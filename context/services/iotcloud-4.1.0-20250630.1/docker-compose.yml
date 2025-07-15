@@ -1,0 +1,33 @@
+
+
+networks:
+  proxy:
+    external: true
+
+services:
+  iotcloud:
+    image: iotcloud:4.1.0-20250630.1
+    container_name: iotcloud
+    networks:
+      - proxy
+    environment:
+      TZ: Asia/Shanghai
+    ports:
+      - "1883:1883"       # MQTT端口
+      - "7070:7070"       # 另一个服务端口（具体服务需要根据实际使用进行确认）
+      - "5683-5688:5683-5688/udp"  # CoAP端口范围，使用UDP协议
+      - "8080:8080"
+    #env_file:
+    #  - ./.env
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+      - ./logs:/home/sprixin/logs
+      - ./conf:/home/sprixin/conf
+      - ./conf/logback.xml:/home/sprixin/logback.xml
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"        # 单个日志文件的最大大小（这里为10MB）
+        max-file: "3"          # 保留的最大日志文件数量
