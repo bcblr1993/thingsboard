@@ -25,9 +25,26 @@
         </encoder>
     </appender>
 
+    <appender name="fileLogAppender"
+              class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/iotcloud.log</file>
+        <rollingPolicy
+                class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR}/iotcloud.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <maxFileSize>100MB</maxFileSize>
+            <maxHistory>100</maxHistory>
+            <totalSizeCap>10GB</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{ISO8601} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
     <logger name="org.thingsboard.server" level="INFO"/>
     <logger name="org.apache.kafka.common.utils.AppInfoParser" level="WARN"/>
     <logger name="org.apache.kafka.clients" level="WARN"/>
+    <!-- 设置规则引擎的日志级别为 WARN -->
+    <logger name="org.thingsboard.server.service.queue" level="INFO"/>
     <!-- To enable the logging of scanned rule engine components-->
     <!--    <logger name="org.thingsboard.server.service.component.AnnotationComponentDiscoveryService" level="DEBUG" />-->
     <!-- To enable the debug logging of rule node upgrade -->
