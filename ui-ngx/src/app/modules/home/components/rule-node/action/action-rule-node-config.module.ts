@@ -110,7 +110,8 @@ import {
     PushToEdgeConfigComponent,
     PushToCloudConfigComponent,
     MathFunctionConfigComponent,
-    DeviceStateConfigComponent
+    DeviceStateConfigComponent,
+    TimeseriesFetchLatestRedisConfigComponent
   ]
 })
 export class ActionRuleNodeConfigModule {
