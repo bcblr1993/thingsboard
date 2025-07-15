@@ -45,6 +45,8 @@ import org.thingsboard.server.common.msg.edqs.EdqsService;
 import org.thingsboard.server.dao.entityview.EntityViewService;
 import org.thingsboard.server.dao.exception.IncorrectParameterException;
 import org.thingsboard.server.dao.service.Validator;
+import org.thingsboard.server.dao.sqlts.CachedRedisSqlTimeseriesLatestDao;
+import org.thingsboard.server.dao.sqlts.SqlTimeseriesLatestDao;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -193,7 +195,7 @@ public class BaseTimeseriesService implements TimeseriesService {
                 tsFutures.add(timeseriesDao.savePartition(tenantId, entityId, tsKvEntry.getTs(), tsKvEntry.getKey()));
                 tsFutures.add(timeseriesDao.save(tenantId, entityId, tsKvEntry, ttl));
             }
-            if (saveLatest) {
+            if (saveLatest && (timeseriesLatestDao instanceof  CassandraBaseTimeseriesLatestDao || timeseriesLatestDao instanceof SqlTimeseriesLatestDao || timeseriesLatestDao instanceof CachedRedisSqlTimeseriesLatestDao)) {
                 latestFutures.add(Futures.transform(timeseriesLatestDao.saveLatest(tenantId, entityId, tsKvEntry), version -> {
                     if (version != null) {
                         edqsService.onUpdate(tenantId, ObjectType.LATEST_TS_KV, new LatestTsKv(entityId, tsKvEntry, version));
@@ -202,11 +204,16 @@ public class BaseTimeseriesService implements TimeseriesService {
                 }, MoreExecutors.directExecutor()));
             }
         }
+        if(saveLatest &&  (timeseriesLatestDao instanceof RedisTimeseriesLatestDao || timeseriesLatestDao instanceof RedisClusterTimeseriesLatestDao)){
+            latestFutures.add(Futures.transform(timeseriesLatestDao.saveLatest(tenantId, entityId, tsKvEntries), version -> {
+                return version;
+            }, MoreExecutors.directExecutor()));
+        }
         ListenableFuture<Integer> dpsFuture = saveTs ? Futures.transform(Futures.allAsList(tsFutures), SUM_ALL_INTEGERS, MoreExecutors.directExecutor()) : Futures.immediateFuture(0);
         ListenableFuture<List<Long>> versionsFuture = saveLatest ? Futures.allAsList(latestFutures) : Futures.immediateFuture(null);
         return Futures.whenAllComplete(dpsFuture, versionsFuture).call(() -> {
-            Integer dataPoints = dpsFuture.get();
-            List<Long> versions = versionsFuture.get();
+            Integer dataPoints = Futures.getUnchecked(dpsFuture);
+            List<Long> versions = Futures.getUnchecked(versionsFuture);
             return TimeseriesSaveResult.of(dataPoints, versions);
         }, MoreExecutors.directExecutor());
     }

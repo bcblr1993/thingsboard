@@ -16,6 +16,7 @@
 package org.thingsboard.server.dao.timeseries;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import org.thingsboard.server.common.data.id.DeviceProfileId;
 import org.thingsboard.server.common.data.id.EntityId;
 import org.thingsboard.server.common.data.id.TenantId;
@@ -47,6 +48,13 @@ public interface TimeseriesLatestDao {
     ListenableFuture<List<TsKvEntry>> findAllLatest(TenantId tenantId, EntityId entityId);
 
     ListenableFuture<Long> saveLatest(TenantId tenantId, EntityId entityId, TsKvEntry tsKvEntry);
+
+    default ListenableFuture<Long> saveLatest(TenantId tenantId, EntityId entityId, List<TsKvEntry> tsKvEntries) {
+        // 返回一个已完成的空 ListenableFuture
+        SettableFuture<Long> future = SettableFuture.create();
+        future.set(0L);  // 默认返回 0L，表示没有实际保存的操作
+        return future;
+    };
 
     ListenableFuture<TsKvLatestRemovingResult> removeLatest(TenantId tenantId, EntityId entityId, DeleteTsKvQuery query);
 
