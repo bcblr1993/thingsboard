@@ -48,6 +48,9 @@ import {
 import {
   AdvancedProcessingSettingRowComponent
 } from '@home/components/rule-node/action/advanced-processing-setting-row.component';
+import {
+  TimeseriesFetchLatestRedisConfigComponent
+} from "@home/components/rule-node/action/timeseries-fetch-latest-redis-config.component";
 
 @NgModule({
   declarations: [
@@ -76,6 +79,7 @@ import {
     DeviceStateConfigComponent,
     AdvancedProcessingSettingComponent,
     AdvancedProcessingSettingRowComponent,
+    TimeseriesFetchLatestRedisConfigComponent
   ],
   imports: [
     CommonModule,

@@ -1,0 +1,29 @@
+/**
+ * Copyright © 2016-2025 The Thingsboard Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/* 控制文本框和删除按钮的间距 */
+mat-form-field {
+  margin-right: 8px;  /* 调整文本框和删除按钮之间的间距 */
+}
+
+button.mat-icon-button {
+  margin-left: 8px;  /* 控制删除按钮与文本框的间距 */
+}
+
+/* 控制下拉列表与其他元素之间的间距 */
+mat-form-field.mat-block {
+  margin-top: 16px;  /* 控制下拉列表与前面元素之间的间距 */
+}
