@@ -488,9 +488,9 @@ public class CassandraBaseTimeseriesDao extends AbstractCassandraBaseTimeseriesD
                 .setUuid(1, entityId.getId())
                 .setLong(2, partition)
                 .setString(3, key);
-        if (ttl > 0) {
-            stmt = stmt.setInt(4, (int) ttl);
-        }
+//        if (ttl > 0) {
+//            stmt = stmt.setInt(4, (int) ttl);
+//        }
         return getFuture(executeAsyncWrite(tenantId, stmt), rs -> 0);
     }
 
