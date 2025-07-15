@@ -266,3 +266,13 @@ $tb-dark-theme: map_merge($tb-dark-theme, $color);
 .tb-dark {
   @include mat.all-component-colors($tb-dark-theme);
 }
+.tb-dark .mat-error {
+  color: #f4aa36 !important;
+}
+.tb-dark .mat-form-field.mat-form-field-invalid .mat-form-field-label {
+  color: #f4aa36 !important;
+}
+
+.tb-dark .mat-form-field-appearance-legacy .mat-form-field-underline {
+  background-color: rgb(191 153 21 / 70%) !important;
+}
