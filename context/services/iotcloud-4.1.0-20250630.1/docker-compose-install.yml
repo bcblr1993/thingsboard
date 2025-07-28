@@ -1,0 +1,23 @@
+
+
+
+networks:
+  proxy:
+    external: true
+services:
+  iotcloud:
+    image: iotcloud:4.1.0-20250630.1
+    container_name: iotcloud
+    networks:
+      - proxy
+    environment:
+      TZ: Asia/Shanghai
+    #env_file:
+    #  - ./.env
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+      - ./logs:/home/sprixin/logs
+      - ./conf:/home/sprixin/conf
+      - ./conf/logback.xml:/home/sprixin/logback.xml
+    command: ['/bin/bash','install.sh']

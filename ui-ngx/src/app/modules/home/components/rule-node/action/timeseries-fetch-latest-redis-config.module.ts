@@ -14,19 +14,24 @@
 /// limitations under the License.
 ///
 
-import { Component } from '@angular/core';
+import { NgModule } from "@angular/core";
+import { CommonModule } from "@angular/common";
+import { SharedModule } from "@shared/shared.module";
 
-@Component({
-  selector: 'tb-logo',
-  templateUrl: './logo.component.html',
-  styleUrls: ['./logo.component.scss']
+// 变化点: 将导入路径修改为相对路径
+import { TimeseriesFetchLatestRedisConfigComponent } from "./timeseries-fetch-latest-redis-config.component";
+
+@NgModule({
+  declarations: [
+    TimeseriesFetchLatestRedisConfigComponent
+  ],
+  imports: [
+    CommonModule,
+    SharedModule
+  ],
+  exports: [
+    TimeseriesFetchLatestRedisConfigComponent
+  ]
 })
-export class LogoComponent {
-
-  logo = 'assets/logo_title_white.svg';
-
-  gotoThingsboard(): void {
-    // window.open('https://thingsboard.io', '_blank');
-  }
-
+export class TimeseriesFetchLatestRedisConfigModule {
 }

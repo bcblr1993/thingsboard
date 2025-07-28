@@ -17,6 +17,7 @@ package org.thingsboard.server.service.sync.ie.importing.csv;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.util.concurrent.FutureCallback;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import jakarta.annotation.Nullable;
@@ -312,13 +313,13 @@ public abstract class AbstractBulkImportService<E extends HasId<? extends Entity
         private final Object value;
         private final DataType dataType;
 
-        public JsonPrimitive toJsonPrimitive() {
+        public JsonElement toJsonPrimitive() {
             return switch (dataType) {
                 case STRING -> new JsonPrimitive((String) value);
                 case LONG -> new JsonPrimitive((Long) value);
                 case DOUBLE -> new JsonPrimitive((Double) value);
                 case BOOLEAN -> new JsonPrimitive((Boolean) value);
-                default -> null;
+                case JSON -> (JsonElement) value;
             };
         }
 

@@ -106,24 +106,34 @@ public class CassandraBaseTimeseriesLatestDao extends AbstractCassandraBaseTimes
 
     @Override
     public ListenableFuture<Long> saveLatest(TenantId tenantId, EntityId entityId, TsKvEntry tsKvEntry) {
-        BoundStatementBuilder stmtBuilder = new BoundStatementBuilder(getLatestStmt().bind());
-        stmtBuilder.setString(0, entityId.getEntityType().name())
-                .setUuid(1, entityId.getId())
-                .setString(2, tsKvEntry.getKey())
-                .setLong(3, tsKvEntry.getTs())
-                .set(4, tsKvEntry.getBooleanValue().orElse(null), Boolean.class)
-                .set(5, tsKvEntry.getStrValue().orElse(null), String.class)
-                .set(6, tsKvEntry.getLongValue().orElse(null), Long.class)
-                .set(7, tsKvEntry.getDoubleValue().orElse(null), Double.class);
-        Optional<String> jsonV = tsKvEntry.getJsonValue();
-        if (jsonV.isPresent()) {
-            stmtBuilder.setString(8, tsKvEntry.getJsonValue().get());
-        } else {
-            stmtBuilder.setToNull(8);
-        }
-        BoundStatement stmt = stmtBuilder.build();
-
-        return getFuture(executeAsyncWrite(tenantId, stmt), rs -> null);
+        // 1.获取当前 key latest 的遥测
+        // 2.获取库当前 key遥测与当前参数传递的遥测进行对比
+        // 3.如果存在比较参数与库中的数据的 ts 如果参数比库中 ts 小 不执行任何操作,
+        ListenableFuture<TsKvEntry> tsKvEntryLatestFuture = findLatest(tenantId, entityId, tsKvEntry.getKey());
+        return Futures.transformAsync(tsKvEntryLatestFuture, latestEntry -> {
+            boolean shouldSave = latestEntry == null || latestEntry.getValue() == null || tsKvEntry.getTs() > latestEntry.getTs();
+            if (shouldSave) {
+                BoundStatementBuilder stmtBuilder = new BoundStatementBuilder(getLatestStmt().bind());
+                stmtBuilder.setString(0, entityId.getEntityType().name())
+                        .setUuid(1, entityId.getId())
+                        .setString(2, tsKvEntry.getKey())
+                        .setLong(3, tsKvEntry.getTs())
+                        .set(4, tsKvEntry.getBooleanValue().orElse(null), Boolean.class)
+                        .set(5, tsKvEntry.getStrValue().orElse(null), String.class)
+                        .set(6, tsKvEntry.getLongValue().orElse(null), Long.class)
+                        .set(7, tsKvEntry.getDoubleValue().orElse(null), Double.class);
+                Optional<String> jsonV = tsKvEntry.getJsonValue();
+                if (jsonV.isPresent()) {
+                    stmtBuilder.setString(8, jsonV.get());
+                } else {
+                    stmtBuilder.setToNull(8);
+                }
+                BoundStatement stmt = stmtBuilder.build();
+                return getFuture(executeAsyncWrite(tenantId, stmt), rs -> null);
+            } else {
+                return Futures.immediateFuture(null);
+            }
+        }, MoreExecutors.directExecutor());
     }
 
     @Override

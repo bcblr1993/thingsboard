@@ -15,6 +15,8 @@
  */
 package org.thingsboard.server.common.data.util;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.thingsboard.server.common.data.kv.DataType;
@@ -40,8 +42,21 @@ public class TypeCastUtil {
             } catch (RuntimeException ignored) {}
         } else if (value.equalsIgnoreCase("true") || value.equalsIgnoreCase("false")) {
             return Pair.of(DataType.BOOLEAN, Boolean.parseBoolean(value));
+        } else if (isJson(value)) {
+            try {
+                Gson gson = new Gson();
+                JsonElement jsonElement = gson.fromJson(value, JsonElement.class);
+                return Pair.of(DataType.JSON, jsonElement);
+            } catch (Exception e) {
+                // Not JSON, continue to treat as string
+            }
         }
         return Pair.of(DataType.STRING, value);
+    }
+
+    private static boolean isJson(String value) {
+        value = value.trim();
+        return (value.startsWith("{") && value.endsWith("}")) || (value.startsWith("[") && value.endsWith("]"));
     }
 
     public static Pair<DataType, Number> castToNumber(String value) {

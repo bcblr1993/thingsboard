@@ -14,19 +14,11 @@
 /// limitations under the License.
 ///
 
-import { Component } from '@angular/core';
+import { RuleNodeConfiguration } from '@shared/models/rule-node.models';
 
-@Component({
-  selector: 'tb-logo',
-  templateUrl: './logo.component.html',
-  styleUrls: ['./logo.component.scss']
-})
-export class LogoComponent {
-
-  logo = 'assets/logo_title_white.svg';
-
-  gotoThingsboard(): void {
-    // window.open('https://thingsboard.io', '_blank');
-  }
-
+export interface TimeseriesFetchLatestRedisNodeConfiguration extends RuleNodeConfiguration {
+  entityId: string;
+  entityType: 'DEVICE' | 'API_USAGE_STATE';
+  fetchAllKeys: boolean;
+  entityTypeKeys: string[];
 }

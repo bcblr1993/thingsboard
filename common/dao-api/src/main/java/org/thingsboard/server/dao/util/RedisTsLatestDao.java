@@ -13,17 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-:host-context(.login-logo) {
-  img.tb-logo-title {
-    width: 180px;
-    height: 60px;
-    text-decoration: none;
-    cursor: pointer;
-    border: none;
-    transform: none;
+package org.thingsboard.server.dao.util;
 
-    &:focus {
-      outline: 0;
-    }
-  }
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+
+@Retention(RetentionPolicy.RUNTIME)
+@ConditionalOnProperty(prefix = "database.ts_latest", value = "type", havingValue = "redis")
+public @interface RedisTsLatestDao {
 }

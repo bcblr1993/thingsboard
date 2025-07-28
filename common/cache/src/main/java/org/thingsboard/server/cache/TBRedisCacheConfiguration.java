@@ -31,6 +31,7 @@ import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisNode;
 import org.springframework.data.redis.connection.jedis.JedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.format.support.DefaultFormattingConversionService;
 import org.springframework.util.Assert;
 import org.thingsboard.common.util.SslUtil;
@@ -135,6 +136,15 @@ public abstract class TBRedisCacheConfiguration {
     public RedisTemplate<String, Object> redisTemplate() {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(redisConnectionFactory());
+        return template;
+    }
+
+    @Bean
+    public RedisTemplate<String, String> redisTemplateString() {
+        RedisTemplate<String, String> template = new RedisTemplate<>();
+        template.setConnectionFactory(redisConnectionFactory());
+        template.setKeySerializer(new StringRedisSerializer()); // 配置 Key 的序列化方式
+        template.setValueSerializer(new StringRedisSerializer()); // 配置 Value 的序列化方式
         return template;
     }
 

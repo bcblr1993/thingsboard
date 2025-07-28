@@ -13,17 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-:host-context(.login-logo) {
-  img.tb-logo-title {
-    width: 180px;
-    height: 60px;
-    text-decoration: none;
-    cursor: pointer;
-    border: none;
-    transform: none;
 
-    &:focus {
-      outline: 0;
-    }
-  }
+/* 控制文本框和删除按钮的间距 */
+mat-form-field {
+  margin-right: 8px;  /* 调整文本框和删除按钮之间的间距 */
+}
+
+button.mat-icon-button {
+  margin-left: 8px;  /* 控制删除按钮与文本框的间距 */
+}
+
+/* 控制下拉列表与其他元素之间的间距 */
+mat-form-field.mat-block {
+  margin-top: 16px;  /* 控制下拉列表与前面元素之间的间距 */
 }
