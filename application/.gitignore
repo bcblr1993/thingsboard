@@ -1,2 +1,12 @@
 !bin/
 /bin/
+/src/main/data/sql/schema-entities.sql
+/src/main/data/sql/schema-entities-idx.sql
+/src/main/data/sql/schema-entities-idx-psql-addon.sql
+/src/main/data/cassandra/schema-keyspace.cql
+/src/main/data/sql/schema-timescale.sql
+/src/main/data/cassandra/schema-ts.cql
+/src/main/data/cassandra/schema-ts-latest.cql
+/src/main/data/sql/schema-ts-latest-psql.sql
+/src/main/data/sql/schema-ts-psql.sql
+/src/main/data/sql/schema-views-and-functions.sql
