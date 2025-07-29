@@ -135,7 +135,9 @@ public class ThingsboardErrorResponseHandler extends ResponseEntityExceptionHand
         log.debug("Processing exception {}", exception.getMessage(), exception);
         if (!response.isCommitted()) {
             try {
-                response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                //设置统一异常处理响应编码格式为utf-8
+                //response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                response.setContentType(MediaType.APPLICATION_JSON_UTF8_VALUE);
 
                 if (exception instanceof ThingsboardException) {
                     ThingsboardException thingsboardException = (ThingsboardException) exception;
