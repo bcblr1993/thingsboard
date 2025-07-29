@@ -80,6 +80,15 @@ export class TimeseriesFetchLatestRedisConfigComponent extends RuleNodeConfigura
     return ['fetchAllKeys'];
   }
 
+  protected updateConfiguration(configuration: TimeseriesFetchLatestRedisNodeConfiguration) {
+    const formValue = {
+      ...configuration,
+      entityTypeKeys: configuration.entityTypeKeys ? configuration.entityTypeKeys.join(',') : ''
+    };
+    this.configForm().reset(formValue, {emitEvent: false});
+    this.updateValidators(false);
+  }
+
   protected updateValidators(emitEvent: boolean) {
     const fetchAllKeys = this.timeseriesFetchLatestRedisConfigForm.get('fetchAllKeys').value;
     const entityTypeKeysControl = this.timeseriesFetchLatestRedisConfigForm.get('entityTypeKeys');
