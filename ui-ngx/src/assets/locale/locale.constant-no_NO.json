@@ -1521,6 +1521,17 @@
     "toggle-edit-mode": "Bytt redigeringsmodus"
   },
   "device": {
+    "assets-device-config": "Konfigurasjonsfil for eiendeler og enheter",
+    "import-assets-device-config": "Importer konfigurasjon for eiendeler og enheter",
+    "validate-assets-device-config": "Valider konfigurasjon for eiendeler og enheter",
+    "asset-file": "Eiendelsfil",
+    "validation-result": "Valideringsresultat",
+    "assets-device-with-relations": "Eksisterende relasjoner mellom eiendeler og enheter",
+    "nodes-without-relations": "Eiendeler/enheter uten relasjoner",
+    "common.search": "Søk",
+    "common.filter": "Filtrer enheter eller eiendeler",
+    "relations-without-nodes": "Eiendeler/enheter som har relasjoner, men som ikke finnes i eiendels- eller enhetsdataene",
+    "relation-file": "Relasjonsfil for eiendeler og enheter",
     "device": "Enhet",
     "device-required": "Enhet er påkrevd.",
     "devices": "Enheter",

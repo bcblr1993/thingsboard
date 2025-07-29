@@ -84,6 +84,9 @@ import {
   DeviceCheckConnectivityDialogData
 } from '@home/pages/device/device-check-connectivity-dialog.component';
 import { EntityId } from '@shared/models/id/entity-id';
+import { ImportAssetConfigDialogComponent, ImportAssetConfigDialogData } from './import-asset-config-dialog.component';
+import { ValidateAssetDeviceConfigDialogComponent, ValidateAssetDeviceConfigDialogData } from './validate-asset-device-config-dialog.component';
+
 
 interface DevicePageQueryParams extends PageQueryParam {
   deviceProfileId?: string;
@@ -416,6 +419,18 @@ export class DevicesTableConfigResolver  {
           isEnabled: () => true,
           onAction: ($event) => this.importDevices($event)
         },
+        {
+          name: this.translate.instant('device.import-assets-device-config'),
+          icon: 'cloud_upload',
+          isEnabled: () => true,
+          onAction: ($event) => this.importAssetConfig($event)
+        },
+        {
+          name: this.translate.instant('device.validate-assets-device-config'),
+          icon: 'check',
+          isEnabled: () => true,
+          onAction: ($event) => this.validateAssetConfig($event)
+        },
       );
       this.config.addEntity = () => {this.deviceWizard(null); return of(null); };
     }
@@ -440,6 +455,34 @@ export class DevicesTableConfigResolver  {
       );
     }
     return actions;
+  }
+
+  importAssetConfig($event: Event) {
+    this.dialog.open<ImportAssetConfigDialogComponent, ImportAssetConfigDialogData, File>(ImportAssetConfigDialogComponent, {
+      disableClose: true,
+      panelClass: ['tb-dialog', 'tb-fullscreen-dialog'],
+      width: '500px',
+      height: '380px',
+      data: {}
+    }).afterClosed().subscribe((file) => {
+      if (file) {
+        this.config.updateData();
+      }
+    });
+  }
+
+  validateAssetConfig($event: Event) {
+    this.dialog.open<ValidateAssetDeviceConfigDialogComponent, ValidateAssetDeviceConfigDialogData, boolean>(ValidateAssetDeviceConfigDialogComponent, {
+      disableClose: true,
+      panelClass: ['tb-dialog', 'tb-fullscreen-dialog'],
+      width: '500px',
+      height: '670px',
+      data: {}
+    }).afterClosed().subscribe((result) => {
+      if (result) {
+        this.config.updateData();
+      }
+    });
   }
 
   private openDevice($event: Event, device: Device, config: EntityTableConfig<DeviceInfo>) {

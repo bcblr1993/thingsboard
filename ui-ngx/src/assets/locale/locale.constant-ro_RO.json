@@ -611,6 +611,17 @@
         "toggle-edit-mode": "Schimbă Mod Editare"
     },
     "device": {
+        "assets-device-config": "Fișier de configurare a activelor și dispozitivelor",
+        "import-assets-device-config": "Importați configurația activelor și dispozitivelor",
+        "validate-assets-device-config": "Validați configurația activelor și dispozitivelor",
+        "asset-file": "Fișier de active",
+        "validation-result": "Rezultatul validării",
+        "assets-device-with-relations": "Relații existente între active și dispozitive",
+        "nodes-without-relations": "Active/Dispozitive fără relații",
+        "common.search": "Căutare",
+        "common.filter": "Filtrați dispozitivele sau activele",
+        "relations-without-nodes": "Active/Dispozitive care au relații, dar nu există în datele despre active sau dispozitive",
+        "relation-file": "Fișier de relații între active și dispozitive",
         "device": "Dispozitiv",
         "device-required": "Dispozitivul este obligatoriu",
         "devices": "Dispozitive",

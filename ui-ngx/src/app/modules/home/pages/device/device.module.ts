@@ -36,6 +36,13 @@ import { SnmpDeviceTransportConfigurationComponent } from './data/snmp-device-tr
 import { DeviceCredentialsModule } from '@home/components/device/device-credentials.module';
 import { DeviceProfileCommonModule } from '@home/components/profile/device/common/device-profile-common.module';
 import { DeviceCheckConnectivityDialogComponent } from './device-check-connectivity-dialog.component';
+import { MatTreeModule } from '@angular/material/tree';
+import { ImportAssetConfigDialogComponent } from './import-asset-config-dialog.component';
+import { ValidateAssetDeviceConfigDialogComponent } from './validate-asset-device-config-dialog.component';
+import { ValidationResultDialogComponent } from './validate-asset-device-config-result-dialog.component';
+import {MatNestedTreeNode, MatTree, MatTreeNode} from "@angular/material/tree";
+
+
 
 @NgModule({
   declarations: [
@@ -52,7 +59,10 @@ import { DeviceCheckConnectivityDialogComponent } from './device-check-connectiv
     DeviceTabsComponent,
     DeviceTableHeaderComponent,
     DeviceCredentialsDialogComponent,
-    DeviceCheckConnectivityDialogComponent
+    DeviceCheckConnectivityDialogComponent,
+    ImportAssetConfigDialogComponent,
+    ValidateAssetDeviceConfigDialogComponent,
+    ValidationResultDialogComponent
   ],
   imports: [
     CommonModule,
@@ -61,7 +71,11 @@ import { DeviceCheckConnectivityDialogComponent } from './device-check-connectiv
     HomeDialogsModule,
     DeviceCredentialsModule,
     DeviceProfileCommonModule,
-    DeviceRoutingModule
+    DeviceRoutingModule,
+    MatTreeModule,
+    MatTree,
+    MatTreeNode,
+    MatNestedTreeNode
   ]
 })
 export class DeviceModule { }

@@ -1535,6 +1535,17 @@
         "toggle-edit-mode": "Toggle edit mode"
     },
     "device": {
+        "assets-device-config": "Asset-Device Config File",
+        "import-assets-device-config": "Import Asset-Device Config",
+        "validate-assets-device-config": "Validate Asset-Device Config",
+        "asset-file": "Asset File",
+        "validation-result": "Validation Result",
+        "assets-device-with-relations": "Existing Asset-Device Relations",
+        "nodes-without-relations": "Assets/Devices without relations",
+        "common.search": "Search",
+        "common.filter": "Filter devices or assets",
+        "relations-without-nodes": "Assets/Devices that have relations but do not exist in asset or device data",
+        "relation-file": "Asset-Device Relation File",
         "device": "Device",
         "device-required": "Device is required.",
         "devices": "Devices",

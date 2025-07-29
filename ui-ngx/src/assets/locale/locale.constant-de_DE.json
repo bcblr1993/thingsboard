@@ -1521,6 +1521,17 @@
     "toggle-edit-mode": "Bearbeitungsmodus umschalten"
   },
   "device": {
+    "assets-device-config": "Asset-Geräte-Konfigurationsdatei",
+    "import-assets-device-config": "Asset-Geräte-Konfiguration importieren",
+    "validate-assets-device-config": "Asset-Geräte-Konfiguration validieren",
+    "asset-file": "Asset-Datei",
+    "validation-result": "Validierungsergebnis",
+    "assets-device-with-relations": "Bestehende Asset-Geräte-Beziehungen",
+    "nodes-without-relations": "Assets/Geräte ohne Beziehungen",
+    "common.search": "Suchen",
+    "common.filter": "Geräte oder Assets filtern",
+    "relations-without-nodes": "Assets/Geräte, die Beziehungen haben, aber nicht in den Asset- oder Gerätedaten vorhanden sind",
+    "relation-file": "Asset-Geräte-Beziehungsdatei",
     "device": "Gerät",
     "device-required": "Gerät ist erforderlich.",
     "devices": "Geräte",

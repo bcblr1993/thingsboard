@@ -878,6 +878,17 @@
         "toggle-edit-mode": "Přepnout do režimu editace"
     },
     "device": {
+        "assets-device-config": "Konfigurační soubor zařízení a aktiv",
+        "import-assets-device-config": "Importovat konfiguraci zařízení a aktiv",
+        "validate-assets-device-config": "Ověřit konfiguraci zařízení a aktiv",
+        "asset-file": "Soubor aktiv",
+        "validation-result": "Výsledek ověření",
+        "assets-device-with-relations": "Existující vztahy mezi zařízeními a aktivy",
+        "nodes-without-relations": "Aktiva/zařízení bez vztahů",
+        "common.search": "Hledat",
+        "common.filter": "Filtrovat zařízení nebo aktiva",
+        "relations-without-nodes": "Aktiva/zařízení, která mají vztahy, ale neexistují v datech aktiv nebo zařízení",
+        "relation-file": "Soubor vztahů mezi zařízeními a aktivy",
         "device": "Zařízení",
         "device-required": "Zařízení je povinné.",
         "devices": "Zařízení",

@@ -790,6 +790,17 @@
         "toggle-edit-mode": "Перемкнути режим редагування"
     },
     "device": {
+        "assets-device-config": "Файл конфігурації активів та пристроїв",
+        "import-assets-device-config": "Імпортувати конфігурацію активів та пристроїв",
+        "validate-assets-device-config": "Перевірити конфігурацію активів та пристроїв",
+        "asset-file": "Файл активів",
+        "validation-result": "Результат перевірки",
+        "assets-device-with-relations": "Існуючі зв'язки між активами та пристроями",
+        "nodes-without-relations": "Активи/Пристрої без зв'язків",
+        "common.search": "Пошук",
+        "common.filter": "Фільтрувати пристрої або активи",
+        "relations-without-nodes": "Активи/Пристрої, які мають зв'язки, але не існують у даних активів або пристроїв",
+        "relation-file": "Файл зв'язків між активами та пристроями",
         "device": "Пристрій",
         "device-required": "Необхідно вказати пристрій.",
         "devices": "Пристрої",

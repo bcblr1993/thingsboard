@@ -1215,6 +1215,17 @@
         "toggle-edit-mode": "Anar a Manera d'Edició"
     },
     "device": {
+        "assets-device-config": "Fitxer de configuració d'actius i dispositius",
+        "import-assets-device-config": "Importa la configuració d'actius i dispositius",
+        "validate-assets-device-config": "Valida la configuració d'actius i dispositius",
+        "asset-file": "Fitxer d'actius",
+        "validation-result": "Resultat de la validació",
+        "assets-device-with-relations": "Relacions existents entre actius i dispositius",
+        "nodes-without-relations": "Actius/Dispositius sense relacions",
+        "common.search": "Cerca",
+        "common.filter": "Filtra dispositius o actius",
+        "relations-without-nodes": "Actius/Dispositius que tenen relacions però no existeixen a les dades d'actius o dispositius",
+        "relation-file": "Fitxer de relacions d'actius i dispositius",
         "device": "Dispositiu",
         "device-required": "Cal dispositiu.",
         "devices": "Dispositius",

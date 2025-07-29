@@ -576,6 +576,17 @@
         "toggle-edit-mode": "حالت ويرايش را تغيير دهيد"
     },
     "device": {
+        "assets-device-config": "فایل پیکربندی دارایی-دستگاه",
+        "import-assets-device-config": "وارد کردن پیکربندی دارایی-دستگاه",
+        "validate-assets-device-config": "اعتبارسنجی پیکربندی دارایی-دستگاه",
+        "asset-file": "فایل دارایی",
+        "validation-result": "نتیجه اعتبارسنجی",
+        "assets-device-with-relations": "روابط موجود دارایی-دستگاه",
+        "nodes-without-relations": "دارایی ها/دستگاه های بدون روابط",
+        "common.search": "جستجو",
+        "common.filter": "فیلتر کردن دستگاه ها یا دارایی ها",
+        "relations-without-nodes": "دارایی ها/دستگاه هایی که دارای روابط هستند اما در داده های دارایی یا دستگاه وجود ندارند",
+        "relation-file": "فایل روابط دارایی-دستگاه",
         "device": "دستگاه",
         "device-required": ".دستگاه مورد نياز است",
         "devices": "دستگاه ها",

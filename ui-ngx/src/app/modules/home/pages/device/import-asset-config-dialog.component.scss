@@ -1,0 +1,16 @@
+:host {
+  display: grid;
+  grid-template-rows: min-content 1fr min-content;
+  height: 100%;
+}
+
+.tb-dialog-actions {
+  justify-content: flex-end;
+  display: flex;
+  gap: 8px;
+  padding: 8px 24px;
+}
+
+:host-context(.mat-mdc-dialog-container) .mat-mdc-dialog-content {
+  padding: 16px 24px;
+}

@@ -1,0 +1,74 @@
+<mat-toolbar color="primary">
+  <h2>{{ 'device.validation-result' | translate }}</h2>
+  <span class="flex-1"></span>
+  <button mat-icon-button (click)="close()" type="button">
+    <mat-icon class="material-icons">close</mat-icon>
+  </button>
+</mat-toolbar>
+
+<div mat-dialog-content>
+  <mat-accordion multi="true">
+    <mat-expansion-panel>
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <mat-icon>account_tree</mat-icon>
+          <span class="mat-panel-title-text">{{ 'device.assets-device-with-relations' | translate }}</span>
+        </mat-panel-title>
+      </mat-expansion-panel-header>
+      <div class="tree-container">
+        <mat-form-field class="search-box" appearance="outline">
+          <mat-label>{{ 'device.common.search' | translate }}</mat-label>
+          <input matInput (keyup)="applyFilter($event)" placeholder="{{ 'device.common.filter' | translate }}">
+          <mat-icon matSuffix>search</mat-icon>
+        </mat-form-field>
+        <mat-tree [dataSource]="dataSource" [treeControl]="treeControl" class="result-tree">
+          <mat-nested-tree-node *matTreeNodeDef="let node; when: hasChild">
+            <div class="mat-tree-node">
+              <button mat-icon-button matTreeNodeToggle [attr.aria-label]="'toggle ' + node.name">
+                <mat-icon class="mat-icon-rtl-mirror tree-toggle-icon">
+                  {{treeControl.isExpanded(node) ? 'remove' : 'add'}}
+                </mat-icon>
+              </button>
+              <span [innerHTML]="highlight(node.name)"></span>
+            </div>
+            <div class="tree-node-children" [@slideVertical]="treeControl.isExpanded(node) ? 'expanded' : 'collapsed'">
+              <ng-container matTreeNodeOutlet></ng-container>
+            </div>
+          </mat-nested-tree-node>
+          <mat-tree-node *matTreeNodeDef="let node" matTreeNodePadding>
+            <button mat-icon-button disabled></button>
+            <span [innerHTML]="highlight(node.name)"></span>
+          </mat-tree-node>
+        </mat-tree>
+      </div>
+    </mat-expansion-panel>
+
+    <mat-expansion-panel *ngIf="data.noRelation.length">
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <mat-icon>warning</mat-icon>
+          <span class="mat-panel-title-text">{{ 'device.nodes-without-relations' | translate }}</span>
+        </mat-panel-title>
+      </mat-expansion-panel-header>
+      <div class="indented-list no-relation-list">
+        <span *ngFor="let item of data.noRelation" class="relation-item">{{ item }}</span>
+      </div>
+    </mat-expansion-panel>
+
+    <mat-expansion-panel *ngIf="data.onlyRelation.length">
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <mat-icon>warning</mat-icon>
+          <span class="mat-panel-title-text">{{ 'device.relations-without-nodes' | translate }}</span>
+        </mat-panel-title>
+      </mat-expansion-panel-header>
+      <div class="indented-list only-relation-list">
+        <span *ngFor="let item of data.onlyRelation" class="relation-item">{{ item }}</span>
+      </div>
+    </mat-expansion-panel>
+  </mat-accordion>
+</div>
+
+<div mat-dialog-actions class="tb-dialog-actions">
+  <button mat-button (click)="close()">{{ 'action.close' | translate }}</button>
+</div>

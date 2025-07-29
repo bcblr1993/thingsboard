@@ -1,0 +1,30 @@
+:host {
+  display: grid;
+  grid-template-rows: min-content 1fr min-content;
+  height: 100%;
+}
+
+:host-context(.mat-mdc-dialog-container) {
+  .mat-mdc-dialog-content {
+    display: flex;
+    flex-direction: column;
+    padding: 16px 24px;
+
+    form {
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+
+      tb-file-input {
+        flex-grow: 1;
+      }
+    }
+  }
+}
+
+.tb-dialog-actions {
+  justify-content: flex-end;
+  display: flex;
+  gap: 8px;
+  padding: 8px 24px;
+}

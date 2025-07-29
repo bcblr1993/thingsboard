@@ -802,6 +802,17 @@
         "toggle-edit-mode": "편집 모드 전환"
     },
     "device": {
+        "assets-device-config": "자산-장치 구성 파일",
+        "import-assets-device-config": "자산-장치 구성 가져오기",
+        "validate-assets-device-config": "자산-장치 구성 유효성 검사",
+        "asset-file": "자산 파일",
+        "validation-result": "유효성 검사 결과",
+        "assets-device-with-relations": "기존 자산-장치 관계",
+        "nodes-without-relations": "관계가 없는 자산/장치",
+        "common.search": "검색",
+        "common.filter": "장치 또는 자산 필터링",
+        "relations-without-nodes": "관계는 있지만 자산 또는 장치 데이터에 존재하지 않는 자산/장치",
+        "relation-file": "자산-장치 관계 파일",
         "device": "장치",
         "device-required": "장치를 입력하세요.",
         "devices": "장치",

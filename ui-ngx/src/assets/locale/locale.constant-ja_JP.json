@@ -559,6 +559,17 @@
 		"toggle-edit-mode": "編集モードを切り替える"
 	},
 	"device": {
+		"assets-device-config": "資産デバイス構成ファイル",
+		"import-assets-device-config": "資産デバイス構成のインポート",
+		"validate-assets-device-config": "資産デバイス構成の検証",
+		"asset-file": "資産ファイル",
+		"validation-result": "検証結果",
+		"assets-device-with-relations": "既存の資産とデバイスの関係",
+		"nodes-without-relations": "関係のない資産/デバイス",
+		"common.search": "検索",
+		"common.filter": "デバイスまたは資産のフィルタリング",
+		"relations-without-nodes": "関係はあるが、資産またはデバイスデータに存在しない資産/デバイス",
+		"relation-file": "資産デバイス関係ファイル",
 		"device": "デバイス",
 		"device-required": "デバイスが必要です。",
 		"devices": "デバイス",

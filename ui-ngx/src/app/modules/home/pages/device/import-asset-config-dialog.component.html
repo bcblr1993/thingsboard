@@ -1,0 +1,25 @@
+
+<mat-toolbar color="primary">
+  <h2>{{ 'device.import-assets-device-config' | translate }}</h2>
+  <span class="flex-1"></span>
+  <button mat-icon-button (click)="cancel()" type="button">
+    <mat-icon class="material-icons">close</mat-icon>
+  </button>
+</mat-toolbar>
+
+<div mat-dialog-content>
+  <form [formGroup]="form">
+    <tb-file-input
+      formControlName="file"
+      accept=".csv"
+      [label]="'device.assets-device-config' | translate"
+      [dropLabel]="'import.drop-file-csv-or' | translate"
+      required
+    ></tb-file-input>
+  </form>
+</div>
+
+<div mat-dialog-actions class="tb-dialog-actions">
+  <button mat-button (click)="cancel()">{{ 'action.cancel' | translate }}</button>
+  <button mat-raised-button color="primary" (click)="import()" [disabled]="form.invalid">{{ 'action.import' | translate }}</button>
+</div>

@@ -979,6 +979,17 @@
         "toggle-edit-mode": "切換編輯模式"
     },
     "device": {
+        "assets-device-config": "設備資產設定檔",
+        "import-assets-device-config": "匯入資產設備組態",
+        "validate-assets-device-config": "校驗資產設備組態",
+        "asset-file": "資產檔案",
+        "validation-result": "驗證結果",
+        "assets-device-with-relations": "已存在的資產與設備關係",
+        "nodes-without-relations": "未存在關係的資產、設備",
+        "common.search": "搜尋",
+        "common.filter": "搜尋設備或資產",
+        "relations-without-nodes": "有關聯關係，但在資產或設備資料中不存在的資產、設備",
+        "relation-file": "資產設備關係檔案",
         "device": "設備",
         "device-required": "設備必填",
         "devices": "設備",

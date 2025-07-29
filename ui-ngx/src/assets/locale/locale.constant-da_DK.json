@@ -1521,6 +1521,17 @@
     "toggle-edit-mode": "Skift redigeringstilstand"
   },
   "device": {
+    "assets-device-config": "Konfigurationsfil for aktiv-enhed",
+    "import-assets-device-config": "Importer konfiguration af aktiv-enhed",
+    "validate-assets-device-config": "Valider konfiguration af aktiv-enhed",
+    "asset-file": "Aktivfil",
+    "validation-result": "Valideringsresultat",
+    "assets-device-with-relations": "Eksisterende relationer mellem aktiv og enhed",
+    "nodes-without-relations": "Aktiver/enheder uden relationer",
+    "common.search": "Søg",
+    "common.filter": "Filtrer enheder eller aktiver",
+    "relations-without-nodes": "Aktiver/enheder, der har relationer, men ikke findes i aktiv- eller enhedsdata",
+    "relation-file": "Relationsfil for aktiv-enhed",
     "device": "Enhed",
     "device-required": "Enhed er påkrævet.",
     "devices": "Enheder",
