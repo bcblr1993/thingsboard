@@ -1,22 +1,8 @@
-/**
- * Copyright © 2016-2025 The Thingsboard Authors
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 :host {
   display: grid;
   grid-template-rows: min-content 1fr min-content;
   height: 100%;
+  min-width: 500px;
 }
 
 .tb-dialog-actions {
@@ -38,66 +24,75 @@
 .tree-container {
   display: flex;
   flex-direction: column;
+  padding-bottom: 16px;
 }
 
 .search-box {
   margin-bottom: 16px;
 }
 
-.result-tree {
-  padding-left: 20px;
+.mat-tree {
+  background: transparent;
+}
 
-  .mat-tree-node,
-  .mat-nested-tree-node {
-    position: relative;
-    padding-left: 28px;
-  }
+.mat-tree-node, .mat-nested-tree-node {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+}
 
-  .mat-tree-node::before,
-  .mat-nested-tree-node::before {
-    content: '';
-    position: absolute;
-    top: -18px;
-    left: 10px;
-    border-left: 1px dashed #888;
-    height: 100%;
-  }
+.node-label {
+  font-size: 14px;
+  font-weight: 500;
+}
 
-  .mat-tree-node:last-child::before {
-    height: 35px;
-  }
+.level-0 .node-label {
+  color: #212121; // Almost Black
+}
 
-  .mat-nested-tree-node > .mat-tree-node::before {
-    top: -18px;
-  }
+.level-1 .node-label {
+  color: #1E88E5; // Blue
+}
 
-  .mat-tree-node::after,
-  .mat-nested-tree-node > .mat-tree-node::after {
-    content: '';
-    position: absolute;
-    top: 17px;
-    left: 10px;
-    border-top: 1px dashed #888;
-    width: 18px;
-  }
+.level-2 .node-label {
+  color: #43A047; // Green
+}
 
-  .tree-toggle-icon {
-    position: absolute;
-    left: -8px;
-    top: 50%;
-    transform: translateY(-50%);
-    background-color: white;
-    z-index: 1;
-  }
+.level-3 .node-label {
+  color: #FB8C00; // Orange
+}
 
-  .tree-node-children {
-    overflow: hidden;
-    padding-left: 20px;
-  }
+.level-4 .node-label, .level-5 .node-label {
+  color: #673AB7; // Deep Purple for deeper levels
+}
+
+.level-0 > .node-label {
+  color: #212121; // Almost Black
+}
+
+.level-1 > .node-label {
+  color: #1E88E5; // Blue
+}
+
+.level-2 > .node-label {
+  color: #43A047; // Green
+}
+
+.level-3 > .node-label {
+  color: #FB8C00; // Orange
+}
+
+.level-4 > .node-label, .level-5 > .node-label {
+  color: #673AB7; // Deep Purple for deeper levels
+}
+
+.mat-mdc-icon-button.mat-mdc-button-base {
+  width: 38px;
+  height: 38px;
 }
 
 .indented-list {
-  padding: 16px 0 16px 40px;
+  padding: 16px 0 16px 24px;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -121,6 +116,6 @@
 }
 
 ::ng-deep .highlight {
-  background-color: yellow;
-  font-weight: bold;
+  background-color: #ffecb3; // A softer yellow
+  font-weight: 600;
 }
