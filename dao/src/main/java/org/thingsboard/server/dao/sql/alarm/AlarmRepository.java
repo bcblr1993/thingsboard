@@ -15,6 +15,7 @@
  */
 package org.thingsboard.server.dao.sql.alarm;
 
+import jakarta.validation.constraints.NotNull;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
@@ -416,4 +417,15 @@ public interface AlarmRepository extends JpaRepository<AlarmEntity, UUID> {
 
     Page<AlarmEntity> findByTenantId(UUID tenantId, Pageable pageable);
 
+    @Query(value = "SELECT create_or_update_active_alarm_by_id(:t_id, :c_id, :a_id, :a_created_ts, :a_o_id, :a_o_type, :a_type, :a_severity, " +
+            ":a_start_ts, :a_end_ts, :a_details, :a_propagate, :a_propagate_to_owner, " +
+            ":a_propagate_to_tenant, :a_propagation_types, :a_creation_enabled)", nativeQuery = true)
+    String createOrUpdateActiveEdgeAlarm(@Param("t_id") UUID tenantId, @Param("c_id") UUID customerId,
+                                     @Param("a_id") UUID alarmId, @Param("a_created_ts") long createdTime,
+                                     @Param("a_o_id") UUID originatorId, @Param("a_o_type") int originatorType,
+                                     @Param("a_type") @NotNull String type, @Param("a_severity") String severity,
+                                     @Param("a_start_ts") long startTs, @Param("a_end_ts") long endTs, @Param("a_details") String detailsAsString,
+                                     @Param("a_propagate") boolean propagate, @Param("a_propagate_to_owner") boolean propagateToOwner,
+                                     @Param("a_propagate_to_tenant") boolean propagateToTenant, @Param("a_propagation_types") String propagationTypes,
+                                     @Param("a_creation_enabled") boolean alarmCreationEnabled);
 }

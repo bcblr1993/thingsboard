@@ -27,19 +27,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.util.CollectionUtils;
 import org.thingsboard.server.common.data.EntitySubtype;
 import org.thingsboard.server.common.data.EntityType;
-import org.thingsboard.server.common.data.alarm.Alarm;
-import org.thingsboard.server.common.data.alarm.AlarmApiCallResult;
-import org.thingsboard.server.common.data.alarm.AlarmCreateOrUpdateActiveRequest;
-import org.thingsboard.server.common.data.alarm.AlarmInfo;
-import org.thingsboard.server.common.data.alarm.AlarmModificationRequest;
-import org.thingsboard.server.common.data.alarm.AlarmQuery;
-import org.thingsboard.server.common.data.alarm.AlarmQueryV2;
-import org.thingsboard.server.common.data.alarm.AlarmSearchStatus;
-import org.thingsboard.server.common.data.alarm.AlarmSeverity;
-import org.thingsboard.server.common.data.alarm.AlarmStatus;
-import org.thingsboard.server.common.data.alarm.AlarmStatusFilter;
-import org.thingsboard.server.common.data.alarm.AlarmUpdateRequest;
-import org.thingsboard.server.common.data.alarm.EntityAlarm;
+import org.thingsboard.server.common.data.alarm.*;
 import org.thingsboard.server.common.data.audit.ActionType;
 import org.thingsboard.server.common.data.exception.ApiUsageLimitsExceededException;
 import org.thingsboard.server.common.data.id.AlarmId;
@@ -48,6 +36,7 @@ import org.thingsboard.server.common.data.id.EntityId;
 import org.thingsboard.server.common.data.id.HasId;
 import org.thingsboard.server.common.data.id.TenantId;
 import org.thingsboard.server.common.data.id.UserId;
+import org.thingsboard.server.common.data.mobile.LoginMobileInfo;
 import org.thingsboard.server.common.data.page.PageData;
 import org.thingsboard.server.common.data.page.PageLink;
 import org.thingsboard.server.common.data.page.SortOrder;
@@ -133,6 +122,7 @@ public class BaseAlarmService extends AbstractCachedEntityService<TenantId, Page
         }
         request.setCustomerId(customerId);
         AlarmApiCallResult result = alarmDao.createOrUpdateActiveAlarm(request, alarmCreationEnabled);
+        log.info("Created alarm with id {}", result.getAlarm().getId());
         if (!result.isSuccessful() && !alarmCreationEnabled) {
             throw new ApiUsageLimitsExceededException("Alarms creation is disabled");
         }
@@ -489,4 +479,52 @@ public class BaseAlarmService extends AbstractCachedEntityService<TenantId, Page
         }
     }
 
+
+    @Override
+    public void createAlarm(Alarm alarm) {
+        log.debug("Saving Create Event In historical (cleared) alarm from edge: {}", alarm.getId());
+        Alarm savedAlarm = alarmDao.save(alarm.getTenantId(), alarm);
+        if (savedAlarm != null) {
+            try {
+                createEntityAlarmRecords(savedAlarm);
+            } catch (ExecutionException | InterruptedException e) {
+                throw new RuntimeException("Failed to create entity alarm records for historical alarm " + savedAlarm.getId(), e);
+            }
+            eventPublisher.publishEvent(SaveEntityEvent.builder()
+                    .tenantId(savedAlarm.getTenantId())
+                    .entityId(savedAlarm.getId())
+                    .entity(savedAlarm)
+                    .created(true).build());
+            publishEvictEvent(new AlarmTypesCacheEvictEvent(savedAlarm.getTenantId()));
+        } else {
+            log.warn("Saving historical alarm failed, it returned null. Alarm: {}", alarm);
+        }
+    }
+
+
+
+
+    @Override
+    public AlarmApiCallResult createAlarmForEdge(AlarmCreateOrUpdateActiveRequest request,boolean alarmCreationEnabled) {
+            log.info("Create Alarm For Edge request: {}", request);
+            validateAlarmRequest(request);
+            CustomerId customerId = entityService.fetchEntityCustomerId(request.getTenantId(), request.getOriginator()).orElse(null);
+            if (customerId == null && request.getCustomerId() != null) {
+                throw new DataValidationException("Can't assign alarm to customer. Originator is not assigned to customer!");
+            } else if (customerId != null && request.getCustomerId() != null && !customerId.equals(request.getCustomerId())) {
+                throw new DataValidationException("Can't assign alarm to customer. Originator belongs to different customer!");
+            }
+            request.setCustomerId(customerId);
+            AlarmApiCallResult result = alarmDao.createOrUpdateActiveEdgeAlarm(request, alarmCreationEnabled);
+            log.info("Created alarm with id {}", result.getAlarm().getId());
+            if (!result.isSuccessful() && !alarmCreationEnabled) {
+                throw new ApiUsageLimitsExceededException("Alarms creation is disabled");
+            }
+            if (result.getAlarm() != null) {
+                eventPublisher.publishEvent(SaveEntityEvent.builder().tenantId(result.getAlarm().getTenantId())
+                        .entityId(result.getAlarm().getId()).entity(result).created(true).build());
+                publishEvictEvent(new AlarmTypesCacheEvictEvent(request.getTenantId()));
+            }
+            return withPropagated(result);
+    }
 }

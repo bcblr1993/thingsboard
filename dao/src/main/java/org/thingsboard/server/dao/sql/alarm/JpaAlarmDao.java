@@ -374,6 +374,31 @@ public class JpaAlarmDao extends JpaAbstractDao<AlarmEntity, Alarm> implements A
     }
 
     @Override
+    public AlarmApiCallResult createOrUpdateActiveEdgeAlarm(AlarmCreateOrUpdateActiveRequest request, boolean alarmCreationEnabled) {
+        UUID tenantUUID = request.getTenantId().getId();
+        log.debug("[{}] createOrUpdateActiveEdgeAlarm [{}] {}", tenantUUID, alarmCreationEnabled, request);
+
+        AlarmPropagationInfo ap = getSafePropagationInfo(request.getPropagation());
+        return toAlarmApiResult(alarmRepository.createOrUpdateActiveEdgeAlarm(
+                tenantUUID,
+                request.getCustomerId() != null ? request.getCustomerId().getId() : CustomerId.NULL_UUID,
+                request.getEdgeAlarmId() != null ? request.getEdgeAlarmId().getId() : UUID.randomUUID(),
+                System.currentTimeMillis(),
+                request.getOriginator().getId(),
+                request.getOriginator().getEntityType().ordinal(),
+                request.getType(),
+                request.getSeverity().name(),
+                request.getStartTs(), request.getEndTs(),
+                getDetailsAsString(request.getDetails()),
+                ap.isPropagate(),
+                ap.isPropagateToOwner(),
+                ap.isPropagateToTenant(),
+                getPropagationTypes(ap),
+                alarmCreationEnabled
+        ));
+    }
+
+    @Override
     public AlarmApiCallResult updateAlarm(AlarmUpdateRequest request) {
         UUID tenantUUID = request.getTenantId().getId();
         UUID alarmUUID = request.getAlarmId().getId();

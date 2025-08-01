@@ -63,7 +63,11 @@ public abstract class BaseAlarmProcessor extends BaseEdgeProcessor {
         try {
             switch (alarmUpdateMsg.getMsgType()) {
                 case ENTITY_CREATED_RPC_MESSAGE:
-                    edgeCtx.getAlarmService().createAlarm(AlarmCreateOrUpdateActiveRequest.fromAlarm(alarm, null, alarmId));
+                    if(alarm.isCleared()){
+                        edgeCtx.getAlarmService().createAlarm(alarm);
+                    }else{
+                        edgeCtx.getAlarmService().createAlarmForEdge(AlarmCreateOrUpdateActiveRequest.fromAlarm(alarm, null, alarmId),true);
+                    }
                     break;
                 case ENTITY_UPDATED_RPC_MESSAGE:
                     edgeCtx.getAlarmService().updateAlarm(AlarmUpdateRequest.fromAlarm(alarm));

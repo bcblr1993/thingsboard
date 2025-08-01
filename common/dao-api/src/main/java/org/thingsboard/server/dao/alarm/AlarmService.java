@@ -124,4 +124,7 @@ public interface AlarmService extends EntityDaoService {
 
     List<UUID> findActiveOriginatorAlarms(TenantId tenantId, OriginatorAlarmFilter originatorAlarmFilter, int limit);
 
+    void createAlarm(Alarm alarm);
+
+    AlarmApiCallResult createAlarmForEdge(AlarmCreateOrUpdateActiveRequest alarmCreateOrUpdateActiveRequest, boolean alarmCreationEnabled);
 }

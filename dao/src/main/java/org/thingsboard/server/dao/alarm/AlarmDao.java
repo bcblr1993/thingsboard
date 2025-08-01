@@ -96,6 +96,8 @@ public interface AlarmDao extends Dao<Alarm> {
 
     AlarmApiCallResult createOrUpdateActiveAlarm(AlarmCreateOrUpdateActiveRequest request, boolean alarmCreationEnabled);
 
+    AlarmApiCallResult createOrUpdateActiveEdgeAlarm(AlarmCreateOrUpdateActiveRequest request, boolean alarmCreationEnabled);
+
     AlarmApiCallResult updateAlarm(AlarmUpdateRequest request);
 
     AlarmApiCallResult acknowledgeAlarm(TenantId tenantId, AlarmId id, long ackTs);
