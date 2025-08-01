@@ -85,13 +85,19 @@ export class ValidationResultDialogComponent extends DialogComponent<ValidationR
     if (!this.filter) {
       return nodes;
     }
-    return nodes.map(node => {
-      const filteredChildren = node.children ? this.filterNodes(node.children) : null;
-      if (node.name.toLowerCase().includes(this.filter) || (filteredChildren && filteredChildren.length > 0)) {
-        return { ...node, children: filteredChildren };
+    return nodes.reduce<TreeNode[]>((acc, node) => {
+      if (node.name.toLowerCase().includes(this.filter)) {
+        acc.push(node);
+        return acc;
       }
-      return null;
-    }).filter(node => node !== null);
+      if (node.children) {
+        const filteredChildren = this.filterNodes(node.children);
+        if (filteredChildren.length > 0) {
+          acc.push({ ...node, children: filteredChildren });
+        }
+      }
+      return acc;
+    }, []);
   }
 
   highlight(text: string): string {
