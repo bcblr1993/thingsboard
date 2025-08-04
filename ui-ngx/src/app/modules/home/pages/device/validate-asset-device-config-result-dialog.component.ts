@@ -87,8 +87,8 @@ export class ValidationResultDialogComponent extends DialogComponent<ValidationR
   }
 
   applyFilter(filterText: string) {
-    this.filter = filterText.trim().toLowerCase();
-    const filteredData = this.filterNodes(this.originalData, this.filter);
+    this.filter = filterText.trim();
+    const filteredData = this.filterNodes(JSON.parse(JSON.stringify(this.originalData)), this.filter);
     this.dataSource.data = filteredData;
     if (this.filter) {
       this.treeControl.expandAll();
@@ -101,10 +101,12 @@ export class ValidationResultDialogComponent extends DialogComponent<ValidationR
     if (!filter) {
       return nodes;
     }
+    const filterLower = filter.toLowerCase();
     return nodes.reduce<AppTreeNode[]>((acc, node) => {
+      const isMatch = node.name.toLowerCase().includes(filterLower);
       const children = node.children ? this.filterNodes(node.children, filter) : null;
-      if (node.name.toLowerCase().includes(filter) || (children && children.length > 0)) {
-        acc.push({ ...node, children });
+      if (isMatch || (children && children.length > 0)) {
+        acc.push({ ...node, children: isMatch ? node.children : children });
       }
       return acc;
     }, []);
