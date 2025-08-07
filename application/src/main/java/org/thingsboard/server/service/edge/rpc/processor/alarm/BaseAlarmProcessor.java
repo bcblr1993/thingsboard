@@ -37,9 +37,15 @@ import org.thingsboard.server.gen.edge.v1.AlarmCommentUpdateMsg;
 import org.thingsboard.server.gen.edge.v1.AlarmUpdateMsg;
 import org.thingsboard.server.service.edge.rpc.processor.BaseEdgeProcessor;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import static org.thingsboard.server.dao.edge.BaseRelatedEdgesService.RELATED_EDGES_CACHE_ITEMS;
 
@@ -48,6 +54,41 @@ public abstract class BaseAlarmProcessor extends BaseEdgeProcessor {
 
     @Autowired
     protected AlarmCommentDao alarmCommentDao;
+
+    private final BlockingQueue<Alarm> clearedAlarmsQueue = new LinkedBlockingQueue<>();
+    private final ExecutorService clearedAlarmsExecutor = Executors.newSingleThreadExecutor();
+
+
+
+    @PostConstruct
+    public void init() {
+        clearedAlarmsExecutor.submit(() -> {
+            List<Alarm> alarms = new ArrayList<>(100);
+            while (!Thread.currentThread().isInterrupted()) {
+                try {
+                    int drained = clearedAlarmsQueue.drainTo(alarms, 100);
+                    if (drained == 0) {
+                        alarms.add(clearedAlarmsQueue.take());
+                        clearedAlarmsQueue.drainTo(alarms, 99);
+                    }
+                    if (!alarms.isEmpty()) {
+                        edgeCtx.getAlarmService().createAlarms(alarms);
+                        alarms.clear();
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                } catch (Exception e) {
+                    log.error("Failed to process cleared alarm from the queue", e);
+                }
+            }
+        });
+    }
+
+    @PreDestroy
+    public void destroy() {
+        clearedAlarmsExecutor.shutdownNow();
+    }
 
     public ListenableFuture<Void> processAlarmMsg(TenantId tenantId, AlarmUpdateMsg alarmUpdateMsg) {
         log.trace("[{}] processAlarmMsg [{}]", tenantId, alarmUpdateMsg);
@@ -64,7 +105,15 @@ public abstract class BaseAlarmProcessor extends BaseEdgeProcessor {
             switch (alarmUpdateMsg.getMsgType()) {
                 case ENTITY_CREATED_RPC_MESSAGE:
                     if(alarm.isCleared()){
-                        edgeCtx.getAlarmService().createAlarm(alarm);
+                        try {
+                            long startTime = System.currentTimeMillis();
+                            clearedAlarmsQueue.put(alarm);
+                            long endTime = System.currentTimeMillis();
+                            System.out.println("创建中包含清除的放入队列直接返回时间====>: "+(endTime - startTime)+" ms");
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            return Futures.immediateFailedFuture(e);
+                        }
                     }else{
                         edgeCtx.getAlarmService().createAlarmForEdge(AlarmCreateOrUpdateActiveRequest.fromAlarm(alarm, null, alarmId),true);
                     }

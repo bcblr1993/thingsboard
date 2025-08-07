@@ -481,6 +481,40 @@ public class BaseAlarmService extends AbstractCachedEntityService<TenantId, Page
 
 
     @Override
+    public void createAlarms(List<Alarm> alarms) {
+        log.trace("Executing createAlarms for alarms list of size {}", alarms.size());
+        if (CollectionUtils.isEmpty(alarms)) {
+            return;
+        }
+        TenantId tenantId = alarms.get(0).getTenantId();
+        alarms = alarmDao.save(tenantId, alarms);
+        List<EntityAlarm> entityAlarms = new ArrayList<>();
+        for (Alarm alarm : alarms) {
+            try {
+                Set<EntityId> propagatedEntitiesSet = new LinkedHashSet<>();
+                propagatedEntitiesSet.add(alarm.getOriginator());
+                if (alarm.isPropagate()) {
+                    propagatedEntitiesSet.addAll(getRelatedEntities(alarm));
+                }
+                if (alarm.isPropagateToOwner()) {
+                    propagatedEntitiesSet.add(alarm.getCustomerId() != null ? alarm.getCustomerId() : alarm.getTenantId());
+                }
+                if (alarm.isPropagateToTenant()) {
+                    propagatedEntitiesSet.add(alarm.getTenantId());
+                }
+                for (EntityId entityId : propagatedEntitiesSet) {
+                    entityAlarms.add(new EntityAlarm(tenantId, entityId, alarm.getCreatedTime(), alarm.getType(), alarm.getCustomerId(), null, alarm.getId()));
+                }
+            } catch (ExecutionException | InterruptedException e) {
+                throw new RuntimeException("Failed to create entity alarm records for historical alarm " + alarm.getId(), e);
+            }
+        }
+        if (!entityAlarms.isEmpty()) {
+            alarmDao.createEntityAlarmRecords(entityAlarms);
+        }
+    }
+
+    @Override
     public void createAlarm(Alarm alarm) {
         log.debug("Saving Create Event In historical (cleared) alarm from edge: {}", alarm.getId());
         Alarm savedAlarm = alarmDao.save(alarm.getTenantId(), alarm);
@@ -516,7 +550,7 @@ public class BaseAlarmService extends AbstractCachedEntityService<TenantId, Page
             }
             request.setCustomerId(customerId);
             AlarmApiCallResult result = alarmDao.createOrUpdateActiveEdgeAlarm(request, alarmCreationEnabled);
-            log.info("Created alarm with id {}", result.getAlarm().getId());
+            log.debug("Created alarm with id {}", result.getAlarm().getId());
             if (!result.isSuccessful() && !alarmCreationEnabled) {
                 throw new ApiUsageLimitsExceededException("Alarms creation is disabled");
             }

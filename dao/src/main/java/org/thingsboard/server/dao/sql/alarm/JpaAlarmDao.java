@@ -107,6 +107,13 @@ public class JpaAlarmDao extends JpaAbstractDao<AlarmEntity, Alarm> implements A
     }
 
     @Override
+    public List<Alarm> save(TenantId tenantId, List<Alarm> alarms) {
+        List<AlarmEntity> entities = alarms.stream().map(AlarmEntity::new).toList();
+        alarmRepository.saveAll(entities);
+        return alarms;
+    }
+
+    @Override
     public Alarm findLatestByOriginatorAndType(TenantId tenantId, EntityId originator, String type) {
         List<AlarmEntity> latest = alarmRepository.findLatestByOriginatorAndType(
                 originator.getId(),
@@ -325,6 +332,13 @@ public class JpaAlarmDao extends JpaAbstractDao<AlarmEntity, Alarm> implements A
     public void createEntityAlarmRecord(EntityAlarm entityAlarm) {
         log.debug("Saving entity {}", entityAlarm);
         entityAlarmRepository.save(new EntityAlarmEntity(entityAlarm));
+    }
+
+    @Override
+    public void createEntityAlarmRecords(List<EntityAlarm> entityAlarms) {
+        log.debug("Saving {} entity alarm records", entityAlarms.size());
+        List<EntityAlarmEntity> entities = entityAlarms.stream().map(EntityAlarmEntity::new).toList();
+        entityAlarmRepository.saveAll(entities);
     }
 
     @Override

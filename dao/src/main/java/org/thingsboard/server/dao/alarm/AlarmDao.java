@@ -66,6 +66,8 @@ public interface AlarmDao extends Dao<Alarm> {
 
     Alarm save(TenantId tenantId, Alarm alarm);
 
+    List<Alarm> save(TenantId tenantId, List<Alarm> alarms);
+
     PageData<AlarmInfo> findAlarms(TenantId tenantId, AlarmQuery query);
 
     PageData<AlarmInfo> findCustomerAlarms(TenantId tenantId, CustomerId customerId, AlarmQuery query);
@@ -85,6 +87,8 @@ public interface AlarmDao extends Dao<Alarm> {
     PageData<TbPair<UUID, Long>> findAlarmIdsByOriginatorId(TenantId tenantId, EntityId originatorId, long createdTimeOffset, AlarmId idOffset, int limit);
 
     void createEntityAlarmRecord(EntityAlarm entityAlarm);
+
+    void createEntityAlarmRecords(List<EntityAlarm> entityAlarms);
 
     List<EntityAlarm> findEntityAlarmRecords(TenantId tenantId, AlarmId id);
 

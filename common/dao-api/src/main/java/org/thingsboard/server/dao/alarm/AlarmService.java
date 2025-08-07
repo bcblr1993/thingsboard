@@ -126,5 +126,7 @@ public interface AlarmService extends EntityDaoService {
 
     void createAlarm(Alarm alarm);
 
+    void createAlarms(List<Alarm> alarms);
+
     AlarmApiCallResult createAlarmForEdge(AlarmCreateOrUpdateActiveRequest alarmCreateOrUpdateActiveRequest, boolean alarmCreationEnabled);
 }
