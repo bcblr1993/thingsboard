@@ -391,6 +391,9 @@ public interface AlarmRepository extends JpaRepository<AlarmEntity, UUID> {
     @Query(value = "SELECT clear_alarm(:t_id, :a_id, :a_ts, :a_details)", nativeQuery = true)
     String clearAlarm(@Param("t_id") UUID tenantId, @Param("a_id") UUID alarmId, @Param("a_ts") long ts, @Param("a_details") String details);
 
+    @Query(value = "SELECT clear_alarm_edge(:t_id, :a_id, :a_ts, :a_end_ts, :a_details)", nativeQuery = true)
+    String clearAlarmEdge(@Param("t_id") UUID tenantId, @Param("a_id") UUID alarmId, @Param("a_ts") long ts, @Param("a_end_ts") long endTs, @Param("a_details") String details);
+
     @Query(value = "SELECT assign_alarm(:t_id, :a_id, :u_id, :a_ts)", nativeQuery = true)
     String assignAlarm(@Param("t_id") UUID tenantId, @Param("a_id") UUID alarmId, @Param("u_id") UUID userId, @Param("a_ts") long assignTime);
 

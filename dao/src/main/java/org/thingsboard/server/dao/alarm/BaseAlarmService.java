@@ -155,6 +155,16 @@ public class BaseAlarmService extends AbstractCachedEntityService<TenantId, Page
     }
 
     @Override
+    public AlarmApiCallResult clearAlarmForEdge(TenantId tenantId, AlarmId alarmId, long endTs, long clearTs, JsonNode details) {
+        var result = withPropagated(alarmDao.clearAlarmForEdge(tenantId, alarmId, endTs, clearTs, details));
+        if (result.getAlarm() != null) {
+            eventPublisher.publishEvent(ActionEntityEvent.builder().tenantId(tenantId).entityId(result.getAlarm().getId())
+                    .actionType(ActionType.ALARM_CLEAR).build());
+        }
+        return result;
+    }
+
+    @Override
     public Alarm findLatestActiveByOriginatorAndType(TenantId tenantId, EntityId originator, String type) {
         return alarmDao.findLatestActiveByOriginatorAndType(tenantId, originator, type);
     }

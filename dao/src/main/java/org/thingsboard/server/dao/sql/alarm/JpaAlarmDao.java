@@ -445,6 +445,12 @@ public class JpaAlarmDao extends JpaAbstractDao<AlarmEntity, Alarm> implements A
     }
 
     @Override
+    public AlarmApiCallResult clearAlarmForEdge(TenantId tenantId, AlarmId id, long endTs, long clearTs, JsonNode details) {
+        log.debug("[{}][{}] clearAlarmForEdge [{}] [{}]", tenantId, id, endTs, clearTs);
+        return toAlarmApiResult(alarmRepository.clearAlarmEdge(tenantId.getId(), id.getId(), clearTs, endTs, details != null ? getDetailsAsString(details) : null));
+    }
+
+    @Override
     public AlarmApiCallResult assignAlarm(TenantId tenantId, AlarmId id, UserId assigneeId, long assignTime) {
         return toAlarmApiResult(alarmRepository.assignAlarm(tenantId.getId(), id.getId(), assigneeId.getId(), assignTime));
     }

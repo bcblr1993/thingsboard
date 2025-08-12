@@ -106,10 +106,7 @@ public abstract class BaseAlarmProcessor extends BaseEdgeProcessor {
                 case ENTITY_CREATED_RPC_MESSAGE:
                     if(alarm.isCleared()){
                         try {
-                            long startTime = System.currentTimeMillis();
                             clearedAlarmsQueue.put(alarm);
-                            long endTime = System.currentTimeMillis();
-                            System.out.println("创建中包含清除的放入队列直接返回时间====>: "+(endTime - startTime)+" ms");
                         } catch (InterruptedException e) {
                             Thread.currentThread().interrupt();
                             return Futures.immediateFailedFuture(e);
@@ -131,6 +128,7 @@ public abstract class BaseAlarmProcessor extends BaseEdgeProcessor {
                     Alarm alarmToClear = edgeCtx.getAlarmService().findAlarmById(tenantId, alarmId);
                     if (alarmToClear != null) {
                         edgeCtx.getAlarmService().clearAlarm(tenantId, alarmId, alarm.getClearTs(), alarm.getDetails());
+                        edgeCtx.getAlarmService().clearAlarmForEdge(tenantId, alarmId, alarm.getEndTs(),alarm.getClearTs(), alarm.getDetails());
                     }
                     break;
                 case ENTITY_DELETED_RPC_MESSAGE:

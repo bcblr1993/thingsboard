@@ -258,6 +258,34 @@ BEGIN
 END
 $$;
 
+DROP FUNCTION IF EXISTS clear_alarm_edge;
+CREATE OR REPLACE FUNCTION clear_alarm_edge(t_id uuid, a_id uuid, a_ts bigint, a_end_ts bigint, a_details varchar)
+    RETURNS varchar
+    LANGUAGE plpgsql
+AS
+$$
+DECLARE
+existing alarm;
+    result   alarm_info;
+    cleared boolean = FALSE;
+BEGIN
+SELECT * INTO existing FROM alarm a WHERE a.id = a_id AND a.tenant_id = t_id FOR UPDATE;
+IF existing IS NULL THEN
+        RETURN json_build_object('success', false)::text;
+END IF;
+    IF NOT(existing.cleared) THEN
+        cleared = TRUE;
+        IF a_details IS NULL THEN
+UPDATE alarm a SET cleared = true, clear_ts = a_ts, end_ts = a_end_ts WHERE a.id = a_id AND a.tenant_id = t_id;
+ELSE
+UPDATE alarm a SET cleared = true, clear_ts = a_ts, end_ts = a_end_ts, additional_info = a_details WHERE a.id = a_id AND a.tenant_id = t_id;
+END IF;
+END IF;
+SELECT * INTO result FROM alarm_info a WHERE a.id = a_id AND a.tenant_id = t_id;
+RETURN json_build_object('success', true, 'cleared', cleared, 'alarm', row_to_json(result))::text;
+END
+$$;
+
 DROP FUNCTION IF EXISTS assign_alarm;
 CREATE OR REPLACE FUNCTION assign_alarm(t_id uuid, a_id uuid, u_id uuid, a_ts bigint)
     RETURNS varchar

@@ -108,6 +108,8 @@ public interface AlarmDao extends Dao<Alarm> {
 
     AlarmApiCallResult clearAlarm(TenantId tenantId, AlarmId alarmId, long clearTs, JsonNode details);
 
+    AlarmApiCallResult clearAlarmForEdge(TenantId tenantId, AlarmId alarmId, long endTs, long clearTs, JsonNode details);
+
     AlarmApiCallResult assignAlarm(TenantId tenantId, AlarmId alarmId, UserId assigneeId, long assignTime);
 
     AlarmApiCallResult unassignAlarm(TenantId tenantId, AlarmId alarmId, long unassignTime);

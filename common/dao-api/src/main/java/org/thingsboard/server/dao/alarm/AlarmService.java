@@ -75,6 +75,8 @@ public interface AlarmService extends EntityDaoService {
 
     AlarmApiCallResult clearAlarm(TenantId tenantId, AlarmId alarmId, long clearTs, JsonNode details);
 
+    AlarmApiCallResult clearAlarmForEdge(TenantId tenantId, AlarmId alarmId, long endTs, long clearTs, JsonNode details);
+
     AlarmApiCallResult assignAlarm(TenantId tenantId, AlarmId alarmId, UserId assigneeId, long ts);
 
     AlarmApiCallResult unassignAlarm(TenantId tenantId, AlarmId alarmId, long ts);
