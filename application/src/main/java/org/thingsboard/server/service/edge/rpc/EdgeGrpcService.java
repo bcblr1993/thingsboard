@@ -506,7 +506,12 @@ public class EdgeGrpcService extends EdgeRpcServiceGrpc.EdgeRpcServiceImplBase i
             } finally {
                 newEventLock.unlock();
             }
-            destroySession(toRemove);
+            boolean destroySessionResult = destroySession(toRemove);
+            if(!destroySessionResult){
+                log.error("[{}][{}] Session destroy failed for edge [{}] with session id [{}]. Adding to zombie queue for later cleanup.",
+                        edge.getTenantId(), edgeId, edge.getName(), sessionId);
+                zombieSessions.add(toRemove);
+            }
             TenantId tenantId = toRemove.getEdge().getTenantId();
             save(tenantId, edgeId, ACTIVITY_STATE, false);
             long lastDisconnectTs = System.currentTimeMillis();
