@@ -91,16 +91,46 @@ export class AddEntitiesToEdgeDialogComponent extends
   fetchEntities() {
     this.isLoading = true;
     const pageLink = new PageLink(50, 0, null, {property: 'name', direction: Direction.ASC});
+
+    // A large page size to get all assigned entities.
+    const assignedEntitiesPageLink = new PageLink(10000, 0);
+
     this.getEntities(pageLink).subscribe(
-      (data) => {
-        this.allEntities = data.data;
+      (allEntitiesData) => {
+        this.allEntities = allEntitiesData.data;
         this.searchControl.setValue('');
         this.isLoading = false;
+
+        // Get assigned entities and update selection in the background
+        this.getAssignedEntitiesToEdge(assignedEntitiesPageLink).subscribe(
+          (assignedEntities) => {
+            if (assignedEntities.data) {
+              const assignedIds = new Set(assignedEntities.data.map(entity => entity.id.id));
+              const alreadyAssigned = this.allEntities.filter(entity => assignedIds.has(entity.id.id));
+              this.selection.select(...alreadyAssigned);
+            }
+          }
+        );
       },
       () => {
         this.isLoading = false;
       }
     );
+  }
+
+  getAssignedEntitiesToEdge(pageLink: PageLink): Observable<any> {
+    switch (this.entityType) {
+      case EntityType.DEVICE:
+        return this.deviceService.getEdgeDevices(this.data.edgeId, pageLink);
+      case EntityType.ASSET:
+        return this.assetService.getEdgeAssets(this.data.edgeId, pageLink);
+      case EntityType.ENTITY_VIEW:
+        return this.entityViewService.getEdgeEntityViews(this.data.edgeId, pageLink);
+      case EntityType.DASHBOARD:
+        return this.dashboardService.getEdgeDashboards(this.data.edgeId, pageLink);
+      case EntityType.RULE_CHAIN:
+        return this.ruleChainService.getEdgeRuleChains(this.data.edgeId, pageLink);
+    }
   }
 
   getEntities(pageLink: PageLink): Observable<any> {
