@@ -584,7 +584,7 @@
         "assets-device-with-relations": "روابط موجود دارایی-دستگاه",
         "nodes-without-relations": "دارایی ها/دستگاه های بدون روابط",
         "common.search": "جستجو",
-        "common.select-all": "انتخاب همه دستگاه‌ها",
+        "common.select-all": "انتخاب همه",
         "common.filter": "فیلتر کردن دستگاه ها یا دارایی ها",
         "relations-without-nodes": "دارایی ها/دستگاه هایی که دارای روابط هستند اما در داده های دارایی یا دستگاه وجود ندارند",
         "relation-file": "فایل روابط دارایی-دستگاه",

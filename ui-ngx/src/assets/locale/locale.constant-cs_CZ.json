@@ -886,7 +886,7 @@
         "assets-device-with-relations": "Existující vztahy mezi zařízeními a aktivy",
         "nodes-without-relations": "Aktiva/zařízení bez vztahů",
         "common.search": "Hledat",
-        "common.select-all": "Vybrat všechna zařízení",
+        "common.select-all": "Vybrat vše",
         "common.filter": "Filtrovat zařízení nebo aktiva",
         "relations-without-nodes": "Aktiva/zařízení, která mají vztahy, ale neexistují v datech aktiv nebo zařízení",
         "relation-file": "Soubor vztahů mezi zařízeními a aktivy",

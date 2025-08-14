@@ -1433,7 +1433,7 @@
         "assets-device-with-relations": "已存在的资产与设备关系",
         "nodes-without-relations": "未存在关系的资产、设备",
         "common.search": "搜索",
-        "common.select-all": "选择所有设备",
+        "common.select-all": "选择全部",
         "common.filter": "搜索设备或资产",
         "relations-without-nodes": "有关联关系，但在资产或设备数据中不存在的资产、设备",
         "relation-file": "资产设备关系文件",

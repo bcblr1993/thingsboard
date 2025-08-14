@@ -586,7 +586,7 @@
         "assets-device-with-relations": "Esošās aktīvu un ierīču attiecības",
         "nodes-without-relations": "Aktīvi/ierīces bez attiecībām",
         "common.search": "Meklēt",
-        "common.select-all": "Atlasīt visas ierīces",
+        "common.select-all": "Atlasīt visu",
         "common.filter": "Filtrēt ierīces vai aktīvus",
         "relations-without-nodes": "Aktīvi/ierīces, kuriem ir attiecības, bet tie nepastāv aktīvu vai ierīču datos",
         "relation-file": "Aktīvu un ierīču attiecību fails",

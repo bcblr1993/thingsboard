@@ -567,7 +567,7 @@
 		"assets-device-with-relations": "既存の資産とデバイスの関係",
 		        "nodes-without-relations": "関係のない資産/デバイス",
         "common.search": "検索",
-        "common.select-all": "すべてのデバイスを選択",
+        "common.select-all": "すべて選択",
         "common.filter": "デバイスまたは資産のフィルタリング",
 		"common.search": "検索",
 		"common.filter": "デバイスまたは資産のフィルタリング",

@@ -987,7 +987,7 @@
         "assets-device-with-relations": "已存在的資產與設備關係",
         "nodes-without-relations": "未存在關係的資產、設備",
         "common.search": "搜尋",
-        "common.select-all": "選擇所有設備",
+        "common.select-all": "全選",
         "common.filter": "搜尋設備或資產",
         "relations-without-nodes": "有關聯關係，但在資產或設備資料中不存在的資產、設備",
         "relation-file": "資產設備關係檔案",

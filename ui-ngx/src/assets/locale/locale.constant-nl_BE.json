@@ -1407,7 +1407,7 @@
         "assets-device-with-relations": "Bestaande relaties tussen activa en apparaten",
         "nodes-without-relations": "Activa/apparaten zonder relaties",
         "common.search": "Zoeken",
-        "common.select-all": "Selecteer alle apparaten",
+        "common.select-all": "Alles selecteren",
         "common.filter": "Apparaten of activa filteren",
         "relations-without-nodes": "Activa/apparaten die relaties hebben maar niet bestaan in de activa- of apparaatgegevens",
         "relation-file": "Relatiebestand voor activa en apparaten",

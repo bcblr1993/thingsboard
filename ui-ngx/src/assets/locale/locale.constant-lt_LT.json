@@ -1458,7 +1458,7 @@
         "assets-device-with-relations": "Esami turto ir įrenginio ryšiai",
         "nodes-without-relations": "Turtas/įrenginiai be ryšių",
         "common.search": "Ieškoti",
-        "common.select-all": "Pasirinkti visus įrenginius",
+        "common.select-all": "Pasirinkti viską",
         "common.filter": "Filtruoti įrenginius ar turtą",
         "relations-without-nodes": "Turtas/įrenginiai, kurie turi ryšius, bet neegzistuoja turto ar įrenginio duomenyse",
         "relation-file": "Turto ir įrenginio ryšio failas",

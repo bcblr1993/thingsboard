@@ -1529,7 +1529,7 @@
     "assets-device-with-relations": "Eksisterende relationer mellem aktiv og enhed",
     "nodes-without-relations": "Aktiver/enheder uden relationer",
     "common.search": "Søg",
-    "common.select-all": "Vælg alle enheder",
+    "common.select-all": "Vælg alle",
     "common.filter": "Filtrer enheder eller aktiver",
     "relations-without-nodes": "Aktiver/enheder, der har relationer, men ikke findes i aktiv- eller enhedsdata",
     "relation-file": "Relationsfil for aktiv-enhed",

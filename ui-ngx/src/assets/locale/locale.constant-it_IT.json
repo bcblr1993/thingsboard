@@ -1529,7 +1529,7 @@
     "assets-device-with-relations": "Relazioni asset-dispositivo esistenti",
     "nodes-without-relations": "Asset/Dispositivi senza relazioni",
     "common.search": "Cerca",
-    "common.select-all": "Seleziona tutti i dispositivi",
+    "common.select-all": "Seleziona tutto",
     "common.filter": "Filtra dispositivi o asset",
     "relations-without-nodes": "Asset/Dispositivi che hanno relazioni ma non esistono nei dati di asset o dispositivi",
     "relation-file": "File relazioni asset-dispositivo",

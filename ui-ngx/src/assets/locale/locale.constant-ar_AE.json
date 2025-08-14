@@ -1487,7 +1487,7 @@
         "assets-device-with-relations": "علاقات الجهاز الأصول الموجودة",
         "nodes-without-relations": "الأصول/الأجهزة التي ليس لها علاقات",
         "common.search": "بحث",
-        "common.select-all": "تحديد كافة الأجهزة",
+        "common.select-all": "تحديد الكل",
         "common.filter": "تصفية الأجهزة أو الأصول",
         "relations-without-nodes": "الأصول/الأجهزة التي لها علاقات ولكنها غير موجودة في بيانات الأصول أو الأجهزة",
         "relation-file": "ملف علاقة الجهاز الأصول",

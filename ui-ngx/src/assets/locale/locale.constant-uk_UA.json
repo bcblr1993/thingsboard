@@ -798,7 +798,7 @@
         "assets-device-with-relations": "Існуючі зв'язки між активами та пристроями",
         "nodes-without-relations": "Активи/Пристрої без зв'язків",
         "common.search": "Пошук",
-        "common.select-all": "Вибрати всі пристрої",
+        "common.select-all": "Вибрати все",
         "common.filter": "Фільтрувати пристрої або активи",
         "relations-without-nodes": "Активи/Пристрої, які мають зв'язки, але не існують у даних активів або пристроїв",
         "relation-file": "Файл зв'язків між активами та пристроями",
