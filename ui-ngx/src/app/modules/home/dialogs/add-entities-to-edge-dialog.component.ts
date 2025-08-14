@@ -22,7 +22,7 @@ import { AppState } from '@core/core.state';
 import { UntypedFormBuilder, UntypedFormControl, FormGroupDirective, NgForm } from '@angular/forms';
 import { DeviceService } from '@core/http/device.service';
 import { EntityType, entityTypeTranslations } from '@shared/models/entity-type.models';
-import { forkJoin, Observable, BehaviorSubject } from 'rxjs';
+import { forkJoin, Observable } from 'rxjs';
 import { AssetService } from '@core/http/asset.service';
 import { EntityViewService } from '@core/http/entity-view.service';
 import { DashboardService } from '@core/http/dashboard.service';
@@ -131,16 +131,12 @@ export class AddEntitiesToEdgeDialogComponent extends
     this.isLoading = true;
     const pageLink = new PageLink(50, 0, null, {property: 'createdTime', direction: Direction.ASC});
 
-    // A large page size to get all assigned entities.
-    const assignedEntitiesPageLink = new PageLink(10000, 0);
-
+    const assignedEntitiesPageLink = new PageLink(300, 0);
     this.getEntities(pageLink).subscribe(
       (allEntitiesData) => {
         this.allEntities = allEntitiesData.data;
         this.searchControl.setValue('');
         this.isLoading = false;
-
-        // Get assigned entities and update selection in the background
         this.getAssignedEntitiesToEdge(assignedEntitiesPageLink).subscribe(
           (assignedEntities) => {
             if (assignedEntities.data) {
@@ -183,7 +179,7 @@ export class AddEntitiesToEdgeDialogComponent extends
       case EntityType.DASHBOARD:
         return this.dashboardService.getTenantDashboards(pageLink);
       case EntityType.RULE_CHAIN:
-        return this.ruleChainService.getRuleChains(pageLink, RuleChainType.CORE);
+        return this.ruleChainService.getRuleChains(pageLink, this.subType as RuleChainType);
     }
   }
 
