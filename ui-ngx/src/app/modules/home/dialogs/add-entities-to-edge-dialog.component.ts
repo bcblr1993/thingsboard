@@ -21,7 +21,6 @@ import { Store } from '@ngrx/store';
 import { AppState } from '@core/core.state';
 import { UntypedFormBuilder, UntypedFormControl, FormGroupDirective, NgForm } from '@angular/forms';
 import { DeviceService } from '@core/http/device.service';
-import { EdgeService } from '@core/http/edge.service';
 import { EntityType, entityTypeTranslations } from '@shared/models/entity-type.models';
 import { forkJoin, Observable, BehaviorSubject } from 'rxjs';
 import { AssetService } from '@core/http/asset.service';
@@ -53,7 +52,9 @@ export class AddEntitiesToEdgeDialogComponent extends
   DialogComponent<AddEntitiesToEdgeDialogComponent, boolean> implements OnInit, ErrorStateMatcher {
 
   entityType: EntityType;
+  subType: string;
   assignToEdgeTitle: string;
+  assignToEdgeText: string;
   entityTypeTranslation: string;
 
   selection = new SelectionModel<DeviceInfo>(true, []);
@@ -69,7 +70,6 @@ export class AddEntitiesToEdgeDialogComponent extends
               protected router: Router,
               @Inject(MAT_DIALOG_DATA) public data: AddEntitiesToEdgeDialogData,
               private deviceService: DeviceService,
-              private edgeService: EdgeService,
               private assetService: AssetService,
               private entityViewService: EntityViewService,
               private dashboardService: DashboardService,
@@ -84,7 +84,30 @@ export class AddEntitiesToEdgeDialogComponent extends
 
   ngOnInit(): void {
     this.entityTypeTranslation = this.translate.instant(entityTypeTranslations.get(this.entityType).typePlural);
-    this.assignToEdgeTitle = this.translate.instant('edge.assign-entity-title', {entityType: this.entityTypeTranslation});
+    this.subType = '';
+    switch (this.entityType) {
+      case EntityType.DEVICE:
+        this.assignToEdgeTitle = 'device.assign-device-to-edge-title';
+        this.assignToEdgeText = 'device.assign-device-to-edge-text';
+        break;
+      case EntityType.RULE_CHAIN:
+        this.assignToEdgeTitle = 'rulechain.assign-rulechain-to-edge-title';
+        this.assignToEdgeText = 'rulechain.assign-rulechain-to-edge-text';
+        this.subType = RuleChainType.EDGE;
+        break;
+      case EntityType.ASSET:
+        this.assignToEdgeTitle = 'asset.assign-asset-to-edge-title';
+        this.assignToEdgeText = 'asset.assign-asset-to-edge-text';
+        break;
+      case EntityType.ENTITY_VIEW:
+        this.assignToEdgeTitle = 'entity-view.assign-entity-view-to-edge-title';
+        this.assignToEdgeText = 'entity-view.assign-entity-view-to-edge-text';
+        break;
+      case EntityType.DASHBOARD:
+        this.assignToEdgeTitle = 'dashboard.assign-dashboard-to-edge-title';
+        this.assignToEdgeText = 'dashboard.assign-dashboard-to-edge-text';
+        break;
+    }
 
     this.fetchEntities();
 
@@ -106,7 +129,7 @@ export class AddEntitiesToEdgeDialogComponent extends
 
   fetchEntities() {
     this.isLoading = true;
-    const pageLink = new PageLink(50, 0, null, {property: 'name', direction: Direction.ASC});
+    const pageLink = new PageLink(50, 0, null, {property: 'createdTime', direction: Direction.ASC});
 
     // A large page size to get all assigned entities.
     const assignedEntitiesPageLink = new PageLink(10000, 0);
