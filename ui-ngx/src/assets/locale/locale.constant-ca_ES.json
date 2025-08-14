@@ -1223,6 +1223,7 @@
         "assets-device-with-relations": "Relacions existents entre actius i dispositius",
         "nodes-without-relations": "Actius/Dispositius sense relacions",
         "common.search": "Cerca",
+        "common.select-all": "Seleccionar tots els dispositius",
         "common.filter": "Filtra dispositius o actius",
         "relations-without-nodes": "Actius/Dispositius que tenen relacions però no existeixen a les dades d'actius o dispositius",
         "relation-file": "Fitxer de relacions d'actius i dispositius",

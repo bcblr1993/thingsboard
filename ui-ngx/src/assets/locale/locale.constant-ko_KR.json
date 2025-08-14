@@ -810,6 +810,7 @@
         "assets-device-with-relations": "기존 자산-장치 관계",
         "nodes-without-relations": "관계가 없는 자산/장치",
         "common.search": "검색",
+        "common.select-all": "모든 장치 선택",
         "common.filter": "장치 또는 자산 필터링",
         "relations-without-nodes": "관계는 있지만 자산 또는 장치 데이터에 존재하지 않는 자산/장치",
         "relation-file": "자산-장치 관계 파일",

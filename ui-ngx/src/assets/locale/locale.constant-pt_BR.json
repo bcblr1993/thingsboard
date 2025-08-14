@@ -660,6 +660,7 @@
         "assets-device-with-relations": "Relações existentes entre ativos e dispositivos",
         "nodes-without-relations": "Ativos/Dispositivos sem relações",
         "common.search": "Pesquisar",
+        "common.select-all": "Selecionar todos os dispositivos",
         "common.filter": "Filtrar dispositivos ou ativos",
         "relations-without-nodes": "Ativos/Dispositivos que possuem relações, mas não existem nos dados de ativos ou dispositivos",
         "relation-file": "Arquivo de relações de ativos e dispositivos",

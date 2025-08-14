@@ -1458,6 +1458,7 @@
         "assets-device-with-relations": "Istniejące relacje między zasobami a urządzeniami",
         "nodes-without-relations": "Zasoby/urządzenia bez relacji",
         "common.search": "Szukaj",
+        "common.select-all": "Zaznacz wszystkie urządzenia",
         "common.filter": "Filtruj urządzenia lub zasoby",
         "relations-without-nodes": "Zasoby/urządzenia, które mają relacje, ale nie istnieją w danych zasobów lub urządzeń",
         "relation-file": "Plik relacji zasobów i urządzeń",

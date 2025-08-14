@@ -889,6 +889,7 @@
         "assets-device-with-relations": "Mevcut Varlık-Cihaz İlişkileri",
         "nodes-without-relations": "İlişkisiz Varlıklar/Cihazlar",
         "common.search": "Ara",
+        "common.select-all": "Tüm cihazları seç",
         "common.filter": "Cihazları veya varlıkları filtrele",
         "relations-without-nodes": "İlişkileri olan ancak varlık veya cihaz verilerinde bulunmayan Varlıklar/Cihazlar",
         "relation-file": "Varlık-Cihaz İlişki Dosyası",

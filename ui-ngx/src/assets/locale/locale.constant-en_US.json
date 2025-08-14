@@ -1543,6 +1543,7 @@
         "assets-device-with-relations": "Existing Asset-Device Relations",
         "nodes-without-relations": "Assets/Devices without relations",
         "common.search": "Search",
+        "common.select-all": "Select all devices",
         "common.filter": "Filter devices or assets",
         "relations-without-nodes": "Assets/Devices that have relations but do not exist in asset or device data",
         "relation-file": "Asset-Device Relation File",
