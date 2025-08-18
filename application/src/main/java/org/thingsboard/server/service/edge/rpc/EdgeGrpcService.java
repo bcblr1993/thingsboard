@@ -671,10 +671,10 @@ public class EdgeGrpcService extends EdgeRpcServiceGrpc.EdgeRpcServiceImplBase i
 
     private void cleanupZombieSessions() {
         int zombiesToProcess = zombieSessions.size();
+        log.info("Found {} zombie sessions in the queue. Starting cleanup cycle.", zombiesToProcess);
         if (zombiesToProcess == 0) {
             return;
         }
-        log.info("Found {} zombie sessions in the queue. Starting cleanup cycle.", zombiesToProcess);
         for (int i = 0; i < zombiesToProcess; i++) {
             EdgeGrpcSession zombie = zombieSessions.poll();
             if (zombie == null) {
