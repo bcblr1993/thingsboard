@@ -43,8 +43,8 @@
     <mat-list>
       <mat-list-item *ngFor="let entity of (entities | async)">
         <mat-checkbox (click)="$event.stopPropagation()"
-                      (change)="$event ? selection.toggle(entity) : null"
-                      [checked]="selection.isSelected(entity)">
+                      (change)="toggleSelection(entity)"
+                      [checked]="isEntitySelected(entity)">
           {{entity.name}}
         </mat-checkbox>
       </mat-list-item>

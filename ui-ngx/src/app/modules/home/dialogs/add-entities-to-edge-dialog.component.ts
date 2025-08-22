@@ -33,7 +33,7 @@ import { RuleChainType } from '@shared/models/rule-chain.models';
 import { PageLink } from '@shared/models/page/page-link';
 import { Direction } from '@shared/models/page/sort-order';
 import { SelectionModel } from '@angular/cdk/collections';
-import { debounceTime, distinctUntilChanged, map, startWith } from 'rxjs/operators';
+import { debounceTime, distinctUntilChanged, map, startWith, switchMap, tap } from 'rxjs/operators';
 import { DeviceInfo } from '@app/shared/models/device.models';
 import { TranslateService } from '@ngx-translate/core';
 
@@ -62,7 +62,6 @@ export class AddEntitiesToEdgeDialogComponent extends
   searchControl = new UntypedFormControl();
   isLoading = false;
 
-  private allEntities: DeviceInfo[] = [];
   private filteredEntities: DeviceInfo[] = [];
   entities: Observable<DeviceInfo[]>;
 
@@ -109,47 +108,31 @@ export class AddEntitiesToEdgeDialogComponent extends
         break;
     }
 
-    this.fetchEntities();
+    const assignedEntitiesPageLink = new PageLink(1000, 0);
+    this.getAssignedEntitiesToEdge(assignedEntitiesPageLink).subscribe(
+      (assignedEntities) => {
+        if (assignedEntities.data) {
+          this.selection.select(...assignedEntities.data);
+        }
+      }
+    );
 
     this.entities = this.searchControl.valueChanges.pipe(
       startWith(''),
       debounceTime(400),
       distinctUntilChanged(),
-      map(value => {
-        this.filteredEntities = this._filter(value);
+      tap(() => {
+        this.isLoading = true;
+      }),
+      switchMap((value: string) => {
+        const pageLink = new PageLink(50, 0, value, {property: 'createdTime', direction: Direction.ASC});
+        return this.getEntities(pageLink);
+      }),
+      map((pageData) => {
+        this.filteredEntities = pageData.data;
+        this.isLoading = false;
         return this.filteredEntities;
       })
-    );
-  }
-
-  private _filter(value: string): DeviceInfo[] {
-    const filterValue = value.toLowerCase();
-    return this.allEntities.filter(entity => entity.name.toLowerCase().includes(filterValue));
-  }
-
-  fetchEntities() {
-    this.isLoading = true;
-    const pageLink = new PageLink(50, 0, null, {property: 'createdTime', direction: Direction.ASC});
-
-    const assignedEntitiesPageLink = new PageLink(300, 0);
-    this.getEntities(pageLink).subscribe(
-      (allEntitiesData) => {
-        this.allEntities = allEntitiesData.data;
-        this.searchControl.setValue('');
-        this.isLoading = false;
-        this.getAssignedEntitiesToEdge(assignedEntitiesPageLink).subscribe(
-          (assignedEntities) => {
-            if (assignedEntities.data) {
-              const assignedIds = new Set(assignedEntities.data.map(entity => entity.id.id));
-              const alreadyAssigned = this.allEntities.filter(entity => assignedIds.has(entity.id.id));
-              this.selection.select(...alreadyAssigned);
-            }
-          }
-        );
-      },
-      () => {
-        this.isLoading = false;
-      }
     );
   }
 
@@ -183,18 +166,38 @@ export class AddEntitiesToEdgeDialogComponent extends
     }
   }
 
+  isEntitySelected(entity: DeviceInfo): boolean {
+    return this.selection.selected.some(e => e.id.id === entity.id.id);
+  }
+
+  toggleSelection(entity: DeviceInfo): void {
+    if (this.isEntitySelected(entity)) {
+      const existing = this.selection.selected.find(e => e.id.id === entity.id.id);
+      if (existing) {
+        this.selection.deselect(existing);
+      }
+    } else {
+      this.selection.select(entity);
+    }
+  }
+
   isAllSelected() {
     if (!this.filteredEntities || this.filteredEntities.length === 0) {
       return false;
     }
-    return this.filteredEntities.every(entity => this.selection.isSelected(entity));
+    return this.filteredEntities.every(entity => this.isEntitySelected(entity));
   }
 
   masterToggle() {
     if (this.isAllSelected()) {
-      this.filteredEntities.forEach(row => this.selection.deselect(row));
+      this.filteredEntities.forEach(entity => {
+        const existing = this.selection.selected.find(e => e.id.id === entity.id.id);
+        if (existing) {
+          this.selection.deselect(existing);
+        }
+      });
     } else {
-      this.filteredEntities.forEach(row => this.selection.select(row));
+      this.selection.select(...this.filteredEntities);
     }
   }
 
