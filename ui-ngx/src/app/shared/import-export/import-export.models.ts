@@ -196,24 +196,32 @@ export function convertCSVToJson(csvdata: string, config: CsvToJsonConfig,
   return result;
 }
 
-function splitCSV(str: string, sep: string): string[] {
-  let foo: string[];
-  let x: number;
-  let tl: string;
-  for (foo = str.split(sep = sep || ','), x = foo.length - 1, tl; x >= 0; x--) {
-    if (foo[x].replace(/"\s+$/, '"').charAt(foo[x].length - 1) === '"') {
-      if ((tl = foo[x].replace(/^\s+"/, '"')).length > 1 && tl.charAt(0) === '"') {
-        foo[x] = foo[x].replace(/^\s*"|"\s*$/g, '').replace(/""/g, '"');
-      } else if (x) {
-        foo.splice(x - 1, 2, [foo[x - 1], foo[x]].join(sep));
+function splitCSV(str: string, sep: string = ','): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < str.length; i++) {
+    const char = str[i];
+    if (char === '"') {
+      // 遇到双引号时，判断是否是转义引号
+      if (inQuotes && str[i + 1] === '"') {
+        current += '"';
+        i++; // 跳过下一个
       } else {
-        foo = foo.shift().split(sep).concat(foo);
+        inQuotes = !inQuotes; // 切换引号状态
       }
+    } else if (char === sep && !inQuotes) {
+      // 只有在引号外的分隔符才算分隔
+      result.push(current.trim());
+      current = '';
     } else {
-      foo[x].replace(/""/g, '"');
+      current += char;
     }
   }
-  return foo;
+
+  result.push(current.trim());
+  return result;
 }
 
 function isNumeric(str: any): boolean {
