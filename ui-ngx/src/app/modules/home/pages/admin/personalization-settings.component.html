@@ -1,0 +1,56 @@
+<!--
+
+    Copyright © 2016-2025 The Thingsboard Authors
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+
+-->
+<div class="mat-padding" [formGroup]="personalizationSettingsForm">
+  <mat-card class="mat-elevation-z2 settings-card">
+    <mat-card-content>
+      <span class="tb-entity-table-title ng-star-inserted"> {{ 'admin.personalization.title' | translate }} </span>
+      <div fxLayout="column">
+        <mat-form-field class="mat-block">
+          <mat-label>{{ 'admin.personalization.page-title' | translate }}</mat-label>
+          <input matInput formControlName="title">
+        </mat-form-field>
+        <mat-form-field class="mat-block">
+          <mat-label>{{ 'admin.personalization.primary-color' | translate }}</mat-label>
+          <input matInput formControlName="primaryColor" type="color">
+        </mat-form-field>
+
+        <div fxLayout="row" fxLayoutGap="16px">
+            <tb-image-input fxFlex formControlName="favicon" label="{{ 'admin.personalization.favicon' | translate }}"></tb-image-input>
+            <mat-hint>{{ 'admin.personalization.favicon-hint' | translate }}</mat-hint>
+            <tb-image-input fxFlex formControlName="logo" label="{{ 'admin.personalization.logo' | translate }}"></tb-image-input>
+            <mat-form-field fxFlex>
+              <mat-label>{{ 'admin.personalization.logo-height' | translate }}</mat-label>
+              <input matInput formControlName="logoHeight" type="number">
+            </mat-form-field>
+        </div>
+
+        <div fxLayout="row" fxLayoutGap="16px">
+            <tb-image-input fxFlex formControlName="loginLogo" label="{{ 'admin.personalization.login-logo' | translate }}"></tb-image-input>
+            <mat-form-field fxFlex>
+              <mat-label>{{ 'admin.personalization.login-logo-height' | translate }}</mat-label>
+              <input matInput formControlName="loginLogoHeight" type="number">
+            </mat-form-field>
+        </div>
+      </div>
+    </mat-card-content>
+    <mat-card-actions fxLayout="row" fxLayoutAlign="end">
+      <button mat-button (click)="discard()" [disabled]="!personalizationSettingsForm.dirty">{{ 'action.discard-changes' | translate }}</button>
+      <button mat-raised-button color="primary" (click)="save()" [disabled]="!personalizationSettingsForm.valid || !personalizationSettingsForm.dirty">{{ 'action.save' | translate }}</button>
+    </mat-card-actions>
+  </mat-card>
+</div>
