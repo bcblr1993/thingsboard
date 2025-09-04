@@ -14,16 +14,36 @@
 /// limitations under the License.
 ///
 
-import { Component } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
+import { PersonalizationService } from '@core/services/personalization.service';
 
 @Component({
   selector: 'tb-logo',
   templateUrl: './logo.component.html',
   styleUrls: ['./logo.component.scss']
 })
-export class LogoComponent {
+export class LogoComponent implements OnInit {
+
+  @Input()
+  logoType: 'main' | 'login' = 'main';
 
   logo = 'assets/logo_title_white.svg';
+  logoHeight: number;
+
+  constructor(private personalizationService: PersonalizationService) {}
+
+  ngOnInit(): void {
+    const settings = this.personalizationService.getPersonalization();
+    if (settings) {
+      if (this.logoType === 'login' && settings.loginLogo) {
+        this.logo = settings.loginLogo;
+        this.logoHeight = settings.loginLogoHeight;
+      } else if (this.logoType === 'main' && settings.logo) {
+        this.logo = settings.logo;
+        this.logoHeight = settings.logoHeight;
+      }
+    }
+  }
 
   gotoThingsboard(): void {
     // window.open('https://thingsboard.io', '_blank');

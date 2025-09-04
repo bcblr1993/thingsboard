@@ -46,10 +46,10 @@ export class TitleService {
         .get(title)
         .pipe(filter(translatedTitle => translatedTitle !== title))
         .subscribe(translatedTitle =>
-          this.title.setTitle(`${env.appTitle} | ${translatedTitle}`)
+          this.title.setTitle(translatedTitle)
         );
     } else {
-      this.title.setTitle(env.appTitle);
+      this.title.setTitle(this.title.getTitle());
     }
   }
 }

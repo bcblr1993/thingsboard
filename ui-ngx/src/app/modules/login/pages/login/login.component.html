@@ -21,7 +21,7 @@
       <form class="tb-login-form" [formGroup]="loginFormGroup" (ngSubmit)="login()">
         <fieldset class="flex flex-col">
           <div class="flex flex-col items-center justify-start" style="padding: 15px 0;">
-            <tb-logo class="login-logo"></tb-logo>
+            <tb-logo class="login-logo" logoType="login"></tb-logo>
           </div>
           <mat-progress-bar color="warn" mode="indeterminate" *ngIf="isLoading$ | async">
           </mat-progress-bar>
@@ -62,9 +62,7 @@
             </div>
             <div class="tb-action-button flex flex-col">
               <button mat-raised-button color="accent" [disabled]="(isLoading$ | async)"
-                      type="submit" style="background-color: #ebb416 !important;
-                      box-shadow: 0px 3px 1px -2px rgba(58, 58, 19, 0.2), 0px 2px 2px 0px rgba(51, 50, 13, 0.14), 0px 1px 5px 0rgba(54, 40, 8, 0.12);text-shadow: 0 0 2px #373737;font-size: 16px;
-                      font-weight: 500;letter-spacing: 20px;">{{ 'login.login' | translate }}</button>
+                      type="submit">{{ 'login.login' | translate }}</button>
             </div>
           </div>
         </fieldset>

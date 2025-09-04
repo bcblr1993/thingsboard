@@ -25,6 +25,8 @@ import { Constants } from '@shared/models/constants';
 import { Router } from '@angular/router';
 import { OAuth2ClientLoginInfo } from '@shared/models/oauth2.models';
 
+import { PersonalizationService } from '@core/services/personalization.service';
+
 @Component({
   selector: 'tb-login',
   templateUrl: './login.component.html',
@@ -43,12 +45,14 @@ export class LoginComponent extends PageComponent implements OnInit {
   constructor(protected store: Store<AppState>,
               private authService: AuthService,
               public fb: UntypedFormBuilder,
-              private router: Router) {
+              private router: Router,
+              private personalizationService: PersonalizationService) {
     super(store);
   }
 
   ngOnInit() {
     this.oauth2Clients = this.authService.oauth2Clients;
+    this.personalizationService.loadPersonalization().subscribe();
   }
 
   login(): void {
