@@ -562,7 +562,10 @@
           "logo": "Main Logo",
           "logo-height": "Logo Height (px)",
           "login-logo": "Login Page Logo",
-          "login-logo-height": "Login Logo Height (px)"
+          "login-logo-height": "Login Logo Height (px)",
+          "restore-defaults": "Restore defaults",
+          "confirm-restore-title": "Restore default colors?",
+          "confirm-restore-message": "This will restore the current color scheme to the system defaults."
         }
       },
     "alarm": {
