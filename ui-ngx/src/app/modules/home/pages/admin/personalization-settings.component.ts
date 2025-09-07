@@ -23,11 +23,9 @@ import { AdminService } from '@core/http/admin.service';
 import { HasConfirmForm } from '@core/guards/confirm-on-exit.guard';
 import { Subject } from 'rxjs';
 import { AdminSettings } from '@shared/models/settings.models';
-import { takeUntil } from 'rxjs/operators';
-import tinycolor from 'tinycolor2';
 import { PersonalizationService } from '@core/services/personalization.service';
-import { MatDialog } from '@angular/material/dialog';
-import { ConfirmDialogComponent } from '@shared/components/dialog/confirm-dialog.component';
+import { TitleService } from '@core/services/title.service';
+import { Router } from '@angular/router';
 
 export interface PersonalizationSettings {
   title: string;
@@ -36,14 +34,7 @@ export interface PersonalizationSettings {
   logoHeight: number;
   loginLogo: string;
   loginLogoHeight: number;
-  primaryColor: string;
-  secondaryColor: string;
-  hue3Color: string;
 }
-
-const DEFAULT_PRIMARY_COLOR = '#00695c';
-const DEFAULT_SECONDARY_COLOR = '#00988a';
-const DEFAULT_HUE3_COLOR = '#00c0b2';
 
 export function svgBase64Validator(maxSizeKB: number): ValidatorFn {
   return (control: AbstractControl): {[key: string]: any} | null => {
@@ -73,8 +64,6 @@ export function svgBase64Validator(maxSizeKB: number): ValidatorFn {
   };
 }
 
-import { TranslateService } from '@ngx-translate/core';
-
 @Component({
   selector: 'tb-personalization-settings',
   templateUrl: './personalization-settings.component.html',
@@ -92,8 +81,8 @@ export class PersonalizationSettingsComponent extends PageComponent implements H
     private adminService: AdminService,
     private personalizationService: PersonalizationService,
     public fb: FormBuilder,
-    private dialog: MatDialog,
-    private translate: TranslateService
+    private titleService: TitleService,
+    private router: Router
   ) {
     super(store);
     this.buildForm();
@@ -112,19 +101,7 @@ export class PersonalizationSettingsComponent extends PageComponent implements H
       favicon: ['', []],
       logo: ['', [svgBase64Validator(40)]],
       logoHeight: [null, [Validators.min(10)]],
-      loginLogoHeight: [null, [Validators.min(10)]],
-      primaryColor: ['', []],
-      secondaryColor: ['', []],
-      hue3Color: ['', []]
-    });
-    this.personalizationSettingsForm.get('primaryColor').valueChanges.pipe(
-      takeUntil(this.destroy$)
-    ).subscribe((color) => {
-      if (tinycolor(color).isValid()) {
-        const secondaryColor = tinycolor(color).lighten(9).toString();
-        const hue3Color = tinycolor(color).lighten(17).toString();
-        this.personalizationSettingsForm.patchValue({ secondaryColor, hue3Color }, { emitEvent: false });
-      }
+      loginLogoHeight: [null, [Validators.min(10)]]
     });
   }
 
@@ -139,43 +116,18 @@ export class PersonalizationSettingsComponent extends PageComponent implements H
     this.adminSettings.jsonValue = {
       ...this.adminSettings.jsonValue,
       ...formValue,
-      loginLogo: formValue.logo,
-      secondaryColor: formValue.secondaryColor,
-      hue3Color: formValue.hue3Color
+      loginLogo: formValue.logo
     };
     this.adminService.saveAdminSettings(this.adminSettings)
       .subscribe(adminSettings => {
         this.adminSettings = adminSettings;
         this.personalizationSettingsForm.reset(this.adminSettings.jsonValue);
         this.personalizationService.applyPersonalization(this.adminSettings.jsonValue);
+        this.titleService.setTitle(this.router.routerState.snapshot.root);
       });
   }
 
-  
-
   confirmForm(): FormGroup {
     return this.personalizationSettingsForm;
-  }
-
-  confirmResetDefaultColors() {
-    this.dialog.open(ConfirmDialogComponent, {
-      data: {
-        title: this.translate.instant('admin.personalization.confirm-restore-title'),
-        message: this.translate.instant('admin.personalization.confirm-restore-message')
-      },
-      disableClose: true
-    }).afterClosed().subscribe((result) => {
-      if (result) {
-        this.resetToDefault();
-      }
-    });
-  }
-
-  resetToDefault() {
-    this.personalizationSettingsForm.patchValue({
-      primaryColor: DEFAULT_PRIMARY_COLOR,
-      secondaryColor: DEFAULT_SECONDARY_COLOR,
-      hue3Color: DEFAULT_HUE3_COLOR
-    });
   }
 }

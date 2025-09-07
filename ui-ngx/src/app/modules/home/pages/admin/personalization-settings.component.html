@@ -24,13 +24,7 @@
           <mat-label>{{ 'admin.personalization.page-title' | translate }}</mat-label>
           <input matInput formControlName="title">
         </mat-form-field>
-        <div fxLayout="row" fxLayoutAlign="start center" fxLayoutGap="16px">
-          <mat-form-field class="mat-block" fxFlex>
-            <mat-label>{{ 'admin.personalization.primary-color' | translate }}</mat-label>
-            <input matInput formControlName="primaryColor" type="color">
-          </mat-form-field>
-          <button mat-raised-button color="primary" (click)="confirmResetDefaultColors()">{{ 'admin.personalization.restore-defaults' | translate }}</button>
-        </div>
+
 
         <div fxLayout="row" fxLayoutGap="16px">
           <div fxFlex fxLayout="column">
@@ -49,12 +43,12 @@
           </div>
         </div>
 
-        <div fxLayout="row" fxLayoutGap="16px">
+        <div fxLayout="row" fxLayoutAlign="start center">
             <mat-form-field fxFlex>
               <mat-label>{{ 'admin.personalization.logo-height' | translate }}</mat-label>
               <input matInput formControlName="logoHeight" type="number">
             </mat-form-field>
-            <mat-form-field fxFlex>
+          <mat-form-field fxFlex style="margin-left: 16px;">
               <mat-label>{{ 'admin.personalization.login-logo-height' | translate }}</mat-label>
               <input matInput formControlName="loginLogoHeight" type="number">
             </mat-form-field>
@@ -62,7 +56,6 @@
       </div>
     </mat-card-content>
     <mat-card-actions fxLayout="row" fxLayoutAlign="end">
-      
       <button mat-raised-button color="primary" (click)="save()" [disabled]="!personalizationSettingsForm.valid || !personalizationSettingsForm.dirty">{{ 'action.save' | translate }}</button>
     </mat-card-actions>
   </mat-card>

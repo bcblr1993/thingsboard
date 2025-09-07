@@ -18,9 +18,8 @@ import { Title } from '@angular/platform-browser';
 import { Injectable } from '@angular/core';
 import { ActivatedRouteSnapshot } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
-import { filter } from 'rxjs/operators';
 
-import { environment as env } from '@env/environment';
+import { PersonalizationService } from '@core/services/personalization.service';
 
 @Injectable({
   providedIn: 'root'
@@ -28,28 +27,36 @@ import { environment as env } from '@env/environment';
 export class TitleService {
   constructor(
     private translate: TranslateService,
-    private title: Title
+    private title: Title,
+    private personalizationService: PersonalizationService
   ) {}
 
   setTitle(
     snapshot: ActivatedRouteSnapshot,
     lazyTranslate?: TranslateService
   ) {
+    const personalization = this.personalizationService.getPersonalization();
+    const customTitle = personalization?.title;
+
     let lastChild = snapshot;
     while (lastChild.children.length) {
       lastChild = lastChild.children[0];
     }
-    const { title } = lastChild.data;
+    const { title: routeTitleKey } = lastChild.data;
+
     const translate = lazyTranslate || this.translate;
-    if (title) {
-      translate
-        .get(title)
-        .pipe(filter(translatedTitle => translatedTitle !== title))
-        .subscribe(translatedTitle =>
-          this.title.setTitle(translatedTitle)
-        );
+
+    if (routeTitleKey) {
+      translate.get(routeTitleKey).subscribe(translatedRouteTitle => {
+        const finalTitle = customTitle ? `${customTitle} | ${translatedRouteTitle}` : translatedRouteTitle;
+        this.title.setTitle(finalTitle);
+      });
     } else {
-      this.title.setTitle(this.title.getTitle());
+      if (customTitle) {
+        this.title.setTitle(customTitle);
+      } else {
+        this.title.setTitle(this.title.getTitle());
+      }
     }
   }
 }
