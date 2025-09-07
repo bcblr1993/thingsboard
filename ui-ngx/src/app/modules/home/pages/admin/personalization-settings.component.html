@@ -28,17 +28,17 @@
 
         <div fxLayout="row" fxLayoutGap="16px">
           <div fxFlex fxLayout="column">
-            <tb-image-input formControlName="favicon" label="{{ 'admin.personalization.favicon' | translate }}"></tb-image-input>
+            <tb-image-input formControlName="favicon" label="{{ 'admin.personalization.favicon' | translate }}" accept=".ico"></tb-image-input>
             <mat-hint>{{ 'admin.personalization.favicon-hint' | translate }}</mat-hint>
           </div>
           <div fxFlex fxLayout="column">
-            <tb-image-input formControlName="logo" label="{{ 'admin.personalization.logo' | translate }}"></tb-image-input>
-            <mat-hint>仅支持SVG格式，大小不超过40KB。</mat-hint>
+            <tb-image-input formControlName="logo" label="{{ 'admin.personalization.logo' | translate }}" accept=".svg, image/svg+xml"></tb-image-input>
+            <mat-hint>{{ 'admin.personalization.logo-hint' | translate }}</mat-hint>
             <mat-error *ngIf="personalizationSettingsForm.get('logo').hasError('invalidSvgFormat') && personalizationSettingsForm.get('logo').touched">
-                必须使用SVG格式的图片
+                {{ 'admin.personalization.invalid-svg-format' | translate }}
             </mat-error>
             <mat-error *ngIf="personalizationSettingsForm.get('logo').hasError('maxSizeExceeded') && personalizationSettingsForm.get('logo').touched">
-                图片大小不能超过40KB
+                {{ 'admin.personalization.max-size-exceeded' | translate }}
             </mat-error>
           </div>
         </div>

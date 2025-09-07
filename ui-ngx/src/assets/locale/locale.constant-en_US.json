@@ -565,7 +565,10 @@
           "login-logo-height": "Login Logo Height (px)",
           "restore-defaults": "Restore defaults",
           "confirm-restore-title": "Restore default colors?",
-          "confirm-restore-message": "This will restore the current color scheme to the system defaults."
+          "confirm-restore-message": "This will restore the current color scheme to the system defaults.",
+          "logo-hint": "Only SVG format is supported, size should not exceed 40KB.",
+          "invalid-svg-format": "Must be an SVG format image.",
+          "max-size-exceeded": "Image size should not exceed 40KB."
         }
       },
     "alarm": {
