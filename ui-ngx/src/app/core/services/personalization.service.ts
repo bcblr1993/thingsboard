@@ -223,6 +223,12 @@ export class PersonalizationService {
       .tb-mobile-layout-button .tb-add-mobile-label-container:after {
         border: 1px solid ${primaryColor};
       }
+      .tooltipster-sidetip.tb-widget-edit-actions-tooltip .tb-widget-reference-panel {
+        color: ${primaryColor};
+      }
+      .tb-add-mobile-item-button .tb-add-mobile-label-container:after {
+        border: 1px solid ${primaryColor};
+      }
 
       /* === Material Components (from previous attempts) === */
       .mat-mdc-slider.mat-primary {
@@ -256,6 +262,10 @@ export class PersonalizationService {
         --mat-full-pseudo-checkbox-selected-icon-color: ${primaryColor};
         --mat-full-pseudo-checkbox-selected-checkmark-color: ${contrastColor};
         --mat-minimal-pseudo-checkbox-selected-checkmark-color: ${primaryColor};
+      }
+      .tb-login-content .mat-mdc-card {
+        --mdc-elevated-card-container-color: ${primaryColor};
+        color: ${contrastColor};
       }
     `;
     const head = document.getElementsByTagName('head')[0];
