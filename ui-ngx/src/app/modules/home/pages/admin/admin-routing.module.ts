@@ -47,6 +47,7 @@ import { MenuId } from '@core/services/menu.models';
 import { catchError } from 'rxjs/operators';
 import { JsLibraryTableConfigResolver } from '@home/pages/admin/resource/js-library-table-config.resolver';
 import { TrendzSettingsComponent } from '@home/pages/admin/trendz-settings.component';
+import { MenuSettingsComponent } from '@home/pages/admin/menu-settings/menu-settings.component';
 
 export const scadaSymbolResolver: ResolveFn<ScadaSymbolData> =
   (route: ActivatedRouteSnapshot,
@@ -359,6 +360,18 @@ const routes: Routes = [
           title: 'admin.trendz-settings',
           breadcrumb: {
             menuId: MenuId.trendz_settings
+          }
+        }
+      },
+      {
+        path: 'permission-menu-allocation',
+        component: MenuSettingsComponent,
+        canDeactivate: [ConfirmOnExitGuard],
+        data: {
+          auth: [Authority.SYS_ADMIN],
+          title: 'admin.permission-menu-allocation',
+          breadcrumb: {
+            menuId: MenuId.permission_menu_allocation
           }
         }
       },

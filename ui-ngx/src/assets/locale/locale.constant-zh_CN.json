@@ -97,6 +97,15 @@
     },
     "admin": {
         "settings": "设置",
+        "permission-menu-allocation": "权限菜单分配",
+         "menu-settings": {
+             "role": "选择配置的角色",
+             "authority":{
+                 "sys_admin": "系统管理员",
+                 "tenant_admin": "租户管理员",
+                 "customer_user": "用户"
+             }
+         },
         "general": "基本设置",
         "general-settings": "基本设置",
         "home-settings": "首页设置",

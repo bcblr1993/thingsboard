@@ -65,7 +65,8 @@ public enum EntityType {
     MOBILE_APP_BUNDLE(38),
     CALCULATED_FIELD(39),
     CALCULATED_FIELD_LINK(40),
-    JOB(41);
+    JOB(41),
+    MENU_SETTING(42);
 
     @Getter
     private final int protoNumber; // Corresponds to EntityTypeProto

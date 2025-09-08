@@ -18,11 +18,12 @@ import { Injectable } from '@angular/core';
 import { select, Store } from '@ngrx/store';
 import { AppState } from '../core.state';
 import { getCurrentOpenedMenuSections, selectAuth, selectIsAuthenticated } from '../auth/auth.selectors';
-import { filter, map, take } from 'rxjs/operators';
-import { buildUserHome, buildUserMenu, HomeSection, MenuId, MenuSection } from '@core/services/menu.models';
+import { filter, map, switchMap, take } from 'rxjs/operators';
+import { buildUserHome, HomeSection, MenuId, MenuSection, referenceToMenuSection } from '@core/services/menu.models';
 import { Observable, ReplaySubject, Subject } from 'rxjs';
 import { AuthState } from '@core/auth/auth.models';
 import { NavigationEnd, Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 
 @Injectable({
   providedIn: 'root'
@@ -38,14 +39,16 @@ export class MenuService {
   );
 
   constructor(private store: Store<AppState>,
-              private router: Router) {
-    this.store.pipe(select(selectIsAuthenticated)).subscribe(
-      (authenticated: boolean) => {
-        if (authenticated) {
-          this.buildMenu();
-        }
-      }
-    );
+              private router: Router,
+              private http: HttpClient) {
+    this.store.pipe(select(selectIsAuthenticated)).pipe(
+      filter(authenticated => authenticated),
+      switchMap(() => this.store.pipe(select(selectAuth), take(1))),
+      filter(authState => !!authState.authUser)
+    ).subscribe((authState) => {
+      this.buildMenu(authState);
+    });
+
     this.router.events.pipe(filter(event => event instanceof NavigationEnd)).subscribe(
       () => {
         this.updateOpenedMenuSections();
@@ -53,20 +56,16 @@ export class MenuService {
     );
   }
 
-  private buildMenu() {
-    this.store.pipe(select(selectAuth), take(1)).subscribe(
-      (authState: AuthState) => {
-        if (authState.authUser) {
-          this.currentMenuSections = buildUserMenu(authState);
-          this.updateOpenedMenuSections();
-          this.menuSections$.next(this.currentMenuSections);
-          const availableMenuSections = this.allMenuSections(this.currentMenuSections);
-          this.availableMenuSections$.next(availableMenuSections);
-          const homeSections = buildUserHome(authState, availableMenuSections);
-          this.homeSections$.next(homeSections);
-        }
-      }
-    );
+  private buildMenu(authState: AuthState) {
+    this.http.get<any[]>('/api/auth/menu').subscribe(menuReferences => {
+      this.currentMenuSections = (menuReferences || []).map(ref => referenceToMenuSection(authState, ref)).filter(section => !!section);
+      this.updateOpenedMenuSections();
+      this.menuSections$.next(this.currentMenuSections);
+      const availableMenuSections = this.allMenuSections(this.currentMenuSections);
+      this.availableMenuSections$.next(availableMenuSections);
+      const homeSections = buildUserHome(authState, availableMenuSections);
+      this.homeSections$.next(homeSections);
+    });
   }
 
   private updateOpenedMenuSections() {

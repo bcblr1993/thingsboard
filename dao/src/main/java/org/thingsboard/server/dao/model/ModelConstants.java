@@ -668,6 +668,13 @@ public class ModelConstants {
     public static final String QUEUE_STATS_SERVICE_ID_PROPERTY = "service_id";
 
     /**
+     * Menu settings constants.
+     */
+    public static final String MENU_SETTINGS_TABLE_NAME = "menu_settings";
+    public static final String MENU_SETTINGS_AUTHORITY_PROPERTY = "authority";
+    public static final String MENU_SETTINGS_MENU_CONFIG_PROPERTY = "menu_config";
+
+    /**
      * Notification constants
      */
     public static final String NOTIFICATION_TARGET_TABLE_NAME = "notification_target";

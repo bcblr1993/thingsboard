@@ -1,0 +1,184 @@
+{
+  "SYS_ADMIN": [
+    {"id": "home", "selected": true},
+    {"id": "tenants", "selected": true},
+    {"id": "tenant_profiles", "selected": true},
+    {
+      "id": "resources",
+      "selected": true,
+      "pages": [
+        {"id": "widget_library", "selected": true, "pages": [{"id": "widget_types", "selected": true}, {"id": "widgets_bundles", "selected": true}]},
+        {"id": "images", "selected": true},
+        {"id": "scada_symbols", "selected": true},
+        {"id": "javascript_library", "selected": true},
+        {"id": "resources_library", "selected": true}
+      ]
+    },
+    {
+      "id": "notifications_center",
+      "selected": true,
+      "pages": [
+        {"id": "notification_inbox", "selected": true},
+        {"id": "notification_sent", "selected": true},
+        {"id": "notification_recipients", "selected": true},
+        {"id": "notification_templates", "selected": true},
+        {"id": "notification_rules", "selected": true}
+      ]
+    },
+    {
+      "id": "mobile_center",
+      "selected": true,
+      "pages": [
+        {"id": "mobile_bundles", "selected": true},
+        {"id": "mobile_apps", "selected": true},
+        {"id": "mobile_qr_code_widget", "selected": true}
+      ]
+    },
+    {
+      "id": "settings",
+      "selected": true,
+      "pages": [
+        {"id": "general", "selected": true},
+        {"id": "mail_server", "selected": true},
+        {"id": "notification_settings", "selected": true},
+        {"id": "queues", "selected": true},
+        {"id": "permission_menu_allocation","selected": true}
+      ]
+    },
+    {
+      "id": "security_settings",
+      "selected": true,
+      "pages": [
+        {"id": "security_settings_general", "selected": true},
+        {"id": "two_fa", "selected": true},
+        {
+          "id": "oauth2",
+          "selected": true,
+          "pages": [
+            {"id": "domains", "selected": true},
+            {"id": "clients", "selected": true}
+          ]
+        }
+      ]
+    }
+  ],
+  "TENANT_ADMIN": [
+    {"id": "home", "selected": true},
+    {"id": "alarms", "selected": true},
+    {"id": "dashboards", "selected": true},
+    {
+      "id": "entities",
+      "selected": true,
+      "pages": [
+        {"id": "devices", "selected": true},
+        {"id": "assets", "selected": true},
+        {"id": "entity_views", "selected": true},
+        {"id": "gateways", "selected": true}
+      ]
+    },
+    {
+      "id": "profiles",
+      "selected": true,
+      "pages": [
+        {"id": "device_profiles", "selected": true},
+        {"id": "asset_profiles", "selected": true}
+      ]
+    },
+    {"id": "customers", "selected": true},
+    {"id": "rule_chains", "selected": true},
+    {
+      "id": "edge_management",
+      "selected": true,
+      "pages": [
+        {"id": "edges", "selected": true},
+        {"id": "rulechain_templates", "selected": true}
+      ]
+    },
+    {
+      "id": "features",
+      "selected": true,
+      "pages": [
+        {"id": "otaUpdates", "selected": true},
+        {"id": "version_control", "selected": true}
+      ]
+    },
+    {
+      "id": "resources",
+      "selected": true,
+      "pages": [
+        {"id": "widget_library", "selected": true, "pages": [{"id": "widget_types", "selected": true}, {"id": "widgets_bundles", "selected": true}]},
+        {"id": "images", "selected": true},
+        {"id": "scada_symbols", "selected": true},
+        {"id": "javascript_library", "selected": true},
+        {"id": "resources_library", "selected": true}
+      ]
+    },
+    {
+      "id": "notifications_center",
+      "selected": true,
+      "pages": [
+        {"id": "notification_inbox", "selected": true},
+        {"id": "notification_sent", "selected": true},
+        {"id": "notification_recipients", "selected": true},
+        {"id": "notification_templates", "selected": true},
+        {"id": "notification_rules", "selected": true}
+      ]
+    },
+    {
+      "id": "mobile_center",
+      "selected": true,
+      "pages": [
+        {"id": "mobile_bundles", "selected": true},
+        {"id": "mobile_apps", "selected": true}
+      ]
+    },
+    {"id": "api_usage", "selected": true},
+    {
+      "id": "settings",
+      "selected": true,
+      "pages": [
+        {"id": "home_settings", "selected": true},
+        {"id": "notification_settings", "selected": true},
+        {"id": "repository_settings", "selected": true},
+        {"id": "auto_commit_settings", "selected": true},
+        {"id": "trendz_settings", "selected": true}
+      ]
+    },
+    {
+      "id": "security_settings",
+      "selected": true,
+      "pages": [
+        {"id": "audit_log", "selected": true},
+        {
+          "id": "oauth2",
+          "selected": true,
+          "pages": [
+            {"id": "clients", "selected": true}
+          ]
+        }
+      ]
+    }
+  ],
+  "CUSTOMER_USER": [
+    {"id": "home", "selected": true},
+    {"id": "alarms", "selected": true},
+    {"id": "dashboards", "selected": true},
+    {
+      "id": "entities",
+      "selected": true,
+      "pages": [
+        {"id": "devices", "selected": true},
+        {"id": "assets", "selected": true},
+        {"id": "entity_views", "selected": true}
+      ]
+    },
+    {"id": "edge_instances", "selected": true},
+    {
+      "id": "notifications_center",
+      "selected": true,
+      "pages": [
+        {"id": "notification_inbox", "selected": true}
+      ]
+    }
+  ]
+}

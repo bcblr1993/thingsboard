@@ -98,6 +98,15 @@
     },
     "admin": {
         "settings": "Settings",
+        "permission-menu-allocation": "Permission Menu Allocation",
+        "menu-settings": {
+            "role": "Role",
+            "authority":{
+                "sys_admin": "sys admin",
+                "tenant_admin": "tenant admin",
+                "customer_user": "user"
+            }
+        },
         "general": "General",
         "general-settings": "General Settings",
         "home-settings": "Home Settings",
