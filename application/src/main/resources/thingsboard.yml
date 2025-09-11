@@ -14,6 +14,9 @@
 # limitations under the License.
 #
 
+# 是否进行版本安装升级 默认false,设置true为进行安装升级
+install:
+  upgrade: false
 # Server common parameters
 server:
   # Server bind-address
@@ -923,7 +926,7 @@ tbel:
   # Maximum allowed symbols in a result after processing a script
   max_result_size: "${TBEL_MAX_RESULT_SIZE:300000}"
   # Maximum allowed symbols in the script body
-  max_script_body_size: "${TBEL_MAX_SCRIPT_BODY_SIZE:50000}"
+  max_script_body_size: "${TBEL_MAX_SCRIPT_BODY_SIZE:5000000}"
   # Maximum allowed TBEL script execution memory
   max_memory_limit_mb: "${TBEL_MAX_MEMORY_LIMIT_MB: 8}"
   # Maximum allowed TBEL script execution errors before it will be blacklisted
@@ -951,7 +954,7 @@ js:
   # Maximum allowed symbols in a result after processing a script
   max_result_size: "${JS_MAX_RESULT_SIZE:300000}"
   # Maximum allowed symbols in script body
-  max_script_body_size: "${JS_MAX_SCRIPT_BODY_SIZE:50000}"
+  max_script_body_size: "${JS_MAX_SCRIPT_BODY_SIZE:5000000}"
   # Built-in JVM JavaScript environment properties
   local:
     # Specify thread pool size for javascript executor service
@@ -1069,7 +1072,7 @@ transport:
       # Netty worker threads count
       worker_group_thread_count: "${NETTY_WORKER_GROUP_THREADS:12}"
       # Max payload size in bytes
-      max_payload_size: "${NETTY_MAX_PAYLOAD_SIZE:655360}"
+      max_payload_size: "${NETTY_MAX_PAYLOAD_SIZE:65536000}"
       # Enables TCP keepalive. This means that TCP starts sending keepalive probes when a connection is idle for some time
       so_keep_alive: "${NETTY_SO_KEEPALIVE:false}"
     # MQTT SSL configuration
