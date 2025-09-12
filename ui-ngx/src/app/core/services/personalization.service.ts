@@ -59,7 +59,7 @@ export class PersonalizationService {
   }
 
   applyPersonalization(settings: PersonalizationSettings) {
-    
+    this.personalizationSettings = settings;
     if (settings.favicon) {
       const link: HTMLLinkElement = document.querySelector("link[rel*='icon']") || document.createElement('link');
       link.type = 'image/x-icon';
