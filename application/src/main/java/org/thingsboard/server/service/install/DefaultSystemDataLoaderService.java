@@ -274,6 +274,19 @@ public class DefaultSystemDataLoaderService implements SystemDataLoaderService {
         connectivitySettings.setKey("connectivity");
         connectivitySettings.setJsonValue(JacksonUtil.valueToTree(connectivityConfiguration.getConnectivity()));
         adminSettingsService.saveAdminSettings(TenantId.SYS_TENANT_ID, connectivitySettings);
+
+        AdminSettings personalizationSettings = new AdminSettings();
+        personalizationSettings.setTenantId(TenantId.SYS_TENANT_ID);
+        personalizationSettings.setKey("personalization");
+        ObjectNode personalizationNode = JacksonUtil.newObjectNode();
+        personalizationNode.put("title", "国能日新物联网云平台");
+        personalizationNode.put("favicon", "");
+        personalizationNode.put("logo", "");
+        personalizationNode.put("logoHeight", 32);
+        personalizationNode.put("loginLogo", "");
+        personalizationNode.put("loginLogoHeight", 32);
+        personalizationSettings.setJsonValue(personalizationNode);
+        adminSettingsService.saveAdminSettings(TenantId.SYS_TENANT_ID, personalizationSettings);
     }
 
     @Override
