@@ -282,9 +282,9 @@ public class DefaultSystemDataLoaderService implements SystemDataLoaderService {
         personalizationNode.put("title", "国能日新物联网云平台");
         personalizationNode.put("favicon", "");
         personalizationNode.put("logo", "");
-        personalizationNode.put("logoHeight", 32);
+        personalizationNode.put("logoHeight", 50);
         personalizationNode.put("loginLogo", "");
-        personalizationNode.put("loginLogoHeight", 32);
+        personalizationNode.put("loginLogoHeight", 60);
         personalizationSettings.setJsonValue(personalizationNode);
         adminSettingsService.saveAdminSettings(TenantId.SYS_TENANT_ID, personalizationSettings);
     }
