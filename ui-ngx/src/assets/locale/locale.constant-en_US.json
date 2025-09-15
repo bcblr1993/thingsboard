@@ -551,7 +551,25 @@
         "trendz-url": "Trendz URL",
         "trendz-url-required": "Trendz URL is required",
         "trendz-api-key": "Trendz API key",
-        "trendz-enable": "Enable Trendz"
+        "trendz-enable": "Enable Trendz",
+        "personalization": {
+          "title": "Personalization",
+          "description": "Global personalization settings for the platform.",
+          "page-title": "Page Title",
+          "primary-color": "Primary Color",
+          "favicon": "Favicon (.ico file)",
+          "favicon-hint": "Will be displayed in the browser tab.",
+          "logo": "Main Logo",
+          "logo-height": "Logo Height (px)",
+          "login-logo": "Login Page Logo",
+          "login-logo-height": "Login Logo Height (px)",
+          "restore-defaults": "Restore defaults",
+          "confirm-restore-title": "Restore default colors?",
+          "confirm-restore-message": "This will restore the current color scheme to the system defaults.",
+          "logo-hint": "Only SVG format is supported, size should not exceed 40KB.",
+          "invalid-svg-format": "Must be an SVG format image.",
+          "max-size-exceeded": "Image size should not exceed 40KB."
+        }
       },
     "alarm": {
         "alarm": "Alarm",

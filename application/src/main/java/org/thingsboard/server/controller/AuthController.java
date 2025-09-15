@@ -26,13 +26,17 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.thingsboard.rule.engine.api.MailService;
 import org.thingsboard.server.cache.limits.RateLimitService;
+import org.thingsboard.server.common.data.AdminSettings;
 import org.thingsboard.server.common.data.User;
 import org.thingsboard.server.common.data.audit.ActionType;
 import org.thingsboard.server.common.data.exception.ThingsboardErrorCode;
@@ -46,6 +50,7 @@ import org.thingsboard.server.common.data.security.model.JwtPair;
 import org.thingsboard.server.common.data.security.model.SecuritySettings;
 import org.thingsboard.server.common.data.security.model.UserPasswordPolicy;
 import org.thingsboard.server.config.annotations.ApiOperation;
+import org.thingsboard.server.dao.settings.AdminSettingsService;
 import org.thingsboard.server.dao.settings.SecuritySettingsService;
 import org.thingsboard.server.queue.util.TbCoreComponent;
 import org.thingsboard.server.service.security.auth.rest.RestAuthenticationDetails;
@@ -74,6 +79,7 @@ public class AuthController extends BaseController {
     private final SecuritySettingsService securitySettingsService;
     private final RateLimitService rateLimitService;
     private final ApplicationEventPublisher eventPublisher;
+    private final AdminSettingsService adminSettingsService;
 
 
     @ApiOperation(value = "Get current User (getUser)",
@@ -273,4 +279,17 @@ public class AuthController extends BaseController {
         eventPublisher.publishEvent(new UserSessionInvalidationEvent(user.getSessionId()));
     }
 
+
+    @ApiOperation(value = "Get the Public Administration Settings object using key (getPublicAdminSettings)",
+            notes = "Get the Public Administration Settings object using specified string key. Only 'personalization' key is available for public access.")
+    @RequestMapping(value = "/noauth/settings/{key}", method = RequestMethod.GET)
+    @ResponseBody
+    public AdminSettings getPublicAdminSettings(
+            @Parameter(description = "A string value of the key (e.g. 'personalization').")
+            @PathVariable("key") String key) throws ThingsboardException {
+        if (!"personalization".equals(key)) {
+            throw new ThingsboardException("Requested key is not available for public access", ThingsboardErrorCode.BAD_REQUEST_PARAMS);
+        }
+        return checkNotNull(adminSettingsService.findAdminSettingsByKey(TenantId.SYS_TENANT_ID, key), "No Administration settings found for key: " + key);
+    }
 }

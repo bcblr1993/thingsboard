@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 @import "../../../scss/constants";
+@import "../../../scss/mixins";
 
 $containerHeight: 96px !default;
 $previewSize: 78px !default;
@@ -57,7 +58,7 @@ $previewSize: 78px !default;
     width: $previewSize;
     height: $previewSize;
     border: 1px solid rgba(0, 0, 0, 0.12);
-    background: #fff;
+    @include tb-checkered-bg();
     display: flex;
     align-items: center;
     justify-content: center;

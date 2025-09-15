@@ -544,7 +544,31 @@
         "slack-settings": "Slack设置",
         "mobile-settings": "移动设置",
         "firebase-service-account-file": "Firebase服务帐户JSON凭据文件",
-        "select-firebase-service-account-file": "拖放Firebase服务帐户凭据文件"
+        "select-firebase-service-account-file": "拖放Firebase服务帐户凭据文件",
+        "trendz": "Trendz",
+        "trendz-settings": "Trendz 设置",
+        "trendz-url": "Trendz 链接",
+        "trendz-url-required": "Trendz 链接必填",
+        "trendz-api-key": "Trendz API 密钥",
+        "trendz-enable": "启用 Trendz",
+        "personalization": {
+          "title": "个性化设置",
+          "description": "平台的全局个性化设置。",
+          "page-title": "页面标题",
+          "primary-color": "主色",
+          "favicon": "网站图标 (.ico 文件)",
+          "favicon-hint": "将显示在浏览器选项卡中。",
+          "logo": "主徽标",
+          "logo-height": "主徽标高度 (px)",
+          "login-logo": "登录页面徽标",
+          "login-logo-height": "登录徽标高度 (px)",
+          "restore-defaults": "恢复默认",
+          "confirm-restore-title": "确认恢复默认颜色吗？",
+          "confirm-restore-message": "一旦恢复，当前颜色将还原为系统默认设置。",
+          "logo-hint": "仅支持SVG格式，大小不超过40KB。",
+          "invalid-svg-format": "必须使用SVG格式的图片",
+          "max-size-exceeded": "图片大小不能超过40KB"
+        }
     },
     "alarm": {
         "alarm": "告警",
