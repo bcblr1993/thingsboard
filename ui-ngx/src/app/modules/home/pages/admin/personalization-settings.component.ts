@@ -36,6 +36,30 @@ export interface PersonalizationSettings {
   loginLogoHeight: number;
 }
 
+export function maxImageSizeValidator(maxSizeKB: number): ValidatorFn {
+  return (control: AbstractControl): {[key: string]: any} | null => {
+    const value = control.value;
+    if (!value || !value.startsWith('data:')) {
+      return null;
+    }
+
+    const base64Data = value.substring(value.indexOf(',') + 1);
+    let padding = 0;
+    if (base64Data.endsWith('==')) {
+      padding = 2;
+    } else if (base64Data.endsWith('=')) {
+      padding = 1;
+    }
+    const sizeInBytes = (base64Data.length * 3 / 4) - padding;
+
+    if (sizeInBytes > maxSizeKB * 1024) {
+      return { maxSizeExceeded: { maxSize: maxSizeKB } };
+    }
+
+    return null;
+  };
+}
+
 export function svgBase64Validator(maxSizeKB: number): ValidatorFn {
   return (control: AbstractControl): {[key: string]: any} | null => {
     const value = control.value;
@@ -98,8 +122,8 @@ export class PersonalizationSettingsComponent extends PageComponent implements H
   private buildForm() {
     this.personalizationSettingsForm = this.fb.group({
       title: ['', [Validators.required]],
-      favicon: ['', []],
-      logo: ['', [svgBase64Validator(40)]],
+      favicon: ['', [maxImageSizeValidator(20)]],
+      logo: ['', [svgBase64Validator(100)]],
       logoHeight: [null, [Validators.min(10)]],
       loginLogoHeight: [null, [Validators.min(10)]]
     });

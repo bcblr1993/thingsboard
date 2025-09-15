@@ -28,16 +28,18 @@
 
         <div fxLayout="row" fxLayoutGap="16px">
           <div fxFlex fxLayout="column">
-            <tb-image-input formControlName="favicon" label="{{ 'admin.personalization.favicon' | translate }}" accept=".ico"></tb-image-input>
-            <mat-hint>{{ 'admin.personalization.favicon-hint' | translate }}</mat-hint>
+            <tb-image-input [showClearButton]="false" formControlName="favicon" label="{{ 'admin.personalization.favicon' | translate }}" accept=".ico"></tb-image-input>
+            <mat-error *ngIf="personalizationSettingsForm.get('favicon').hasError('maxSizeExceeded')" style="margin-bottom: 5px;">
+              {{ 'admin.personalization.max-size-exceeded' | translate }}
+            </mat-error>
           </div>
           <div fxFlex fxLayout="column">
-            <tb-image-input formControlName="logo" label="{{ 'admin.personalization.logo' | translate }}" accept=".svg, image/svg+xml"></tb-image-input>
-            <mat-hint>{{ 'admin.personalization.logo-hint' | translate }}</mat-hint>
-            <mat-error *ngIf="personalizationSettingsForm.get('logo').hasError('invalidSvgFormat') && personalizationSettingsForm.get('logo').touched">
+            <tb-image-input [showClearButton]="false" formControlName="logo" label="{{ 'admin.personalization.logo' | translate }}" accept=".svg, image/svg+xml"></tb-image-input>
+<!--            <mat-hint>{{ 'admin.personalization.logo-hint' | translate }}</mat-hint>-->
+            <mat-error *ngIf="personalizationSettingsForm.get('logo').hasError('invalidSvgFormat')" style="margin-bottom: 5px;">
                 {{ 'admin.personalization.invalid-svg-format' | translate }}
             </mat-error>
-            <mat-error *ngIf="personalizationSettingsForm.get('logo').hasError('maxSizeExceeded') && personalizationSettingsForm.get('logo').touched">
+            <mat-error *ngIf="personalizationSettingsForm.get('logo').hasError('maxSizeExceeded')" style="margin-bottom: 5px;">
                 {{ 'admin.personalization.max-size-exceeded' | translate }}
             </mat-error>
           </div>
