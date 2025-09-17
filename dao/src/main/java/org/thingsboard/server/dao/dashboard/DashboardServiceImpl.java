@@ -378,6 +378,15 @@ public class DashboardServiceImpl extends AbstractEntityService implements Dashb
     }
 
     @Override
+    public PageData<DashboardInfo> findDashboardsByTenantIdAndUnassignedToEdge(TenantId tenantId, EdgeId edgeId, PageLink pageLink) {
+        log.trace("Executing findDashboardsByTenantIdAndUnassignedToEdge, tenantId [{}], edgeId [{}], pageLink [{}]", tenantId, edgeId, pageLink);
+        Validator.validateId(tenantId, id -> INCORRECT_TENANT_ID + id);
+        Validator.validateId(edgeId, id -> "Incorrect edgeId " + id);
+        Validator.validatePageLink(pageLink);
+        return dashboardInfoDao.findDashboardsByTenantIdAndUnassignedToEdge(tenantId.getId(), edgeId.getId(), pageLink);
+    }
+
+    @Override
     public DashboardInfo findFirstDashboardInfoByTenantIdAndName(TenantId tenantId, String name) {
         log.trace("Executing findFirstDashboardInfoByTenantIdAndName [{}][{}]", tenantId, name);
         validateId(tenantId, id -> INCORRECT_TENANT_ID + id);

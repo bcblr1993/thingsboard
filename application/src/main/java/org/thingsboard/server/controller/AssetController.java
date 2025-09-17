@@ -262,6 +262,31 @@ public class AssetController extends BaseController {
         }
     }
 
+    @ApiOperation(value = "Get Unassigned Tenant Asset Infos (getUnassignedTenantAssetInfos)",
+            notes = "Returns a page of asset info objects owned by tenant that are not assigned to the specified edge. " +
+                    PAGE_DATA_PARAMETERS + ASSET_INFO_DESCRIPTION + TENANT_AUTHORITY_PARAGRAPH)
+    @PreAuthorize("hasAuthority('TENANT_ADMIN')")
+    @RequestMapping(value = "/tenant/assetInfos/unassigned/{edgeId}", params = {"pageSize", "page"}, method = RequestMethod.GET)
+    @ResponseBody
+    public PageData<AssetInfo> getUnassignedTenantAssetInfos(
+            @Parameter(description = EDGE_ID_PARAM_DESCRIPTION, required = true)
+            @PathVariable(EDGE_ID) String strEdgeId,
+            @Parameter(description = PAGE_SIZE_DESCRIPTION)
+            @RequestParam int pageSize,
+            @Parameter(description = PAGE_NUMBER_DESCRIPTION)
+            @RequestParam int page,
+            @Parameter(description = ASSET_TEXT_SEARCH_DESCRIPTION)
+            @RequestParam(required = false) String textSearch,
+            @Parameter(description = SORT_PROPERTY_DESCRIPTION, schema = @Schema(allowableValues = {"createdTime", "name", "type", "label", "customerTitle"}))
+            @RequestParam(required = false) String sortProperty,
+            @Parameter(description = SORT_ORDER_DESCRIPTION, schema = @Schema(allowableValues = {"ASC", "DESC"}))
+            @RequestParam(required = false) String sortOrder) throws ThingsboardException {
+        TenantId tenantId = getCurrentUser().getTenantId();
+        EdgeId edgeId = new EdgeId(toUUID(strEdgeId));
+        PageLink pageLink = createPageLink(pageSize, page, textSearch, sortProperty, sortOrder);
+        return checkNotNull(assetService.findAssetInfosByTenantIdAndUnassignedToEdge(tenantId, edgeId, pageLink));
+    }
+
     @ApiOperation(value = "Get Tenant Asset (getTenantAsset)",
             notes = "Requested asset must be owned by tenant that the user belongs to. " +
                     "Asset name is an unique property of asset. So it can be used to identify the asset." + TENANT_AUTHORITY_PARAGRAPH)

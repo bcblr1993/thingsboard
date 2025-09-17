@@ -116,6 +116,17 @@ public interface EntityViewRepository extends JpaRepository<EntityViewEntity, UU
                                                                                  @Param("textSearch") String textSearch,
                                                                                  Pageable pageable);
 
+    @Query("SELECT new org.thingsboard.server.dao.model.sql.EntityViewInfoEntity(e, c.title, c.additionalInfo) " +
+            "FROM EntityViewEntity e " +
+            "LEFT JOIN CustomerEntity c on c.id = e.customerId " +
+            "WHERE e.tenantId = :tenantId " +
+            "AND e.id NOT IN (SELECT re.toId FROM RelationEntity re WHERE re.toType = 'ENTITY_VIEW' AND re.relationTypeGroup = 'EDGE' AND re.relationType = 'Contains' AND re.fromType = 'EDGE' AND re.fromId = :edgeId) " +
+            "AND (:textSearch IS NULL OR ilike(e.name, CONCAT('%', :textSearch, '%')) = true)")
+    Page<EntityViewInfoEntity> findEntityViewInfosByTenantIdAndUnassignedToEdge(@Param("tenantId") UUID tenantId,
+                                                                                @Param("edgeId") UUID edgeId,
+                                                                                @Param("textSearch") String textSearch,
+                                                                                Pageable pageable);
+
     EntityViewEntity findByTenantIdAndName(UUID tenantId, String name);
 
     List<EntityViewEntity> findAllByTenantIdAndEntityId(UUID tenantId, UUID entityId);

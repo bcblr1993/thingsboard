@@ -161,6 +161,15 @@ public class JpaEntityViewDao extends JpaAbstractDao<EntityViewEntity, EntityVie
     }
 
     @Override
+    public PageData<EntityViewInfo> findEntityViewInfosByTenantIdAndUnassignedToEdge(UUID tenantId, UUID edgeId, PageLink pageLink) {
+        return DaoUtil.toPageData(entityViewRepository.findEntityViewInfosByTenantIdAndUnassignedToEdge(
+                tenantId,
+                edgeId,
+                pageLink.getTextSearch(),
+                DaoUtil.toPageable(pageLink, EntityViewInfoEntity.entityViewInfoColumnMap)));
+    }
+
+    @Override
     public List<EntityView> findEntityViewsByTenantIdAndEntityId(UUID tenantId, UUID entityId) {
         return DaoUtil.convertDataList(
                 entityViewRepository.findAllByTenantIdAndEntityId(tenantId, entityId));

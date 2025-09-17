@@ -33,6 +33,8 @@
     <input matInput [formControl]="searchControl">
   </mat-form-field>
 
+  <div class="mat-caption" style="padding-left: 2px; padding-bottom: 10px;">{{ 'edge.entities-hint' | translate }}</div>
+
   <mat-checkbox (change)="$event ? masterToggle() : null"
                 [checked]="selection.hasValue() && isAllSelected()"
                 [indeterminate]="selection.hasValue() && !isAllSelected()">

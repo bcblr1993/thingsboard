@@ -84,6 +84,8 @@ public interface AssetService extends EntityDaoService {
 
     PageData<AssetInfo> findAssetInfosByTenantIdAndCustomerIdAndAssetProfileId(TenantId tenantId, CustomerId customerId, AssetProfileId assetProfileId, PageLink pageLink);
 
+    PageData<AssetInfo> findAssetInfosByTenantIdAndUnassignedToEdge(TenantId tenantId, EdgeId edgeId, PageLink pageLink);
+
     ListenableFuture<List<Asset>> findAssetsByTenantIdCustomerIdAndIdsAsync(TenantId tenantId, CustomerId customerId, List<AssetId> assetIds);
 
     void unassignCustomerAssets(TenantId tenantId, CustomerId customerId);

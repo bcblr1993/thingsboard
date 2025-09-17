@@ -773,6 +773,15 @@ public class BaseRuleChainService extends AbstractEntityService implements RuleC
     }
 
     @Override
+    public PageData<RuleChain> findRuleChainsByTenantIdAndTypeAndUnassignedToEdge(TenantId tenantId, RuleChainType type, EdgeId edgeId, PageLink pageLink) {
+        log.trace("Executing findRuleChainsByTenantIdAndTypeAndUnassignedToEdge, tenantId [{}], type [{}], edgeId [{}], pageLink [{}]", tenantId, type, edgeId, pageLink);
+        Validator.validateId(tenantId, "Incorrect tenantId for search rule chain request.");
+        Validator.validateId(edgeId, "Incorrect edgeId for search rule chain request.");
+        Validator.validatePageLink(pageLink);
+        return ruleChainDao.findRuleChainsByTenantIdAndTypeAndUnassignedToEdge(tenantId.getId(), type, edgeId.getId(), pageLink);
+    }
+
+    @Override
     public List<RuleNode> findRuleNodesByTenantIdAndType(TenantId tenantId, String type, String search) {
         log.trace("Executing findRuleNodes, tenantId [{}], type {}, search {}", tenantId, type, search);
         validateId(tenantId, id -> INCORRECT_TENANT_ID + id);

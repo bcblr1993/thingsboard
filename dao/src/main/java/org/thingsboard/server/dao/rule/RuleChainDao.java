@@ -79,6 +79,8 @@ public interface RuleChainDao extends Dao<RuleChain>, TenantEntityDao<RuleChain>
      */
     PageData<RuleChain> findAutoAssignToEdgeRuleChainsByTenantId(UUID tenantId, PageLink pageLink);
 
+    PageData<RuleChain> findRuleChainsByTenantIdAndTypeAndUnassignedToEdge(UUID tenantId, RuleChainType type, UUID edgeId, PageLink pageLink);
+
     Collection<RuleChain> findByTenantIdAndTypeAndName(TenantId tenantId, RuleChainType type, String name);
 
 }

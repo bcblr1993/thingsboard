@@ -2378,6 +2378,7 @@
         "make-public-edge-title": "Are you sure you want to make the edge '{{edgeName}}' public?",
         "make-public-edge-text": "After the confirmation the edge and all its data will be made public and accessible by others.",
         "make-private": "Make edge private",
+        "entities-hint": "Already assigned to the edge will not be displayed. By default, a maximum of 10 records are displayed.",
         "public": "Public",
         "make-private-edge-title": "Are you sure you want to make the edge '{{edgeName}}' private?",
         "make-private-edge-text": "After the confirmation the edge and all its data will be made private and won't be accessible by others.",

@@ -16,6 +16,7 @@
 package org.thingsboard.server.dao.device;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import org.springframework.data.domain.Pageable;
 import org.thingsboard.server.common.data.Device;
 import org.thingsboard.server.common.data.DeviceIdInfo;
 import org.thingsboard.server.common.data.DeviceInfo;
@@ -236,6 +237,8 @@ public interface DeviceDao extends Dao<Device>, TenantEntityDao<Device>, Exporta
     PageData<ProfileEntityIdInfo> findProfileEntityIdInfosByTenantId(UUID tenantId, PageLink pageLink);
 
     PageData<DeviceInfo> findDeviceInfosByFilter(DeviceInfoFilter filter, PageLink pageLink);
+
+    PageData<DeviceInfo> findDeviceInfosByTenantIdAndUnassignedToEdge(UUID tenantId, UUID edgeId, String textSearch, Pageable pageable);
 
     List<String> findTenantDeviceLabels(TenantId tenantId, String searchText);
 

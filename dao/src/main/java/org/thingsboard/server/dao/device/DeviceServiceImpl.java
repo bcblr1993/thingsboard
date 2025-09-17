@@ -68,6 +68,7 @@ import org.thingsboard.server.common.data.relation.EntitySearchDirection;
 import org.thingsboard.server.common.data.relation.RelationTypeGroup;
 import org.thingsboard.server.common.data.security.DeviceCredentials;
 import org.thingsboard.server.common.data.security.DeviceCredentialsType;
+import org.thingsboard.server.dao.DaoUtil;
 import org.thingsboard.server.dao.device.provision.ProvisionFailedException;
 import org.thingsboard.server.dao.device.provision.ProvisionRequest;
 import org.thingsboard.server.dao.device.provision.ProvisionResponseStatus;
@@ -378,6 +379,20 @@ public class DeviceServiceImpl extends CachedVersionedEntityService<DeviceCacheK
         validatePageLink(pageLink);
         return deviceDao.findDeviceInfosByFilter(filter, pageLink);
 
+    }
+
+    @Override
+    public PageData<DeviceInfo> findDeviceInfosByTenantIdAndUnassignedToEdge(TenantId tenantId, EdgeId edgeId, PageLink pageLink) {
+        log.trace("Executing findDeviceInfosByTenantIdAndUnassignedToEdge, tenantId [{}], edgeId [{}], pageLink [{}]", tenantId, edgeId, pageLink);
+        validateId(tenantId, id -> INCORRECT_TENANT_ID + id);
+        validateId(edgeId, id -> INCORRECT_EDGE_ID + id);
+        validatePageLink(pageLink);
+        return deviceDao.findDeviceInfosByTenantIdAndUnassignedToEdge(
+                tenantId.getId(),
+                edgeId.getId(),
+                pageLink.getTextSearch(),
+                DaoUtil.toPageable(pageLink)
+        );
     }
 
     @Override

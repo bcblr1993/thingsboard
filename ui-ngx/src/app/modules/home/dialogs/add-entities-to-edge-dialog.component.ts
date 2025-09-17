@@ -22,7 +22,7 @@ import { AppState } from '@core/core.state';
 import { UntypedFormBuilder, UntypedFormControl, FormGroupDirective, NgForm } from '@angular/forms';
 import { DeviceService } from '@core/http/device.service';
 import { EntityType, entityTypeTranslations } from '@shared/models/entity-type.models';
-import { forkJoin, Observable } from 'rxjs';
+import { forkJoin, Observable, of } from 'rxjs';
 import { AssetService } from '@core/http/asset.service';
 import { EntityViewService } from '@core/http/entity-view.service';
 import { DashboardService } from '@core/http/dashboard.service';
@@ -108,15 +108,6 @@ export class AddEntitiesToEdgeDialogComponent extends
         break;
     }
 
-    const assignedEntitiesPageLink = new PageLink(1000, 0);
-    this.getAssignedEntitiesToEdge(assignedEntitiesPageLink).subscribe(
-      (assignedEntities) => {
-        if (assignedEntities.data) {
-          this.selection.select(...assignedEntities.data);
-        }
-      }
-    );
-
     this.entities = this.searchControl.valueChanges.pipe(
       startWith(''),
       debounceTime(400),
@@ -125,7 +116,7 @@ export class AddEntitiesToEdgeDialogComponent extends
         this.isLoading = true;
       }),
       switchMap((value: string) => {
-        const pageLink = new PageLink(50, 0, value, {property: 'createdTime', direction: Direction.ASC});
+        const pageLink = new PageLink(10, 0, value, {property: 'createdTime', direction: Direction.ASC});
         return this.getEntities(pageLink);
       }),
       map((pageData) => {
@@ -136,33 +127,18 @@ export class AddEntitiesToEdgeDialogComponent extends
     );
   }
 
-  getAssignedEntitiesToEdge(pageLink: PageLink): Observable<any> {
-    switch (this.entityType) {
-      case EntityType.DEVICE:
-        return this.deviceService.getEdgeDevices(this.data.edgeId, pageLink);
-      case EntityType.ASSET:
-        return this.assetService.getEdgeAssets(this.data.edgeId, pageLink);
-      case EntityType.ENTITY_VIEW:
-        return this.entityViewService.getEdgeEntityViews(this.data.edgeId, pageLink);
-      case EntityType.DASHBOARD:
-        return this.dashboardService.getEdgeDashboards(this.data.edgeId, pageLink);
-      case EntityType.RULE_CHAIN:
-        return this.ruleChainService.getEdgeRuleChains(this.data.edgeId, pageLink);
-    }
-  }
-
   getEntities(pageLink: PageLink): Observable<any> {
     switch (this.entityType) {
       case EntityType.DEVICE:
-        return this.deviceService.getTenantDeviceInfos(pageLink);
+        return this.deviceService.getUnassignedTenantDeviceInfos(this.data.edgeId, pageLink);
       case EntityType.ASSET:
-        return this.assetService.getTenantAssetInfos(pageLink);
+        return this.assetService.getUnassignedTenantAssetInfos(this.data.edgeId, pageLink);
       case EntityType.ENTITY_VIEW:
-        return this.entityViewService.getTenantEntityViewInfos(pageLink);
+        return this.entityViewService.getUnassignedTenantEntityViewInfos(this.data.edgeId, pageLink);
       case EntityType.DASHBOARD:
-        return this.dashboardService.getTenantDashboards(pageLink);
+        return this.dashboardService.getUnassignedTenantDashboards(this.data.edgeId, pageLink);
       case EntityType.RULE_CHAIN:
-        return this.ruleChainService.getRuleChains(pageLink, this.subType as RuleChainType);
+        return this.ruleChainService.getUnassignedTenantRuleChains(this.data.edgeId, pageLink, this.subType as RuleChainType);
     }
   }
 

@@ -115,6 +115,15 @@ public class JpaDashboardInfoDao extends JpaAbstractDao<DashboardInfoEntity, Das
     }
 
     @Override
+    public PageData<DashboardInfo> findDashboardsByTenantIdAndUnassignedToEdge(UUID tenantId, UUID edgeId, PageLink pageLink) {
+        return DaoUtil.toPageData(dashboardInfoRepository.findDashboardInfosByTenantIdAndUnassignedToEdge(
+                tenantId,
+                edgeId,
+                pageLink.getTextSearch(),
+                DaoUtil.toPageable(pageLink)));
+    }
+
+    @Override
     public DashboardInfo findFirstByTenantIdAndName(UUID tenantId, String name) {
         return DaoUtil.getData(dashboardInfoRepository.findFirstByTenantIdAndTitle(tenantId, name));
     }

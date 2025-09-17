@@ -146,6 +146,8 @@ public interface EntityViewDao extends Dao<EntityView>, ExportableEntityDao<Enti
      */
     PageData<EntityViewInfo> findEntityViewInfosByTenantIdAndCustomerIdAndType(UUID tenantId, UUID customerId, String type, PageLink pageLink);
 
+    PageData<EntityViewInfo> findEntityViewInfosByTenantIdAndUnassignedToEdge(UUID tenantId, UUID edgeId, PageLink pageLink);
+
     List<EntityView> findEntityViewsByTenantIdAndEntityId(UUID tenantId, UUID entityId);
 
     boolean existsByTenantIdAndEntityId(UUID tenantId, UUID entityId);

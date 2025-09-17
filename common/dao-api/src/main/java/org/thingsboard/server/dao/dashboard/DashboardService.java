@@ -70,6 +70,8 @@ public interface DashboardService extends EntityDaoService {
 
     PageData<DashboardInfo> findDashboardsByTenantIdAndEdgeId(TenantId tenantId, EdgeId edgeId, PageLink pageLink);
 
+    PageData<DashboardInfo> findDashboardsByTenantIdAndUnassignedToEdge(TenantId tenantId, EdgeId edgeId, PageLink pageLink);
+
     DashboardInfo findFirstDashboardInfoByTenantIdAndName(TenantId tenantId, String name);
 
     ListenableFuture<DashboardInfo> findFirstDashboardInfoByTenantIdAndNameAsync(TenantId tenantId, String name);

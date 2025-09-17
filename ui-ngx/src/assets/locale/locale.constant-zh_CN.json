@@ -2253,6 +2253,7 @@
         "unassign-edge-text": "确定后，边缘将被取消分配，并且客户将无法访问。",
         "unassign-edges-title": "确定要取消分配 {count,plural, =1 {1 个边缘} other {# 个边缘} } 吗？",
         "unassign-edges-text": "确定后，所有选定的边缘将被取消分配，并且客户将无法访问。",
+        "entities-hint": "已经分配到边缘的不会再显示出来, 默认最多显示 10 条记录",
         "make-public": "公开",
         "make-public-edge-title": "确定要将边缘 '{{edgeName}}' 设为公开吗？",
         "make-public-edge-text": "确认后，边缘及其所有数据将被设为公开并可被其他人访问。",

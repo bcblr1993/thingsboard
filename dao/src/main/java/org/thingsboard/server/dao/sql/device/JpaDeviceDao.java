@@ -115,6 +115,11 @@ public class JpaDeviceDao extends JpaAbstractDao<DeviceEntity, Device> implement
     }
 
     @Override
+    public PageData<DeviceInfo> findDeviceInfosByTenantIdAndUnassignedToEdge(UUID tenantId, UUID edgeId, String textSearch, Pageable pageable) {
+        return DaoUtil.toPageData(deviceRepository.findDeviceInfosByTenantIdAndUnassignedToEdge(tenantId, edgeId, textSearch, pageable));
+    }
+
+    @Override
     public List<String> findTenantDeviceLabels(TenantId tenantId, String searchText) {
         return deviceRepository.findTenantDeviceLabels(tenantId.getId(), searchText, Pageable.ofSize(5));
     }

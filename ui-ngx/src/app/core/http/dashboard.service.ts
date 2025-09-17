@@ -62,6 +62,11 @@ export class DashboardService {
       defaultHttpOptionsFromConfig(config));
   }
 
+  public getUnassignedTenantDashboards(edgeId: string, pageLink: PageLink, config?: RequestConfig): Observable<PageData<DashboardInfo>> {
+    return this.http.get<PageData<DashboardInfo>>(`/api/tenant/dashboards/unassigned/${edgeId}${pageLink.toQuery()}`,
+      defaultHttpOptionsFromConfig(config));
+  }
+
   public getCustomerDashboards(customerId: string, pageLink: PageLink, config?: RequestConfig): Observable<PageData<DashboardInfo>> {
     return this.http.get<PageData<DashboardInfo>>(`/api/customer/${customerId}/dashboards${pageLink.toQuery()}`,
       defaultHttpOptionsFromConfig(config));

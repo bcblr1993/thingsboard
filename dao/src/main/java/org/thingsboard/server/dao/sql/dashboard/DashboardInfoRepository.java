@@ -73,6 +73,14 @@ public interface DashboardInfoRepository extends JpaRepository<DashboardInfoEnti
                                                       @Param("searchText") String searchText,
                                                       Pageable pageable);
 
+    @Query("SELECT di FROM DashboardInfoEntity di WHERE di.tenantId = :tenantId " +
+            "AND di.id NOT IN (SELECT re.toId FROM RelationEntity re WHERE re.toType = 'DASHBOARD' AND re.relationTypeGroup = 'EDGE' AND re.relationType = 'Contains' AND re.fromType = 'EDGE' AND re.fromId = :edgeId) " +
+            "AND (:searchText IS NULL OR ilike(di.title, CONCAT('%', :searchText, '%')) = true)")
+    Page<DashboardInfoEntity> findDashboardInfosByTenantIdAndUnassignedToEdge(@Param("tenantId") UUID tenantId,
+                                                                                @Param("edgeId") UUID edgeId,
+                                                                                @Param("searchText") String searchText,
+                                                                                Pageable pageable);
+
     @Query("SELECT di.title FROM DashboardInfoEntity di WHERE di.tenantId = :tenantId AND di.id = :dashboardId")
     String findTitleByTenantIdAndId(@Param("tenantId") UUID tenantId, @Param("dashboardId") UUID dashboardId);
 

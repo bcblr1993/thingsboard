@@ -194,6 +194,19 @@ public interface AssetRepository extends JpaRepository<AssetEntity, UUID>, Expor
                                                                                  @Param("textSearch") String textSearch,
                                                                                  Pageable pageable);
 
+    @Query("SELECT new org.thingsboard.server.dao.model.sql.AssetInfoEntity(a, c.title, c.additionalInfo, p.name) " +
+            "FROM AssetEntity a " +
+            "LEFT JOIN CustomerEntity c on c.id = a.customerId " +
+            "LEFT JOIN AssetProfileEntity p on p.id = a.assetProfileId " +
+            "WHERE a.tenantId = :tenantId " +
+            "AND a.id NOT IN (SELECT re.toId FROM RelationEntity re WHERE re.toType = 'ASSET' AND re.relationTypeGroup = 'EDGE' AND re.relationType = 'Contains' AND re.fromType = 'EDGE' AND re.fromId = :edgeId) " +
+            "AND (:textSearch IS NULL OR ilike(a.name, CONCAT('%', :textSearch, '%')) = true " +
+            "OR ilike(a.label, CONCAT('%', :textSearch, '%')) = true)")
+    Page<AssetInfoEntity> findAssetInfosByTenantIdAndUnassignedToEdge(@Param("tenantId") UUID tenantId,
+                                                                      @Param("edgeId") UUID edgeId,
+                                                                      @Param("textSearch") String textSearch,
+                                                                      Pageable pageable);
+
     Long countByAssetProfileId(UUID assetProfileId);
 
     @Query("SELECT a FROM AssetEntity a, RelationEntity re WHERE a.tenantId = :tenantId " +

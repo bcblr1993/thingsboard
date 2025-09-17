@@ -210,6 +210,15 @@ public class JpaAssetDao extends JpaAbstractDao<AssetEntity, Asset> implements A
     }
 
     @Override
+    public PageData<AssetInfo> findAssetInfosByTenantIdAndUnassignedToEdge(UUID tenantId, UUID edgeId, PageLink pageLink) {
+        return DaoUtil.toPageData(assetRepository.findAssetInfosByTenantIdAndUnassignedToEdge(
+                tenantId,
+                edgeId,
+                pageLink.getTextSearch(),
+                DaoUtil.toPageable(pageLink, AssetInfoEntity.assetInfoColumnMap)));
+    }
+
+    @Override
     public ListenableFuture<List<EntitySubtype>> findTenantAssetTypesAsync(UUID tenantId) {
         return service.submit(() -> convertTenantEntityInfosToDto(tenantId, EntityType.ASSET, assetProfileRepository.findActiveTenantAssetProfileNames(tenantId)));
     }

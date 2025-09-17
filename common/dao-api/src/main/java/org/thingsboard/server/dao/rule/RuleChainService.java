@@ -100,6 +100,8 @@ public interface RuleChainService extends EntityDaoService {
 
     PageData<RuleChain> findAutoAssignToEdgeRuleChainsByTenantId(TenantId tenantId, PageLink pageLink);
 
+    PageData<RuleChain> findRuleChainsByTenantIdAndTypeAndUnassignedToEdge(TenantId tenantId, RuleChainType type, EdgeId edgeId, PageLink pageLink);
+
     List<RuleNode> findRuleNodesByTenantIdAndType(TenantId tenantId, String name, String toString);
 
     List<RuleNode> findRuleNodesByTenantIdAndType(TenantId tenantId, String type);

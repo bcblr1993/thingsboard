@@ -37,6 +37,11 @@ export class EntityViewService {
       defaultHttpOptionsFromConfig(config));
   }
 
+  public getUnassignedTenantEntityViewInfos(edgeId: string, pageLink: PageLink, config?: RequestConfig): Observable<PageData<EntityViewInfo>> {
+    return this.http.get<PageData<EntityViewInfo>>(`/api/tenant/entityViewInfos/unassigned/${edgeId}${pageLink.toQuery()}`,
+      defaultHttpOptionsFromConfig(config));
+  }
+
   public getCustomerEntityViewInfos(customerId: string, pageLink: PageLink, type: string = '',
                                     config?: RequestConfig): Observable<PageData<EntityViewInfo>> {
     return this.http.get<PageData<EntityViewInfo>>(`/api/customer/${customerId}/entityViewInfos${pageLink.toQuery()}&type=${type}`,

@@ -379,6 +379,15 @@ public class BaseAssetService extends AbstractCachedEntityService<AssetCacheKey,
     }
 
     @Override
+    public PageData<AssetInfo> findAssetInfosByTenantIdAndUnassignedToEdge(TenantId tenantId, EdgeId edgeId, PageLink pageLink) {
+        log.trace("Executing findAssetInfosByTenantIdAndUnassignedToEdge, tenantId [{}], edgeId [{}], pageLink [{}]", tenantId, edgeId, pageLink);
+        validateId(tenantId, id -> INCORRECT_TENANT_ID + id);
+        validateId(edgeId, id -> "Incorrect edgeId " + id);
+        validatePageLink(pageLink);
+        return assetDao.findAssetInfosByTenantIdAndUnassignedToEdge(tenantId.getId(), edgeId.getId(), pageLink);
+    }
+
+    @Override
     public ListenableFuture<List<Asset>> findAssetsByTenantIdCustomerIdAndIdsAsync(TenantId tenantId, CustomerId customerId, List<AssetId> assetIds) {
         log.trace("Executing findAssetsByTenantIdAndCustomerIdAndIdsAsync, tenantId [{}], customerId [{}], assetIds [{}]", tenantId, customerId, assetIds);
         validateId(tenantId, id -> INCORRECT_TENANT_ID + id);

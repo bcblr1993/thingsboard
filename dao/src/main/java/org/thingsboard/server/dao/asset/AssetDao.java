@@ -176,6 +176,8 @@ public interface AssetDao extends Dao<Asset>, TenantEntityDao<Asset>, Exportable
      */
     PageData<AssetInfo> findAssetInfosByTenantIdAndCustomerIdAndAssetProfileId(UUID tenantId, UUID customerId, UUID assetProfileId, PageLink pageLink);
 
+    PageData<AssetInfo> findAssetInfosByTenantIdAndUnassignedToEdge(UUID tenantId, UUID edgeId, PageLink pageLink);
+
     /**
      * Find assets by tenantId, customerId and assets Ids.
      *

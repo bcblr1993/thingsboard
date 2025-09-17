@@ -282,6 +282,15 @@ public class EntityViewServiceImpl extends CachedVersionedEntityService<EntityVi
     }
 
     @Override
+    public PageData<EntityViewInfo> findEntityViewInfosByTenantIdAndUnassignedToEdge(TenantId tenantId, EdgeId edgeId, PageLink pageLink) {
+        log.trace("Executing findEntityViewInfosByTenantIdAndUnassignedToEdge, tenantId [{}], edgeId [{}], pageLink [{}]", tenantId, edgeId, pageLink);
+        validateId(tenantId, id -> INCORRECT_TENANT_ID + id);
+        validateId(edgeId, id -> INCORRECT_EDGE_ID + id);
+        validatePageLink(pageLink);
+        return entityViewDao.findEntityViewInfosByTenantIdAndUnassignedToEdge(tenantId.getId(), edgeId.getId(), pageLink);
+    }
+
+    @Override
     public ListenableFuture<List<EntityView>> findEntityViewsByQuery(TenantId tenantId, EntityViewSearchQuery query) {
         ListenableFuture<List<EntityRelation>> relations = relationService.findByQuery(tenantId, query.toEntitySearchQuery());
         ListenableFuture<List<EntityView>> entityViews = Futures.transformAsync(relations, r -> {

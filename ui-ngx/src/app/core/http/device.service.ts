@@ -63,6 +63,11 @@ export class DeviceService {
       defaultHttpOptionsFromConfig(config));
   }
 
+  public getUnassignedTenantDeviceInfos(edgeId: string, pageLink: PageLink, config?: RequestConfig): Observable<PageData<DeviceInfo>> {
+    return this.http.get<PageData<DeviceInfo>>(`/api/tenant/deviceInfos/unassigned/${edgeId}${pageLink.toQuery()}`,
+      defaultHttpOptionsFromConfig(config));
+  }
+
   public getCustomerDeviceInfos(customerId: string, pageLink: PageLink, type: string = '',
                                 config?: RequestConfig): Observable<PageData<DeviceInfo>> {
     return this.http.get<PageData<DeviceInfo>>(`/api/customer/${customerId}/deviceInfos${pageLink.toQuery()}&type=${type}`,
