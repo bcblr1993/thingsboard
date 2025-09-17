@@ -20,7 +20,7 @@ ENV LOGGING_CONFIG=$HOME/logback.xml
 WORKDIR $HOME
 
 # 创建日志、配置目录
-RUN mkdir -p $LOGS $CONFIG_PATH $LIB_DIR
+RUN mkdir -p $LOG_DIR $CONFIG_PATH $LIB_DIR
 
 # 复制外部文件
 COPY install.sh install.sh
