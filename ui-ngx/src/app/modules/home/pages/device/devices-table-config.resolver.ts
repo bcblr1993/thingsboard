@@ -75,6 +75,7 @@ import {
   AddEntitiesToEdgeDialogComponent,
   AddEntitiesToEdgeDialogData
 } from '@home/dialogs/add-entities-to-edge-dialog.component';
+import { AssignDevicesByLabelToEdgeDialogComponent, AssignDevicesByLabelToEdgeDialogData } from '@home/dialogs/assign-devices-by-label-to-edge-dialog.component';
 import { EdgeId } from '@shared/models/id/edge-id';
 import { CustomerId } from '@shared/models/id/customer-id';
 import { PageLink, PageQueryParam } from '@shared/models/page/page-link';
@@ -451,6 +452,12 @@ export class DevicesTableConfigResolver  {
           icon: 'add',
           isEnabled: () => true,
           onAction: ($event) => this.addDevicesToEdge($event)
+        },
+        {
+          name: this.translate.instant('device.assign-devices-by-label'),
+          icon: 'label',
+          isEnabled: () => true,
+          onAction: ($event) => this.assignDevicesByLabelToEdge($event)
         }
       );
     }
@@ -695,9 +702,6 @@ export class DevicesTableConfigResolver  {
   }
 
   addDevicesToEdge($event: Event) {
-    if ($event) {
-      $event.stopPropagation();
-    }
     this.dialog.open<AddEntitiesToEdgeDialogComponent, AddEntitiesToEdgeDialogData,
       boolean>(AddEntitiesToEdgeDialogComponent, {
       disableClose: true,
@@ -762,6 +766,20 @@ export class DevicesTableConfigResolver  {
         }
       }
     );
+  }
+
+  assignDevicesByLabelToEdge($event: Event) {
+    this.dialog.open<AssignDevicesByLabelToEdgeDialogComponent, AssignDevicesByLabelToEdgeDialogData, boolean>(AssignDevicesByLabelToEdgeDialogComponent, {
+      disableClose: true,
+      panelClass: ['tb-dialog'],
+      data: {
+        edgeId: this.config.componentsData.edgeId
+      }
+    }).afterClosed().subscribe((res) => {
+      if (res) {
+        this.config.updateData();
+      }
+    });
   }
 
   checkConnectivity($event: Event, deviceId: EntityId, afterAdd = false) {

@@ -202,9 +202,18 @@ export class DeviceService {
       defaultHttpOptionsFromConfig(config));
   }
 
+  public assignDevicesToEdgeByLabel(edgeId: string, label: string, config?: RequestConfig): Observable<void> {
+    return this.http.post<void>(`/api/edge/${edgeId}/devices/label/${label}`, null, defaultHttpOptionsFromConfig(config));
+  }
+
   public getEdgeDevices(edgeId: string, pageLink: PageLink, type: string = '',
                         config?: RequestConfig): Observable<PageData<DeviceInfo>> {
     return this.http.get<PageData<DeviceInfo>>(`/api/edge/${edgeId}/devices${pageLink.toQuery()}&type=${type}`,
+      defaultHttpOptionsFromConfig(config));
+  }
+
+  public getTenantDeviceLabels(searchText: string, config?: RequestConfig): Observable<Array<string>> {
+    return this.http.get<Array<string>>(`/api/tenant/devices/labels?textSearch=${searchText}`,
       defaultHttpOptionsFromConfig(config));
   }
 

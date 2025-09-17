@@ -544,6 +544,18 @@ public class DeviceController extends BaseController {
         return checkNotNull(deviceTypes.get());
     }
 
+    @ApiOperation(value = "Get Tenant Device Labels (getTenantDeviceLabels)",
+            notes = "Returns a list of unique device labels owned by tenant." + TENANT_AUTHORITY_PARAGRAPH)
+    @PreAuthorize("hasAuthority('TENANT_ADMIN')")
+    @RequestMapping(value = "/tenant/devices/labels", method = RequestMethod.GET)
+    @ResponseBody
+    public List<String> getTenantDeviceLabels(
+            @Parameter(description = DEVICE_TEXT_SEARCH_DESCRIPTION)
+            @RequestParam(required = false) String textSearch) throws ThingsboardException {
+        TenantId tenantId = getCurrentUser().getTenantId();
+        return checkNotNull(deviceService.findTenantDeviceLabels(tenantId, textSearch));
+    }
+
     @ApiOperation(value = "Claim device (claimDevice)",
             notes = "Claiming makes it possible to assign a device to the specific customer using device/server side claiming data (in the form of secret key)." +
                     "To make this happen you have to provide unique device name and optional claiming data (it is needed only for device-side claiming)." +
@@ -705,6 +717,22 @@ public class DeviceController extends BaseController {
         DeviceId deviceId = new DeviceId(toUUID(strDeviceId));
         Device device = checkDeviceId(deviceId, Operation.READ);
         return tbDeviceService.unassignDeviceFromEdge(device, edge, getCurrentUser());
+    }
+
+    @ApiOperation(value = "Assign devices to edge by label (assignDevicesToEdgeByLabel)",
+            notes = "Assigns all devices with the specified label to the edge." + TENANT_AUTHORITY_PARAGRAPH)
+    @PreAuthorize("hasAuthority('TENANT_ADMIN')")
+    @RequestMapping(value = "/edge/{edgeId}/devices/label/{label}", method = RequestMethod.POST)
+    @ResponseBody
+    public void assignDevicesToEdgeByLabel(@Parameter(description = EDGE_ID_PARAM_DESCRIPTION)
+                                           @PathVariable(EDGE_ID) String strEdgeId,
+                                           @Parameter(description = "The label of the devices.")
+                                           @PathVariable("label") String label) throws ThingsboardException {
+        checkParameter(EDGE_ID, strEdgeId);
+        checkParameter("label", label);
+        EdgeId edgeId = new EdgeId(toUUID(strEdgeId));
+        Edge edge = checkEdgeId(edgeId, Operation.READ);
+        tbDeviceService.assignDevicesToEdgeByLabel(getTenantId(), edgeId, label, getCurrentUser());
     }
 
     @ApiOperation(value = "Get devices assigned to edge (getEdgeDevices)",

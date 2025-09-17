@@ -694,8 +694,28 @@ public class DeviceServiceImpl extends CachedVersionedEntityService<DeviceCacheK
     }
 
     @Override
+    public void assignDevicesToEdgeByLabel(TenantId tenantId, EdgeId edgeId, String label) {
+        log.trace("Executing assignDevicesToEdgeByLabel, tenantId [{}], edgeId [{}], label [{}]", tenantId, edgeId, label);
+        validateId(tenantId, id -> INCORRECT_TENANT_ID + id);
+        validateId(edgeId, id -> INCORRECT_EDGE_ID + id);
+        validateString(label, l -> "Incorrect label " + l);
+        PageLink pageLink = new PageLink(10000);
+        PageData<Device> devices = deviceDao.findDevicesByTenantIdAndLabel(tenantId.getId(), label, pageLink);
+        for (Device device : devices.getData()) {
+            assignDeviceToEdge(tenantId, device.getId(), edgeId);
+        }
+    }
+
+    @Override
     public long countByTenantId(TenantId tenantId) {
         return deviceDao.countByTenantId(tenantId);
+    }
+
+    @Override
+    public List<String> findTenantDeviceLabels(TenantId tenantId, String searchText) {
+        log.trace("Executing findTenantDeviceLabels, tenantId [{}], searchText [{}]", tenantId, searchText);
+        validateId(tenantId, id -> INCORRECT_TENANT_ID + id);
+        return deviceDao.findTenantDeviceLabels(tenantId, searchText);
     }
 
     private final PaginatedRemover<TenantId, Device> tenantDevicesRemover = new PaginatedRemover<>() {

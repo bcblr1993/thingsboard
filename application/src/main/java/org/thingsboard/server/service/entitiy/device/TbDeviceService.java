@@ -24,6 +24,7 @@ import org.thingsboard.server.common.data.edge.Edge;
 import org.thingsboard.server.common.data.exception.ThingsboardException;
 import org.thingsboard.server.common.data.id.CustomerId;
 import org.thingsboard.server.common.data.id.DeviceId;
+import org.thingsboard.server.common.data.id.EdgeId;
 import org.thingsboard.server.common.data.id.TenantId;
 import org.thingsboard.server.common.data.security.DeviceCredentials;
 import org.thingsboard.server.dao.device.claim.ClaimResult;
@@ -56,4 +57,6 @@ public interface TbDeviceService {
     Device assignDeviceToEdge(TenantId tenantId, DeviceId deviceId, Edge edge, User user) throws ThingsboardException;
 
     Device unassignDeviceFromEdge(Device device, Edge edge, User user) throws ThingsboardException;
+
+    void assignDevicesToEdgeByLabel(TenantId tenantId, EdgeId edgeId, String label, User user) throws ThingsboardException;
 }

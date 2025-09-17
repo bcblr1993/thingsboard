@@ -83,6 +83,11 @@ public interface DeviceRepository extends JpaRepository<DeviceEntity, UUID>, Exp
                                              @Param("textSearch") String textSearch,
                                              Pageable pageable);
 
+    @Query("SELECT d FROM DeviceEntity d WHERE d.tenantId = :tenantId AND d.label = :label")
+    Page<DeviceEntity> findByTenantIdAndLabel(@Param("tenantId") UUID tenantId,
+                                              @Param("label") String label,
+                                              Pageable pageable);
+
     @Query("SELECT d.id FROM DeviceEntity d WHERE d.tenantId = :tenantId " +
             "AND d.deviceProfileId = :deviceProfileId " +
             "AND (:textSearch IS NULL OR ilike(d.type, CONCAT('%', :textSearch, '%')) = true)")
@@ -208,5 +213,8 @@ public interface DeviceRepository extends JpaRepository<DeviceEntity, UUID>, Exp
     @Query("SELECT new org.thingsboard.server.common.data.edqs.fields.DeviceFields(d.id, d.createdTime, d.tenantId, d.customerId," +
             "d.name, d.version, d.type, d.label, d.deviceProfileId, d.additionalInfo) FROM DeviceEntity d WHERE d.id > :id ORDER BY d.id")
     List<DeviceFields> findNextBatch(@Param("id") UUID id, Limit limit);
+
+    @Query("SELECT d.label FROM DeviceEntity d WHERE d.tenantId = :tenantId AND d.label IS NOT NULL AND (:searchText IS NULL OR ilike(d.label, CONCAT('%', :searchText, '%')) = true) GROUP BY d.label ORDER BY count(d.label) DESC")
+    List<String> findTenantDeviceLabels(@Param("tenantId") UUID tenantId, @Param("searchText") String searchText, Pageable pageable);
 
 }

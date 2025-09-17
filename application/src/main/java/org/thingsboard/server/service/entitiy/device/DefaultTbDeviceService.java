@@ -277,4 +277,17 @@ public class DefaultTbDeviceService extends AbstractTbEntityService implements T
         }
     }
 
+    @Override
+    public void assignDevicesToEdgeByLabel(TenantId tenantId, EdgeId edgeId, String label, User user) throws ThingsboardException {
+        ActionType actionType = ActionType.ASSIGNED_TO_EDGE;
+        try {
+            deviceService.assignDevicesToEdgeByLabel(tenantId, edgeId, label);
+            logEntityActionService.logEntityAction(tenantId, edgeId, null, null,
+                    actionType, user, label);
+        } catch (Exception e) {
+            logEntityActionService.logEntityAction(tenantId, emptyId(EntityType.EDGE), actionType, user, e, label);
+            throw e;
+        }
+    }
+
 }

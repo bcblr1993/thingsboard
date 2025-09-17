@@ -115,6 +115,11 @@ public class JpaDeviceDao extends JpaAbstractDao<DeviceEntity, Device> implement
     }
 
     @Override
+    public List<String> findTenantDeviceLabels(TenantId tenantId, String searchText) {
+        return deviceRepository.findTenantDeviceLabels(tenantId.getId(), searchText, Pageable.ofSize(5));
+    }
+
+    @Override
     public ListenableFuture<List<Device>> findDevicesByTenantIdAndIdsAsync(UUID tenantId, List<UUID> deviceIds) {
         return service.submit(() -> DaoUtil.convertDataList(deviceRepository.findDevicesByTenantIdAndIdIn(tenantId, deviceIds)));
     }
@@ -173,6 +178,15 @@ public class JpaDeviceDao extends JpaAbstractDao<DeviceEntity, Device> implement
                         tenantId,
                         type,
                         pageLink.getTextSearch(),
+                        DaoUtil.toPageable(pageLink)));
+    }
+
+    @Override
+    public PageData<Device> findDevicesByTenantIdAndLabel(UUID tenantId, String label, PageLink pageLink) {
+        return DaoUtil.toPageData(
+                deviceRepository.findByTenantIdAndLabel(
+                        tenantId,
+                        label,
                         DaoUtil.toPageable(pageLink)));
     }
 

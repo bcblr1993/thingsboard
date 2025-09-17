@@ -86,6 +86,8 @@ public interface DeviceDao extends Dao<Device>, TenantEntityDao<Device>, Exporta
      */
     PageData<Device> findDevicesByTenantIdAndType(UUID tenantId, String type, PageLink pageLink);
 
+    PageData<Device> findDevicesByTenantIdAndLabel(UUID tenantId, String label, PageLink pageLink);
+
     /**
      * Find device ids by tenantId, type and page link.
      *
@@ -234,5 +236,7 @@ public interface DeviceDao extends Dao<Device>, TenantEntityDao<Device>, Exporta
     PageData<ProfileEntityIdInfo> findProfileEntityIdInfosByTenantId(UUID tenantId, PageLink pageLink);
 
     PageData<DeviceInfo> findDeviceInfosByFilter(DeviceInfoFilter filter, PageLink pageLink);
+
+    List<String> findTenantDeviceLabels(TenantId tenantId, String searchText);
 
 }
