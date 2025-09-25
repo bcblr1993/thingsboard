@@ -224,7 +224,7 @@ public interface DeviceRepository extends JpaRepository<DeviceEntity, UUID>, Exp
             "d.name, d.version, d.type, d.label, d.deviceProfileId, d.additionalInfo) FROM DeviceEntity d WHERE d.id > :id ORDER BY d.id")
     List<DeviceFields> findNextBatch(@Param("id") UUID id, Limit limit);
 
-    @Query("SELECT d.label FROM DeviceEntity d WHERE d.tenantId = :tenantId AND d.label IS NOT NULL AND (:searchText IS NULL OR ilike(d.label, CONCAT('%', :searchText, '%')) = true) GROUP BY d.label ORDER BY count(d.label) DESC")
+    @Query("SELECT d.label FROM DeviceEntity d WHERE d.tenantId = :tenantId AND d.label IS NOT NULL AND d.label != '' AND (:searchText IS NULL OR ilike(d.label, CONCAT('%', :searchText, '%')) = true) GROUP BY d.label ORDER BY count(d.label) DESC")
     List<String> findTenantDeviceLabels(@Param("tenantId") UUID tenantId, @Param("searchText") String searchText, Pageable pageable);
 
 }
