@@ -18,7 +18,7 @@ import { Component, OnDestroy } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { AppState } from '@core/core.state';
 import { PageComponent } from '@shared/components/page.component';
-import { AbstractControl, FormBuilder, FormGroup, ValidatorFn, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, FormControl, FormGroup, FormGroupDirective, NgForm, ValidatorFn, Validators } from '@angular/forms';
 import { AdminService } from '@core/http/admin.service';
 import { HasConfirmForm } from '@core/guards/confirm-on-exit.guard';
 import { Subject } from 'rxjs';
@@ -26,6 +26,7 @@ import { AdminSettings } from '@shared/models/settings.models';
 import { PersonalizationService } from '@core/services/personalization.service';
 import { TitleService } from '@core/services/title.service';
 import { Router } from '@angular/router';
+
 
 export interface PersonalizationSettings {
   title: string;
@@ -36,11 +37,15 @@ export interface PersonalizationSettings {
   loginLogoHeight: number;
 }
 
-export function maxImageSizeValidator(maxSizeKB: number): ValidatorFn {
+export function icoBase64Validator(maxSizeKB: number): ValidatorFn {
   return (control: AbstractControl): {[key: string]: any} | null => {
     const value = control.value;
     if (!value || !value.startsWith('data:')) {
       return null;
+    }
+
+    if (!value.startsWith('data:image/x-icon') && !value.startsWith('data:image/vnd.microsoft.icon')) {
+      return { invalidIcoFormat: true };
     }
 
     const base64Data = value.substring(value.indexOf(',') + 1);
@@ -88,6 +93,16 @@ export function svgBase64Validator(maxSizeKB: number): ValidatorFn {
   };
 }
 
+import { ErrorStateMatcher } from '@angular/material/core';
+
+/** Error when invalid control is dirty, touched, or submitted. */
+export class ImmediateErrorStateMatcher implements ErrorStateMatcher {
+  isErrorState(control: FormControl | null, form: FormGroupDirective | NgForm | null): boolean {
+    const isSubmitted = form && form.submitted;
+    return !!(control && control.invalid && (control.dirty || control.touched || isSubmitted));
+  }
+}
+
 @Component({
   selector: 'tb-personalization-settings',
   templateUrl: './personalization-settings.component.html',
@@ -96,6 +111,7 @@ export function svgBase64Validator(maxSizeKB: number): ValidatorFn {
 export class PersonalizationSettingsComponent extends PageComponent implements HasConfirmForm, OnDestroy {
 
   personalizationSettingsForm: FormGroup;
+  matcher = new ImmediateErrorStateMatcher();
 
   private adminSettings: AdminSettings<PersonalizationSettings>;
   private readonly destroy$ = new Subject<void>();
@@ -121,8 +137,8 @@ export class PersonalizationSettingsComponent extends PageComponent implements H
 
   private buildForm() {
     this.personalizationSettingsForm = this.fb.group({
-      title: ['', [Validators.required]],
-      favicon: ['', [maxImageSizeValidator(20)]],
+      title: ['', [Validators.required, Validators.maxLength(60)]],
+      favicon: ['', [icoBase64Validator(20)]],
       logo: ['', [svgBase64Validator(100)]],
       logoHeight: [null, [Validators.min(10)]],
       loginLogoHeight: [null, [Validators.min(10)]]

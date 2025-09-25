@@ -22,15 +22,22 @@
       <div fxLayout="column" style="margin-top: 16px;">
         <mat-form-field class="mat-block">
           <mat-label>{{ 'admin.personalization.page-title' | translate }}</mat-label>
-          <input matInput formControlName="title">
+          <input matInput formControlName="title" #titleInput [errorStateMatcher]="matcher">
+          <mat-hint align="end">{{titleInput.value.length}} / 60</mat-hint>
+          <mat-error *ngIf="personalizationSettingsForm.get('title').hasError('maxlength')">
+            {{ 'admin.personalization.title-max-length' | translate: {max: 60} }}
+          </mat-error>
         </mat-form-field>
 
 
         <div fxLayout="row" fxLayoutGap="16px">
           <div fxFlex fxLayout="column">
             <tb-image-input [showClearButton]="false" formControlName="favicon" label="{{ 'admin.personalization.favicon' | translate }}" accept=".ico"></tb-image-input>
+            <mat-error *ngIf="personalizationSettingsForm.get('favicon').hasError('invalidIcoFormat')" style="margin-bottom: 5px;">
+              {{ 'admin.personalization.invalid-ico-format' | translate }}
+            </mat-error>
             <mat-error *ngIf="personalizationSettingsForm.get('favicon').hasError('maxSizeExceeded')" style="margin-bottom: 5px;">
-              {{ 'admin.personalization.max-size-exceeded' | translate }}
+              {{ 'admin.personalization.max-size-exceeded-kb' | translate: {maxSize: 20} }}
             </mat-error>
           </div>
           <div fxFlex fxLayout="column">
@@ -40,7 +47,7 @@
                 {{ 'admin.personalization.invalid-svg-format' | translate }}
             </mat-error>
             <mat-error *ngIf="personalizationSettingsForm.get('logo').hasError('maxSizeExceeded')" style="margin-bottom: 5px;">
-                {{ 'admin.personalization.max-size-exceeded' | translate }}
+                {{ 'admin.personalization.max-size-exceeded-kb' | translate: {maxSize: 100} }}
             </mat-error>
           </div>
         </div>
