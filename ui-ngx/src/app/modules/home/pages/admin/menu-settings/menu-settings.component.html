@@ -41,6 +41,7 @@
           <button mat-icon-button disabled></button>
           <mat-checkbox class="checklist-leaf-node"
                         [checked]="checklistSelection.isSelected(node.id)"
+                        [disabled]="isNodeDisabled(node)"
                         (change)="leafItemSelectionToggle(node)">{{node.name | translate}}</mat-checkbox>
         </mat-tree-node>
 
@@ -53,6 +54,7 @@
           </button>
           <mat-checkbox [checked]="checklistSelection.isSelected(node.id)"
                         [indeterminate]="descendantsPartiallySelected(node)"
+                        [disabled]="isNodeDisabled(node)"
                         (change)="itemSelectionToggle(node)">{{node.name | translate}}</mat-checkbox>
         </mat-tree-node>
       </mat-tree>
