@@ -241,11 +241,17 @@ export class MenuSettingsComponent extends PageComponent implements OnInit {
     const descAllSelected = descendants.length > 0 && descendants.every(child => {
       return this.checklistSelection.isSelected(child.id);
     });
-    if (nodeSelected && !descAllSelected) {
-      this.checklistSelection.deselect(node.id);
-    } else if (!nodeSelected && descAllSelected) {
+    
+    // 修复bug：不要自动取消选中父节点
+    // 父菜单应该可以独立存在，即使所有子菜单都未选中
+    // 只在所有子节点都选中时，自动选中父节点
+    if (!nodeSelected && descAllSelected) {
       this.checklistSelection.select(node.id);
     }
+    // 注释掉原来的逻辑，不再自动取消选中父节点
+    // if (nodeSelected && !descAllSelected) {
+    //   this.checklistSelection.deselect(node.id);
+    // }
   }
 
   getParentNode(node: MenuFlatNode): MenuFlatNode | null {
