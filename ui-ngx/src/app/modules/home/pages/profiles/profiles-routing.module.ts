@@ -20,6 +20,7 @@ import { NgModule } from '@angular/core';
 import { deviceProfilesRoutes } from '@home/pages/device-profile/device-profile-routing.module';
 import { assetProfilesRoutes } from '@home/pages/asset-profile/asset-profile-routing.module';
 import { MenuId } from '@core/services/menu.models';
+import { DynamicMenuRedirectGuard } from '@core/guards/dynamic-menu-redirect.guard';
 
 const routes: Routes = [
   {
@@ -33,10 +34,11 @@ const routes: Routes = [
     children: [
       {
         path: '',
+        canActivate: [DynamicMenuRedirectGuard],
         children: [],
         data: {
           auth: [Authority.TENANT_ADMIN],
-          redirectTo: '/profiles/deviceProfiles'
+          parentMenuId: MenuId.profiles
         }
       },
       ...deviceProfilesRoutes,

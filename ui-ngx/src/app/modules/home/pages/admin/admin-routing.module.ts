@@ -19,6 +19,7 @@ import { ActivatedRouteSnapshot, ResolveFn, Router, RouterModule, RouterStateSna
 
 import { MailServerComponent } from '@modules/home/pages/admin/mail-server.component';
 import { ConfirmOnExitGuard } from '@core/guards/confirm-on-exit.guard';
+import { DynamicMenuRedirectGuard } from '@core/guards/dynamic-menu-redirect.guard';
 import { Authority } from '@shared/models/authority.enum';
 import { GeneralSettingsComponent } from '@modules/home/pages/admin/general-settings.component';
 import { SecuritySettingsComponent } from '@modules/home/pages/admin/security-settings.component';
@@ -83,10 +84,11 @@ const routes: Routes = [
     children: [
       {
         path: '',
+        canActivate: [DynamicMenuRedirectGuard],
         children: [],
         data: {
           auth: [Authority.SYS_ADMIN, Authority.TENANT_ADMIN],
-          redirectTo: '/resources/widgets-library'
+          parentMenuId: MenuId.resources
         }
       },
       ...widgetsLibraryRoutes,
@@ -233,13 +235,11 @@ const routes: Routes = [
     children: [
       {
         path: '',
+        canActivate: [DynamicMenuRedirectGuard],
         children: [],
         data: {
           auth: [Authority.SYS_ADMIN, Authority.TENANT_ADMIN],
-          redirectTo: {
-            SYS_ADMIN: '/settings/general',
-            TENANT_ADMIN: '/settings/home'
-          }
+          parentMenuId: MenuId.settings
         }
       },
       {
@@ -413,13 +413,11 @@ const routes: Routes = [
     children: [
       {
         path: '',
+        canActivate: [DynamicMenuRedirectGuard],
         children: [],
         data: {
           auth: [Authority.SYS_ADMIN, Authority.TENANT_ADMIN],
-          redirectTo: {
-            SYS_ADMIN: '/security-settings/general',
-            TENANT_ADMIN: '/security-settings/auditLogs'
-          }
+          parentMenuId: MenuId.security_settings
         }
       },
       {
