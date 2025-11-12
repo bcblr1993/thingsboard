@@ -60,8 +60,8 @@ public class MenuSettingController extends BaseController {
     @RequestMapping(value = "/menu", method = RequestMethod.POST)
     @ResponseBody
     public MenuSetting saveMenuSetting(@RequestBody MenuSetting menuSetting) throws ThingsboardException {
-        if (menuSetting.getMenuConfig() == null) {
-            throw new ThingsboardException("Menu config cannot be null!", ThingsboardErrorCode.BAD_REQUEST_PARAMS);
+        if (menuSetting.getMenuConfig() == null || menuSetting.getMenuConfig().isEmpty()) {
+            throw new ThingsboardException("Menu config cannot be null or empty!", ThingsboardErrorCode.BAD_REQUEST_PARAMS);
         }
         if (menuSetting.getAuthority() == null) {
             throw new ThingsboardException("Authority cannot be null!", ThingsboardErrorCode.BAD_REQUEST_PARAMS);
