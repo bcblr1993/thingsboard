@@ -51,10 +51,15 @@
                 (click)="closeSearch()">
           <mat-icon class="material-icons">arrow_back</mat-icon>
         </button>
-        <tb-breadcrumb
-            [class.!hidden]="displaySearchMode()"
-            class="mat-toolbar-tools flex-1">
-        </tb-breadcrumb>
+        <ng-container *ngIf="hasMenus$ | async; else emptyBreadcrumb">
+          <tb-breadcrumb
+              [class.!hidden]="displaySearchMode()"
+              class="mat-toolbar-tools flex-1">
+          </tb-breadcrumb>
+        </ng-container>
+        <ng-template #emptyBreadcrumb>
+          <div class="flex-1"></div>
+        </ng-template>
         <div [class.!hidden]="!displaySearchMode()" class="tb-dark flex flex-1 flex-row">
           <mat-form-field class="tb-appearance-transparent flex-1">
             <input #searchInput matInput
@@ -79,7 +84,18 @@
                         *ngIf="!hideLoadingBar && (isLoading$ | async)">
       </mat-progress-bar>
       <div tb-toast class="tb-main-content flex flex-1 flex-col">
-        <router-outlet (activate)="activeComponentChanged($event)"></router-outlet>
+        <ng-container *ngIf="hasMenus$ | async; else noMenus">
+          <router-outlet (activate)="activeComponentChanged($event)"></router-outlet>
+        </ng-container>
+        <ng-template #noMenus>
+          <div class="flex flex-1 items-center justify-center">
+            <div class="text-center p-8">
+              <mat-icon class="material-icons text-gray-400" style="font-size: 72px; width: 72px; height: 72px;">block</mat-icon>
+              <h2 class="mt-4 text-xl text-gray-600">{{ 'permission.no-menu-permission' | translate }}</h2>
+              <p class="mt-2 text-gray-500">{{ 'permission.no-menu-permission-description' | translate }}</p>
+            </div>
+          </div>
+        </ng-template>
       </div>
     </div>
   </mat-sidenav-content>

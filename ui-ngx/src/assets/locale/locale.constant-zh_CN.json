@@ -10,6 +10,10 @@
         "permission-denied": "权限被拒绝",
         "permission-denied-text": "您没有执行此操作的权限！"
     },
+    "permission": {
+        "no-menu-permission": "暂无菜单权限",
+        "no-menu-permission-description": "您当前没有访问任何菜单的权限，请联系管理员分配菜单权限。"
+    },
     "account": {
         "account": "账号",
         "notification-settings": "通知设置"

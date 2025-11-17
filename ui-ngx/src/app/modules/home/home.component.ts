@@ -15,9 +15,9 @@
 ///
 
 import { AfterViewInit, Component, ElementRef, Inject, OnDestroy, OnInit, ViewChild } from '@angular/core';
-import { skip, startWith, Subject } from 'rxjs';
+import { Observable, skip, startWith, Subject } from 'rxjs';
 import { Store } from '@ngrx/store';
-import { debounceTime, distinctUntilChanged, takeUntil } from 'rxjs/operators';
+import { debounceTime, distinctUntilChanged, map, takeUntil } from 'rxjs/operators';
 
 import { BreakpointObserver, BreakpointState } from '@angular/cdk/layout';
 import { PageComponent } from '@shared/components/page.component';
@@ -34,6 +34,7 @@ import { RouterTabsComponent } from '@home/components/router-tabs.component';
 import { FormBuilder } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { isDefined, isDefinedAndNotNull } from '@core/utils';
+import { MenuService } from '@core/services/menu.service';
 
 @Component({
   selector: 'tb-home',
@@ -67,11 +68,15 @@ export class HomeComponent extends PageComponent implements AfterViewInit, OnIni
 
   hideLoadingBar = false;
 
+  // 检查是否有可用的菜单
+  hasMenus$: Observable<boolean>;
+
   private destroy$ = new Subject<void>();
 
   constructor(protected store: Store<AppState>,
               @Inject(WINDOW) private window: Window,
               private activeComponentService: ActiveComponentService,
+              private menuService: MenuService,
               private fb: FormBuilder,
               public breakpointObserver: BreakpointObserver) {
     super(store);
@@ -82,6 +87,11 @@ export class HomeComponent extends PageComponent implements AfterViewInit, OnIni
     const isGtSm = this.breakpointObserver.isMatched(MediaBreakpoints['gt-sm']);
     this.sidenavMode = isGtSm ? 'side' : 'over';
     this.sidenavOpened = isGtSm;
+
+    // 检查是否有可用的菜单
+    this.hasMenus$ = this.menuService.availableMenuLinks().pipe(
+      map(links => links && links.length > 0)
+    );
 
     this.breakpointObserver
       .observe(MediaBreakpoints['gt-sm'])
