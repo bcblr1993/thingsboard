@@ -35,6 +35,9 @@ import { FormBuilder } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { isDefined, isDefinedAndNotNull } from '@core/utils';
 import { MenuService } from '@core/services/menu.service';
+import { DialogService } from '@core/services/dialog.service';
+import { TranslateService } from '@ngx-translate/core';
+import { AuthService } from '@core/auth/auth.service';
 
 @Component({
   selector: 'tb-home',
@@ -72,13 +75,17 @@ export class HomeComponent extends PageComponent implements AfterViewInit, OnIni
   hasMenus$: Observable<boolean>;
 
   private destroy$ = new Subject<void>();
+  private noMenuDialogShown = false;
 
   constructor(protected store: Store<AppState>,
               @Inject(WINDOW) private window: Window,
               private activeComponentService: ActiveComponentService,
               private menuService: MenuService,
               private fb: FormBuilder,
-              public breakpointObserver: BreakpointObserver) {
+              public breakpointObserver: BreakpointObserver,
+              private dialogService: DialogService,
+              private translate: TranslateService,
+              private authService: AuthService) {
     super(store);
   }
 
@@ -92,6 +99,16 @@ export class HomeComponent extends PageComponent implements AfterViewInit, OnIni
     this.hasMenus$ = this.menuService.availableMenuLinks().pipe(
       map(links => links && links.length > 0)
     );
+
+    // 监听菜单权限，如果没有权限则弹出对话框
+    this.hasMenus$.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(hasMenus => {
+      if (!hasMenus && !this.noMenuDialogShown) {
+        this.noMenuDialogShown = true;
+        this.showNoMenuPermissionDialog();
+      }
+    });
 
     this.breakpointObserver
       .observe(MediaBreakpoints['gt-sm'])
@@ -204,5 +221,17 @@ export class HomeComponent extends PageComponent implements AfterViewInit, OnIni
     if (this.searchableComponent) {
       this.searchableComponent.onSearchTextUpdated(searchText);
     }
+  }
+
+  private showNoMenuPermissionDialog() {
+    this.dialogService.alert(
+      this.translate.instant('permission.no-menu-permission'),
+      this.translate.instant('permission.no-menu-permission-description'),
+      this.translate.instant('home.logout')
+    ).subscribe((result) => {
+      if (result) {
+        this.authService.logout();
+      }
+    });
   }
 }
