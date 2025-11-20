@@ -10,6 +10,10 @@
         "permission-denied": "Permission Denied",
         "permission-denied-text": "You don't have permission to perform this operation!"
     },
+    "permission": {
+        "no-menu-permission": "No Menu Permission",
+        "no-menu-permission-description": "You currently don't have permission to access any menus. Please contact your administrator to assign menu permissions."
+    },
     "account": {
         "account": "Account",
         "notification-settings": "Notification settings"
@@ -98,6 +102,15 @@
     },
     "admin": {
         "settings": "Settings",
+        "permission-menu-allocation": "Permission Menu Allocation",
+        "menu-settings": {
+            "role": "Role",
+            "authority":{
+                "sys_admin": "sys admin",
+                "tenant_admin": "tenant admin",
+                "customer_user": "user"
+            }
+        },
         "general": "General",
         "general-settings": "General Settings",
         "home-settings": "Home Settings",

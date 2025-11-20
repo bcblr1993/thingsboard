@@ -213,10 +213,157 @@ export class AuthService {
     if (!isMobileApp()) {
       const authState = getCurrentAuthState(this.store);
       const url = this.defaultUrl(isAuthenticated, authState);
-      this.zone.run(() => {
-        this.router.navigateByUrl(url);
-      });
+      
+      // 检查用户是否有访问首页的权限
+      if (isAuthenticated && url && url.toString() === '/home') {
+        this.http.get<any[]>('/api/auth/menu', defaultHttpOptions()).subscribe(
+          (menuReferences) => {
+            // 检查菜单权限中是否包含 home 菜单
+            const hasHomePermission = this.checkMenuPermission(menuReferences, 'home');
+            
+            if (!hasHomePermission) {
+              // 如果没有首页权限,获取第一个有权限的菜单路径
+              const firstAvailableMenu = this.getFirstAvailableMenuPath(menuReferences);
+              if (firstAvailableMenu) {
+                this.zone.run(() => {
+                  this.router.navigateByUrl(firstAvailableMenu);
+                });
+              } else {
+                // 如果没有任何可用菜单,仍然跳转到home，由home组件显示提示信息
+                this.zone.run(() => {
+                  this.router.navigateByUrl(url);
+                });
+              }
+            } else {
+              this.zone.run(() => {
+                this.router.navigateByUrl(url);
+              });
+            }
+          },
+          () => {
+            // 如果获取菜单失败,仍然跳转到默认URL
+            this.zone.run(() => {
+              this.router.navigateByUrl(url);
+            });
+          }
+        );
+      } else {
+        this.zone.run(() => {
+          this.router.navigateByUrl(url);
+        });
+      }
     }
+  }
+
+  private hasAnyAvailableMenu(menuReferences: any[]): boolean {
+    if (!menuReferences || menuReferences.length === 0) {
+      return false;
+    }
+    
+    for (const menu of menuReferences) {
+      if (menu.selected !== false) {
+        // 如果是link类型的菜单项，直接返回true
+        if (menu.type === 'link') {
+          return true;
+        }
+        // 如果是toggle类型，检查是否有子菜单
+        if (menu.pages && menu.pages.length > 0) {
+          if (this.hasAnyAvailableMenu(menu.pages)) {
+            return true;
+          }
+        }
+      }
+    }
+    
+    return false;
+  }
+
+  private checkMenuPermission(menuReferences: any[], menuId: string): boolean {
+    if (!menuReferences || menuReferences.length === 0) {
+      return false;
+    }
+    
+    for (const menu of menuReferences) {
+      if (menu.id === menuId && menu.selected !== false) {
+        return true;
+      }
+      // 递归检查子菜单
+      if (menu.pages && menu.pages.length > 0) {
+        if (this.checkMenuPermission(menu.pages, menuId)) {
+          return true;
+        }
+      }
+    }
+    
+    return false;
+  }
+
+  private getFirstAvailableMenuPath(menuReferences: any[]): string | null {
+    if (!menuReferences || menuReferences.length === 0) {
+      return null;
+    }
+    
+    for (const menu of menuReferences) {
+      if (menu.selected !== false) {
+        // 获取菜单对应的路径
+        const path = this.getMenuPath(menu.id);
+        if (path) {
+          return path;
+        }
+        
+        // 如果当前菜单是toggle类型,检查子菜单
+        if (menu.pages && menu.pages.length > 0) {
+          const childPath = this.getFirstAvailableMenuPath(menu.pages);
+          if (childPath) {
+            return childPath;
+          }
+        }
+      }
+    }
+    
+    return null;
+  }
+
+  private getMenuPath(menuId: string): string | null {
+    // 定义菜单ID到路径的映射
+    const menuPathMap: { [key: string]: string } = {
+      'home': '/home',
+      'alarms': '/alarms',
+      'dashboards': '/dashboards',
+      'devices': '/entities/devices',
+      'assets': '/entities/assets',
+      'entity_views': '/entities/entityViews',
+      'gateways': '/entities/gateways',
+      'customers': '/customers',
+      'rule_chains': '/ruleChains',
+      'tenants': '/tenants',
+      'tenant_profiles': '/tenantProfiles',
+      'device_profiles': '/profiles/deviceProfiles',
+      'asset_profiles': '/profiles/assetProfiles',
+      'edges': '/edgeManagement/instances',
+      'edge_instances': '/edgeInstances',
+      'rulechain_templates': '/edgeManagement/ruleChains',
+      'otaUpdates': '/otaUpdates',
+      'version_control': '/version-control',
+      'api_usage': '/usage',
+      'audit_log': '/auditLogs',
+      'widget_library': '/resources/widgets-library',
+      'widget_types': '/resources/widgets-library/widget-types',
+      'widgets_bundles': '/resources/widgets-library/widgets-bundles',
+      'images': '/resources/images',
+      'scada_symbols': '/resources/scada-symbols',
+      'javascript_library': '/resources/javascript-library',
+      'resources_library': '/resources/resources-library',
+      'notification_inbox': '/notification/inbox',
+      'notification_sent': '/notification/sent',
+      'notification_recipients': '/notification/recipients',
+      'notification_templates': '/notification/templates',
+      'notification_rules': '/notification/rules',
+      'mobile_apps': '/mobile-center/applications',
+      'mobile_bundles': '/mobile-center/bundles'
+    };
+    
+    return menuPathMap[menuId] || null;
   }
 
   public loadOAuth2Clients(): Observable<Array<OAuth2ClientLoginInfo>> {

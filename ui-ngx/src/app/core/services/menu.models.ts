@@ -106,7 +106,8 @@ export enum MenuId {
   otaUpdates = 'otaUpdates',
   version_control = 'version_control',
   api_usage = 'api_usage',
-  trendz_settings = 'trendz_settings'
+  trendz_settings = 'trendz_settings',
+  permission_menu_allocation = 'permission_menu_allocation'
 }
 
 declare type MenuFilter = (authState: AuthState) => boolean;
@@ -707,6 +708,16 @@ export const menuSectionMap = new Map<MenuId, MenuSection>([
       path: '/settings/trendz',
       icon: 'trendz-settings'
     }
+  ],
+  [
+    MenuId.permission_menu_allocation,
+    {
+      id: MenuId.permission_menu_allocation,
+      name: 'admin.permission-menu-allocation',
+      type: 'link',
+      path: '/settings/permission-menu-allocation',
+      icon: 'rule'
+    }
   ]
 ]);
 
@@ -722,7 +733,7 @@ const menuFilters = new Map<MenuId, MenuFilter>([
   ]
 ]);
 
-const defaultUserMenuMap = new Map<Authority, MenuReference[]>([
+export const defaultUserMenuMap = new Map<Authority, MenuReference[]>([
   [
     Authority.SYS_ADMIN,
     [
@@ -769,6 +780,8 @@ const defaultUserMenuMap = new Map<Authority, MenuReference[]>([
           {id: MenuId.general},
           {id: MenuId.mail_server},
           {id: MenuId.notification_settings},
+          {id: MenuId.queues},
+          {id: MenuId.permission_menu_allocation}
           {id: MenuId.queues},
           {id: MenuId.personalization}
         ]
@@ -1013,7 +1026,10 @@ export const buildUserHome = (authState: AuthState, availableMenuSections: MenuS
     homeReferenceToHomeSection(availableMenuSections, ref)).filter(section => !!section);
 };
 
-const referenceToMenuSection = (authState: AuthState, reference: MenuReference): MenuSection | undefined => {
+export const referenceToMenuSection = (authState: AuthState, reference: MenuReference): MenuSection | undefined => {
+  if ((reference as any).selected === false) {
+    return undefined;
+  }
   if (filterMenuReference(authState, reference)) {
     const section = menuSectionMap.get(reference.id);
     if (section) {

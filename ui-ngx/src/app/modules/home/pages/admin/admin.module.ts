@@ -39,6 +39,7 @@ import { JsResourceComponent } from '@home/pages/admin/resource/js-resource.comp
 import { NgxFlowModule } from '@flowjs/ngx-flow';
 import { TrendzSettingsComponent } from '@home/pages/admin/trendz-settings.component';
 import { PersonalizationSettingsComponent } from '@home/pages/admin/personalization-settings.component';
+import { MenuSettingsComponent } from '@home/pages/admin/menu-settings/menu-settings.component';
 
 @NgModule({
   declarations:
@@ -58,6 +59,8 @@ import { PersonalizationSettingsComponent } from '@home/pages/admin/personalizat
       RepositoryAdminSettingsComponent,
       AutoCommitAdminSettingsComponent,
       TwoFactorAuthSettingsComponent,
+      TrendzSettingsComponent,
+      MenuSettingsComponent
       TrendzSettingsComponent,
       PersonalizationSettingsComponent
     ],

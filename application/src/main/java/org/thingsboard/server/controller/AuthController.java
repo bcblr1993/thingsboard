@@ -62,6 +62,8 @@ import org.thingsboard.server.service.security.model.SecurityUser;
 import org.thingsboard.server.service.security.model.UserPrincipal;
 import org.thingsboard.server.service.security.model.token.JwtTokenFactory;
 import org.thingsboard.server.service.security.system.SystemSecurityService;
+import com.fasterxml.jackson.databind.JsonNode;
+import org.thingsboard.server.dao.menu.MenuSettingService;
 
 @RestController
 @TbCoreComponent
@@ -79,6 +81,7 @@ public class AuthController extends BaseController {
     private final SecuritySettingsService securitySettingsService;
     private final RateLimitService rateLimitService;
     private final ApplicationEventPublisher eventPublisher;
+    private final MenuSettingService menuSettingService;
     private final AdminSettingsService adminSettingsService;
 
 
@@ -91,6 +94,15 @@ public class AuthController extends BaseController {
         User user = userService.findUserById(securityUser.getTenantId(), securityUser.getId());
         checkDashboardInfo(user.getAdditionalInfo());
         return user;
+    }
+
+    @ApiOperation(value = "Get current User Menu (getMenu)",
+            notes = "Get the menu for the User which credentials are used to perform this REST API call.")
+    @PreAuthorize("hasAnyAuthority('SYS_ADMIN', 'TENANT_ADMIN', 'CUSTOMER_USER')")
+    @GetMapping(value = "/auth/menu")
+    public JsonNode getMenu() throws ThingsboardException {
+        SecurityUser securityUser = getCurrentUser();
+        return menuSettingService.getMenuForAuthority(securityUser.getAuthority());
     }
 
     @ApiOperation(value = "Logout (logout)",

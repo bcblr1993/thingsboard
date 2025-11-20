@@ -38,6 +38,8 @@ import org.thingsboard.server.common.data.rule.RuleChain;
 import org.thingsboard.server.common.data.rule.RuleChainMetaData;
 import org.thingsboard.server.common.data.widget.WidgetTypeDetails;
 import org.thingsboard.server.common.data.widget.WidgetsBundle;
+import org.thingsboard.server.common.data.security.Authority;
+import org.thingsboard.server.common.data.menu.MenuSetting;
 import org.thingsboard.server.dao.dashboard.DashboardService;
 import org.thingsboard.server.dao.exception.DataValidationException;
 import org.thingsboard.server.dao.oauth2.OAuth2ConfigTemplateService;
@@ -47,6 +49,7 @@ import org.thingsboard.server.dao.rule.RuleChainService;
 import org.thingsboard.server.dao.util.ImageUtils;
 import org.thingsboard.server.dao.widget.WidgetTypeService;
 import org.thingsboard.server.dao.widget.WidgetsBundleService;
+import org.thingsboard.server.dao.menu.MenuSettingService;
 import org.thingsboard.server.service.install.update.ResourcesUpdater;
 
 import java.io.IOException;
@@ -121,6 +124,9 @@ public class InstallScripts {
 
     @Autowired
     private ImageService imageService;
+
+    @Autowired
+    private MenuSettingService menuSettingService;
 
     Path getTenantRuleChainsDir() {
         return Paths.get(getDataDir(), JSON_DIR, TENANT_DIR, RULE_CHAINS_DIR);
@@ -540,6 +546,26 @@ public class InstallScripts {
         TbResource foundResource = resourceService.findResourceByTenantIdAndKey(TenantId.SYS_TENANT_ID, ResourceType.LWM2M_MODEL, resource.getResourceKey());
         if (foundResource == null) {
             resourceService.saveResource(resource);
+        }
+    }
+
+    public void createDefaultMenuSettings() {
+        Path menuSettingsFile = Paths.get(getDataDir(), JSON_DIR, SYSTEM_DIR, "menu_settings", "default_menu_settings.json");
+        try {
+            JsonNode menuSettingsJson = JacksonUtil.toJsonNode(menuSettingsFile.toFile());
+            menuSettingsJson.fields().forEachRemaining(entry -> {
+                String authorityName = entry.getKey();
+                Authority authority = Authority.valueOf(authorityName);
+                if (menuSettingService.findMenuSettingByAuthority(authority) == null) {
+                    MenuSetting menuSetting = new MenuSetting();
+                    menuSetting.setAuthority(authority);
+                    menuSetting.setMenuConfig(entry.getValue());
+                    menuSettingService.saveMenuSetting(menuSetting);
+                }
+            });
+        } catch (Exception e) {
+            log.error("Unable to load default menu settings from json: [{}]", menuSettingsFile.toString());
+            throw new RuntimeException("Unable to load default menu settings from json", e);
         }
     }
 

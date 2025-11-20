@@ -10,6 +10,10 @@
         "permission-denied": "权限被拒绝",
         "permission-denied-text": "您没有执行此操作的权限！"
     },
+    "permission": {
+        "no-menu-permission": "暂无菜单权限",
+        "no-menu-permission-description": "您当前没有访问任何菜单的权限，请联系管理员分配菜单权限。"
+    },
     "account": {
         "account": "账号",
         "notification-settings": "通知设置"
@@ -97,6 +101,15 @@
     },
     "admin": {
         "settings": "设置",
+        "permission-menu-allocation": "权限菜单分配",
+         "menu-settings": {
+             "role": "选择配置的角色",
+             "authority":{
+                 "sys_admin": "系统管理员",
+                 "tenant_admin": "租户管理员",
+                 "customer_user": "用户"
+             }
+         },
         "general": "基本设置",
         "general-settings": "基本设置",
         "home-settings": "首页设置",

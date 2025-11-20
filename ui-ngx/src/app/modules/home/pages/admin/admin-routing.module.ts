@@ -19,6 +19,7 @@ import { ActivatedRouteSnapshot, ResolveFn, Router, RouterModule, RouterStateSna
 
 import { MailServerComponent } from '@modules/home/pages/admin/mail-server.component';
 import { ConfirmOnExitGuard } from '@core/guards/confirm-on-exit.guard';
+import { DynamicMenuRedirectGuard } from '@core/guards/dynamic-menu-redirect.guard';
 import { Authority } from '@shared/models/authority.enum';
 import { GeneralSettingsComponent } from '@modules/home/pages/admin/general-settings.component';
 import { SecuritySettingsComponent } from '@modules/home/pages/admin/security-settings.component';
@@ -47,6 +48,7 @@ import { MenuId } from '@core/services/menu.models';
 import { catchError } from 'rxjs/operators';
 import { JsLibraryTableConfigResolver } from '@home/pages/admin/resource/js-library-table-config.resolver';
 import { TrendzSettingsComponent } from '@home/pages/admin/trendz-settings.component';
+import { MenuSettingsComponent } from '@home/pages/admin/menu-settings/menu-settings.component';
 import { PersonalizationSettingsComponent } from '@home/pages/admin/personalization-settings.component';
 
 export const scadaSymbolResolver: ResolveFn<ScadaSymbolData> =
@@ -83,10 +85,11 @@ const routes: Routes = [
     children: [
       {
         path: '',
+        canActivate: [DynamicMenuRedirectGuard],
         children: [],
         data: {
           auth: [Authority.SYS_ADMIN, Authority.TENANT_ADMIN],
-          redirectTo: '/resources/widgets-library'
+          parentMenuId: MenuId.resources
         }
       },
       ...widgetsLibraryRoutes,
@@ -233,13 +236,11 @@ const routes: Routes = [
     children: [
       {
         path: '',
+        canActivate: [DynamicMenuRedirectGuard],
         children: [],
         data: {
           auth: [Authority.SYS_ADMIN, Authority.TENANT_ADMIN],
-          redirectTo: {
-            SYS_ADMIN: '/settings/general',
-            TENANT_ADMIN: '/settings/home'
-          }
+          parentMenuId: MenuId.settings
         }
       },
       {
@@ -376,6 +377,18 @@ const routes: Routes = [
         }
       },
       {
+        path: 'permission-menu-allocation',
+        component: MenuSettingsComponent,
+        canDeactivate: [ConfirmOnExitGuard],
+        data: {
+          auth: [Authority.SYS_ADMIN],
+          title: 'admin.permission-menu-allocation',
+          breadcrumb: {
+            menuId: MenuId.permission_menu_allocation
+          }
+        }
+      },
+      {
         path: 'security-settings',
         redirectTo: '/security-settings/general'
       },
@@ -413,13 +426,11 @@ const routes: Routes = [
     children: [
       {
         path: '',
+        canActivate: [DynamicMenuRedirectGuard],
         children: [],
         data: {
           auth: [Authority.SYS_ADMIN, Authority.TENANT_ADMIN],
-          redirectTo: {
-            SYS_ADMIN: '/security-settings/general',
-            TENANT_ADMIN: '/security-settings/auditLogs'
-          }
+          parentMenuId: MenuId.security_settings
         }
       },
       {
