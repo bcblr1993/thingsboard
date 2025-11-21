@@ -148,12 +148,15 @@ export class MenuSettingsComponent extends PageComponent implements OnInit {
     this.menuSettingsForm.markAsDirty();
   }
 
-  expandAll(): void {
-    this.treeControl.expandAll();
-  }
+  isAllExpanded = false;
 
-  collapseAll(): void {
-    this.treeControl.collapseAll();
+  toggleExpandAll(): void {
+    if (this.isAllExpanded) {
+      this.treeControl.collapseAll();
+    } else {
+      this.treeControl.expandAll();
+    }
+    this.isAllExpanded = !this.isAllExpanded;
   }
 
   save() {
