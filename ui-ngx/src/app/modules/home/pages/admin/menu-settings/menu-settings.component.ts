@@ -143,6 +143,11 @@ export class MenuSettingsComponent extends PageComponent implements OnInit {
     });
   }
 
+  reset(): void {
+    this.treeControl.dataNodes.forEach(node => this.checklistSelection.select(node.id));
+    this.menuSettingsForm.markAsDirty();
+  }
+
   save() {
     this.isLoading$.next(true);
     console.log(this.fullMenuSections)

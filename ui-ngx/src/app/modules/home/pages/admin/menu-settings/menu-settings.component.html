@@ -60,6 +60,11 @@
       </mat-tree>
     </mat-card-content>
     <mat-card-actions class="flex items-center justify-end xs:flex-col xs:items-stretch">
+      <button mat-button class="mr-2"
+              [disabled]="(isLoading$ | async)"
+              type="button"
+              (click)="reset()">{{'action.reset' | translate}}
+      </button>
       <button mat-button mat-raised-button color="primary"
               [disabled]="(isLoading$ | async) || menuSettingsForm.invalid || !menuSettingsForm.dirty"
               type="submit" (click)="save()">{{'action.save' | translate}}
