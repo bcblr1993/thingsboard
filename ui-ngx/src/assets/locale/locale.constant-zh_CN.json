@@ -19,6 +19,8 @@
         "notification-settings": "通知设置"
     },
     "action": {
+        "expand-all": "展开",
+        "collapse-all": "折叠",
         "activate": "激活",
         "suspend": "暂停",
         "save": "保存",
