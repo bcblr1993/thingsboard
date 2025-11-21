@@ -781,9 +781,8 @@ export const defaultUserMenuMap = new Map<Authority, MenuReference[]>([
           {id: MenuId.mail_server},
           {id: MenuId.notification_settings},
           {id: MenuId.queues},
+          {id: MenuId.personalization},
           {id: MenuId.permission_menu_allocation}
-          {id: MenuId.queues},
-          {id: MenuId.personalization}
         ]
       },
       {

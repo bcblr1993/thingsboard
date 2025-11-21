@@ -42,6 +42,7 @@
         {"id": "mail_server", "selected": true},
         {"id": "notification_settings", "selected": true},
         {"id": "queues", "selected": true},
+        {"id": "personalization", "selected": true},
         {"id": "permission_menu_allocation","selected": true}
       ]
     },

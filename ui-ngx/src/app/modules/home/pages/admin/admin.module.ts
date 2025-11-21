@@ -60,7 +60,7 @@ import { MenuSettingsComponent } from '@home/pages/admin/menu-settings/menu-sett
       AutoCommitAdminSettingsComponent,
       TwoFactorAuthSettingsComponent,
       TrendzSettingsComponent,
-      MenuSettingsComponent
+      MenuSettingsComponent,
       TrendzSettingsComponent,
       PersonalizationSettingsComponent
     ],

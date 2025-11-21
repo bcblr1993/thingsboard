@@ -145,11 +145,13 @@ export class MenuSettingsComponent extends PageComponent implements OnInit {
 
   save() {
     this.isLoading$.next(true);
+    console.log(this.fullMenuSections)
     const menuConfig = this.buildMenuConfig(this.fullMenuSections);
     const menuSetting: MenuSetting = {
       authority: this.authority,
       menuConfig
     };
+    console.log(menuSetting)
     this.menuSettingService.saveMenuSetting(menuSetting).subscribe(() => {
       this.isLoading$.next(false);
       this.menuSettingsForm.markAsPristine();
@@ -244,7 +246,7 @@ export class MenuSettingsComponent extends PageComponent implements OnInit {
     const descSomeSelected = descendants.length > 0 && descendants.some(child => {
       return this.checklistSelection.isSelected(child.id);
     });
-    
+
     // 修复bug：改进父节点的选中逻辑
     // 1. 如果所有子节点都被选中，自动选中父节点
     // 2. 如果至少有一个子节点被选中，也自动选中父节点（确保父菜单可见）
