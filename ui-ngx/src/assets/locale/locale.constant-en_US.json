@@ -19,6 +19,8 @@
         "notification-settings": "Notification settings"
     },
     "action": {
+        "expand-all": "Expand",
+        "collapse-all": "Collapse",
         "activate": "Activate",
         "suspend": "Suspend",
         "save": "Save",
