@@ -64,7 +64,7 @@
         </div>
       </div>
     </mat-card-content>
-    <mat-card-actions fxLayout="row" fxLayoutAlign="end">
+    <mat-card-actions class="flex items-center justify-end xs:flex-col xs:items-stretch">
       <button mat-raised-button color="primary" (click)="save()" [disabled]="!personalizationSettingsForm.valid || !personalizationSettingsForm.dirty">{{ 'action.save' | translate }}</button>
     </mat-card-actions>
   </mat-card>
