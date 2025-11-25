@@ -125,6 +125,7 @@ import { JsFuncComponent } from '@shared/components/js-func.component';
 import { ConfirmDialogComponent } from '@shared/components/dialog/confirm-dialog.component';
 import { AlertDialogComponent } from '@shared/components/dialog/alert-dialog.component';
 import { ErrorAlertDialogComponent } from '@shared/components/dialog/error-alert-dialog.component';
+import { NoMenuPermissionDialogComponent } from '@shared/components/dialog/no-menu-permission-dialog.component';
 import { TodoDialogComponent } from '@shared/components/dialog/todo-dialog.component';
 import { MaterialIconsDialogComponent } from '@shared/components/dialog/material-icons-dialog.component';
 import { MaterialIconSelectComponent } from '@shared/components/material-icon-select.component';
@@ -361,6 +362,7 @@ export function MarkedOptionsFactory(markedOptionsService: MarkedOptionsService)
     ConfirmDialogComponent,
     AlertDialogComponent,
     ErrorAlertDialogComponent,
+    NoMenuPermissionDialogComponent,
     TodoDialogComponent,
     ColorPickerDialogComponent,
     MaterialIconsDialogComponent,
@@ -628,6 +630,7 @@ export function MarkedOptionsFactory(markedOptionsService: MarkedOptionsService)
     ConfirmDialogComponent,
     AlertDialogComponent,
     ErrorAlertDialogComponent,
+    NoMenuPermissionDialogComponent,
     TodoDialogComponent,
     ColorPickerDialogComponent,
     MaterialIconsDialogComponent,

@@ -40,7 +40,7 @@ interface MenuFlatNode {
 @Component({
   selector: 'tb-menu-settings',
   templateUrl: './menu-settings.component.html',
-  styleUrls: []
+  styleUrls: ['./menu-settings.component.scss']
 })
 export class MenuSettingsComponent extends PageComponent implements OnInit {
 
@@ -61,10 +61,10 @@ export class MenuSettingsComponent extends PageComponent implements OnInit {
   }
 
   treeControl = new FlatTreeControl<MenuFlatNode>(
-      node => node.level, node => node.expandable);
+    node => node.level, node => node.expandable);
 
   treeFlattener = new MatTreeFlattener(
-      this._transformer, node => node.level, node => node.expandable, node => node.pages);
+    this._transformer, node => node.level, node => node.expandable, node => node.pages);
 
   dataSource = new MatTreeFlatDataSource(this.treeControl, this.treeFlattener);
 
@@ -72,8 +72,8 @@ export class MenuSettingsComponent extends PageComponent implements OnInit {
   checklistSelection = new SelectionModel<string>(true /* multiple */);
 
   constructor(protected store: Store<AppState>,
-              private menuSettingService: MenuSettingService,
-              private fb: FormBuilder) {
+    private menuSettingService: MenuSettingService,
+    private fb: FormBuilder) {
     super(store);
     this.menuSettingsForm = this.fb.group({});
   }
@@ -109,6 +109,7 @@ export class MenuSettingsComponent extends PageComponent implements OnInit {
 
   authorityChanged(event: MatSelectChange) {
     this.authority = event.value;
+    this.isAllExpanded = false;
     this.buildDisplayTree();
     this.loadSettings();
     this.menuSettingsForm.markAsDirty();
@@ -143,13 +144,31 @@ export class MenuSettingsComponent extends PageComponent implements OnInit {
     });
   }
 
+  reset(): void {
+    this.treeControl.dataNodes.forEach(node => this.checklistSelection.select(node.id));
+    this.menuSettingsForm.markAsDirty();
+  }
+
+  isAllExpanded = false;
+
+  toggleExpandAll(): void {
+    if (this.isAllExpanded) {
+      this.treeControl.collapseAll();
+    } else {
+      this.treeControl.expandAll();
+    }
+    this.isAllExpanded = !this.isAllExpanded;
+  }
+
   save() {
     this.isLoading$.next(true);
+    console.log(this.fullMenuSections)
     const menuConfig = this.buildMenuConfig(this.fullMenuSections);
     const menuSetting: MenuSetting = {
       authority: this.authority,
       menuConfig
     };
+    console.log(menuSetting)
     this.menuSettingService.saveMenuSetting(menuSetting).subscribe(() => {
       this.isLoading$.next(false);
       this.menuSettingsForm.markAsPristine();
@@ -241,17 +260,22 @@ export class MenuSettingsComponent extends PageComponent implements OnInit {
     const descAllSelected = descendants.length > 0 && descendants.every(child => {
       return this.checklistSelection.isSelected(child.id);
     });
-    
-    // 修复bug：不要自动取消选中父节点
-    // 父菜单应该可以独立存在，即使所有子菜单都未选中
-    // 只在所有子节点都选中时，自动选中父节点
-    if (!nodeSelected && descAllSelected) {
+    const descSomeSelected = descendants.length > 0 && descendants.some(child => {
+      return this.checklistSelection.isSelected(child.id);
+    });
+
+    // 修复bug：改进父节点的选中逻辑
+    // 1. 如果所有子节点都被选中，自动选中父节点
+    // 2. 如果至少有一个子节点被选中，也自动选中父节点（确保父菜单可见）
+    // 3. 不要自动取消选中父节点，除非所有子节点都未选中
+    if (!nodeSelected && descSomeSelected) {
+      // 如果父节点未选中，但至少有一个子节点被选中，自动选中父节点
       this.checklistSelection.select(node.id);
+    } else if (nodeSelected && !descSomeSelected && descendants.length > 0) {
+      // 如果父节点已选中，但所有子节点都未选中，且父节点有子节点，则取消选中父节点
+      // 这样可以避免出现只有父节点选中但没有任何子节点选中的情况
+      this.checklistSelection.deselect(node.id);
     }
-    // 注释掉原来的逻辑，不再自动取消选中父节点
-    // if (nodeSelected && !descAllSelected) {
-    //   this.checklistSelection.deselect(node.id);
-    // }
   }
 
   getParentNode(node: MenuFlatNode): MenuFlatNode | null {

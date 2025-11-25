@@ -35,6 +35,10 @@ import {
   ErrorAlertDialogComponent,
   ErrorAlertDialogData
 } from '@shared/components/dialog/error-alert-dialog.component';
+import {
+  NoMenuPermissionDialogComponent,
+  NoMenuPermissionDialogData
+} from '@shared/components/dialog/no-menu-permission-dialog.component';
 import { TodoDialogComponent } from '@shared/components/dialog/todo-dialog.component';
 
 @Injectable({
@@ -155,6 +159,20 @@ export class DialogService {
       panelClass: ['tb-fullscreen-dialog']
     };
     const dialogRef = this.dialog.open(TodoDialogComponent, dialogConfig);
+    return dialogRef.afterClosed();
+  }
+
+  noMenuPermission(): Observable<boolean> {
+    const dialogConfig: MatDialogConfig<NoMenuPermissionDialogData> = {
+      disableClose: true,
+      data: {
+        title: this.translate.instant('permission.no-menu-permission'),
+        message: this.translate.instant('permission.no-menu-permission-description'),
+        logoutText: this.translate.instant('home.logout') || this.translate.instant('action.sign-in')
+      }
+    };
+    const dialogRef = this.dialog.open<NoMenuPermissionDialogComponent, NoMenuPermissionDialogData, boolean>(
+      NoMenuPermissionDialogComponent, dialogConfig);
     return dialogRef.afterClosed();
   }
 
