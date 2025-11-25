@@ -16,69 +16,69 @@
 
 -->
 <div [formGroup]="personalizationSettingsForm">
-    <mat-card appearance="outlined" class="settings-card">
-        <mat-card-header>
-            <mat-card-title>
-                <span class="mat-headline-5" translate>admin.personalization.title</span>
-            </mat-card-title>
-        </mat-card-header>
-        <mat-card-content style="padding-top: 16px;">
-            <div fxLayout="column">
-                <mat-form-field class="mat-block">
-                    <mat-label>{{ 'admin.personalization.page-title' | translate }}</mat-label>
-                    <input matInput formControlName="title" #titleInput [errorStateMatcher]="matcher">
-                    <mat-hint align="end">{{titleInput.value.length}} / 60</mat-hint>
-                    <mat-error *ngIf="personalizationSettingsForm.get('title').hasError('maxlength')">
-                        {{ 'admin.personalization.title-max-length' | translate: {max: 60} }}
-                    </mat-error>
-                </mat-form-field>
+  <mat-card appearance="outlined" class="settings-card">
+    <mat-card-header>
+      <mat-card-title>
+        <span class="mat-headline-5" translate>admin.personalization.title</span>
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content style="padding-top: 16px;">
+      <div fxLayout="column">
+        <mat-form-field class="mat-block">
+          <mat-label>{{ 'admin.personalization.page-title' | translate }}</mat-label>
+          <input matInput formControlName="title" #titleInput [errorStateMatcher]="matcher">
+          <mat-hint align="end">{{titleInput.value.length}} / 60</mat-hint>
+          <mat-error *ngIf="personalizationSettingsForm.get('title').hasError('maxlength')">
+            {{ 'admin.personalization.title-max-length' | translate: {max: 60} }}
+          </mat-error>
+        </mat-form-field>
 
 
-                <div fxLayout="row" fxLayoutGap="16px">
-                    <div fxFlex fxLayout="column">
-                        <tb-image-input [showClearButton]="false" formControlName="favicon"
+        <div fxLayout="row" fxLayoutGap="16px">
+          <div fxFlex fxLayout="column">
+            <tb-image-input [showClearButton]="false" formControlName="favicon"
                             label="{{ 'admin.personalization.favicon' | translate }}" accept=".ico"></tb-image-input>
-                        <mat-error *ngIf="personalizationSettingsForm.get('favicon').hasError('invalidIcoFormat')"
-                            style="margin-bottom: 5px;">
-                            {{ 'admin.personalization.invalid-ico-format' | translate }}
-                        </mat-error>
-                        <mat-error *ngIf="personalizationSettingsForm.get('favicon').hasError('maxSizeExceeded')"
-                            style="margin-bottom: 5px;">
-                            {{ 'admin.personalization.max-size-exceeded-kb' | translate: {maxSize: 20} }}
-                        </mat-error>
-                    </div>
-                    <div fxFlex fxLayout="column">
-                        <tb-image-input [showClearButton]="false" formControlName="logo"
+            <mat-error *ngIf="personalizationSettingsForm.get('favicon').hasError('invalidIcoFormat')"
+                       style="margin-bottom: 5px;">
+              {{ 'admin.personalization.invalid-ico-format' | translate }}
+            </mat-error>
+            <mat-error *ngIf="personalizationSettingsForm.get('favicon').hasError('maxSizeExceeded')"
+                       style="margin-bottom: 5px;">
+              {{ 'admin.personalization.max-size-exceeded-kb' | translate: {maxSize: 20} }}
+            </mat-error>
+          </div>
+          <div fxFlex fxLayout="column">
+            <tb-image-input [showClearButton]="false" formControlName="logo"
                             label="{{ 'admin.personalization.logo' | translate }}"
                             accept=".svg, image/svg+xml"></tb-image-input>
-                        <!--            <mat-hint>{{ 'admin.personalization.logo-hint' | translate }}</mat-hint>-->
-                        <mat-error *ngIf="personalizationSettingsForm.get('logo').hasError('invalidSvgFormat')"
-                            style="margin-bottom: 5px;">
-                            {{ 'admin.personalization.invalid-svg-format' | translate }}
-                        </mat-error>
-                        <mat-error *ngIf="personalizationSettingsForm.get('logo').hasError('maxSizeExceeded')"
-                            style="margin-bottom: 5px;">
-                            {{ 'admin.personalization.max-size-exceeded-kb' | translate: {maxSize: 100} }}
-                        </mat-error>
-                    </div>
-                </div>
+            <!--            <mat-hint>{{ 'admin.personalization.logo-hint' | translate }}</mat-hint>-->
+            <mat-error *ngIf="personalizationSettingsForm.get('logo').hasError('invalidSvgFormat')"
+                       style="margin-bottom: 5px;">
+              {{ 'admin.personalization.invalid-svg-format' | translate }}
+            </mat-error>
+            <mat-error *ngIf="personalizationSettingsForm.get('logo').hasError('maxSizeExceeded')"
+                       style="margin-bottom: 5px;">
+              {{ 'admin.personalization.max-size-exceeded-kb' | translate: {maxSize: 100} }}
+            </mat-error>
+          </div>
+        </div>
 
-                <div class="flex flex-row xs:flex-col gt-xs:gap-2">
-                    <mat-form-field class="mat-block flex-1">
-                        <mat-label>{{ 'admin.personalization.logo-height' | translate }}</mat-label>
-                        <input matInput formControlName="logoHeight" type="number">
-                    </mat-form-field>
-                    <mat-form-field class="mat-block flex-1">
-                        <mat-label>{{ 'admin.personalization.login-logo-height' | translate }}</mat-label>
-                        <input matInput formControlName="loginLogoHeight" type="number">
-                    </mat-form-field>
-                </div>
-            </div>
-        </mat-card-content>
-        <mat-card-actions class="flex items-center justify-end xs:flex-col xs:items-stretch">
-            <button mat-raised-button color="primary" (click)="save()"
-                [disabled]="!personalizationSettingsForm.valid || !personalizationSettingsForm.dirty">{{ 'action.save' |
-                translate }}</button>
-        </mat-card-actions>
-    </mat-card>
+        <div class="flex flex-row xs:flex-col gt-xs:gap-2">
+          <mat-form-field class="mat-block flex-1">
+            <mat-label>{{ 'admin.personalization.logo-height' | translate }}</mat-label>
+            <input matInput formControlName="logoHeight" type="number">
+          </mat-form-field>
+          <mat-form-field class="mat-block flex-1">
+            <mat-label>{{ 'admin.personalization.login-logo-height' | translate }}</mat-label>
+            <input matInput formControlName="loginLogoHeight" type="number">
+          </mat-form-field>
+        </div>
+      </div>
+    </mat-card-content>
+    <mat-card-actions class="flex items-center justify-end xs:flex-col xs:items-stretch">
+      <button mat-raised-button color="primary" (click)="save()"
+              [disabled]="!personalizationSettingsForm.valid || !personalizationSettingsForm.dirty">{{ 'action.save' |
+        translate }}</button>
+    </mat-card-actions>
+  </mat-card>
 </div>

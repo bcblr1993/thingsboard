@@ -56,26 +56,26 @@ export class BreadcrumbComponent implements OnInit, OnDestroy {
   breadcrumbs$: Subject<Array<BreadCrumb>> = new BehaviorSubject<Array<BreadCrumb>>([]);
 
   routerEventsSubscription = this.router.events.pipe(
-    filter((event) => event instanceof NavigationEnd ),
+    filter((event) => event instanceof NavigationEnd),
     distinctUntilChanged(),
     switchMap(() => this.menuService.availableMenuSections().pipe(first())),
-    map( (sections) => this.buildBreadCrumbs(this.activatedRoute.snapshot, sections) )
-  ).subscribe(breadcrumns => this.breadcrumbs$.next(breadcrumns) );
+    map((sections) => this.buildBreadCrumbs(this.activatedRoute.snapshot, sections))
+  ).subscribe(breadcrumns => this.breadcrumbs$.next(breadcrumns));
 
   activeComponentSubscription = this.activeComponentService.onActiveComponentChanged().subscribe(comp => this.setActiveComponent(comp));
 
   lastBreadcrumb$ = this.breadcrumbs$.pipe(
-    map( breadcrumbs => breadcrumbs[breadcrumbs.length - 1])
+    map(breadcrumbs => breadcrumbs[breadcrumbs.length - 1])
   );
 
   constructor(private router: Router,
-              private activatedRoute: ActivatedRoute,
-              private broadcast: BroadcastService,
-              private activeComponentService: ActiveComponentService,
-              private cd: ChangeDetectorRef,
-              private translate: TranslateService,
-              private menuService: MenuService,
-              public utils: UtilsService) {
+    private activatedRoute: ActivatedRoute,
+    private broadcast: BroadcastService,
+    private activeComponentService: ActiveComponentService,
+    private cd: ChangeDetectorRef,
+    private translate: TranslateService,
+    private menuService: MenuService,
+    public utils: UtilsService) {
   }
 
   ngOnInit(): void {
@@ -83,6 +83,9 @@ export class BreadcrumbComponent implements OnInit, OnDestroy {
       this.cd.markForCheck();
     });
     this.setActiveComponent(this.activeComponentService.getCurrentActiveComponent());
+    this.menuService.availableMenuSections().pipe(first()).subscribe((sections) => {
+      this.breadcrumbs$.next(this.buildBreadCrumbs(this.activatedRoute.snapshot, sections));
+    });
   }
 
   ngOnDestroy(): void {
@@ -103,8 +106,8 @@ export class BreadcrumbComponent implements OnInit, OnDestroy {
   }
 
   buildBreadCrumbs(route: ActivatedRouteSnapshot, availableMenuSections: MenuSection[],
-                   breadcrumbs: Array<BreadCrumb> = [],
-                   lastChild?: ActivatedRouteSnapshot): Array<BreadCrumb> {
+    breadcrumbs: Array<BreadCrumb> = [],
+    lastChild?: ActivatedRouteSnapshot): Array<BreadCrumb> {
     if (!lastChild) {
       lastChild = this.lastChild(route);
     }
@@ -127,7 +130,7 @@ export class BreadcrumbComponent implements OnInit, OnDestroy {
             breadcrumbConfig.labelFunction(route, this.translate, this.activeComponentValue, lastChild.data) : label;
         }
         const icon = section?.icon || breadcrumbConfig.icon || 'home';
-        const link = [ route.pathFromRoot.map(v => v.url.map(segment => segment.toString()).join('/')).join('/') ];
+        const link = [route.pathFromRoot.map(v => v.url.map(segment => segment.toString()).join('/')).join('/')];
         const breadcrumb = {
           id: guid(),
           label,
@@ -146,7 +149,7 @@ export class BreadcrumbComponent implements OnInit, OnDestroy {
     return newBreadcrumbs;
   }
 
-  trackByBreadcrumbs(_index: number, breadcrumb: BreadCrumb){
+  trackByBreadcrumbs(_index: number, breadcrumb: BreadCrumb) {
     return breadcrumb.id;
   }
 }

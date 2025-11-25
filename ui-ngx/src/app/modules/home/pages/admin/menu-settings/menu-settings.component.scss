@@ -16,138 +16,138 @@
 @import "../../../../../../scss/constants";
 
 :host {
-    .settings-card {
-        margin: 8px;
+  .settings-card {
+    margin: 8px;
 
-        mat-card-header.mat-mdc-card-header {
+    mat-card-header.mat-mdc-card-header {
+      align-items: center;
+    }
+
+    mat-card-content {
+      padding-top: 16px;
+    }
+
+    @media #{$mat-md} {
+      width: 80%;
+    }
+
+    @media #{$mat-gt-md} {
+      width: 60%;
+    }
+  }
+
+  .mat-headline-5 {
+    margin-bottom: 0;
+  }
+
+  .mat-mdc-card-title {
+    margin: 0;
+  }
+
+  ::ng-deep {
+    .mat-tree {
+      .mat-tree-node {
+        min-height: 40px;
+        display: flex;
+        align-items: center;
+        flex-wrap: nowrap;
+        width: 100%;
+
+        // 确保按钮位置一致，无论是否 disabled
+        button[mat-icon-button] {
+          flex-shrink: 0;
+          width: 40px;
+          height: 40px;
+          min-width: 40px;
+          min-height: 40px;
+          margin: 0;
+          padding: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          &[disabled] {
+            opacity: 0.38;
+            cursor: default;
+          }
+
+          mat-icon {
+            width: 24px;
+            height: 24px;
+            font-size: 24px;
+            line-height: 24px;
+          }
+        }
+
+        mat-checkbox {
+          flex: 1;
+          min-width: 0;
+          display: flex;
+          align-items: center;
+          margin-left: 0; // 移除任何默认的 margin-left
+
+          .mdc-form-field {
+            width: 100%;
+            display: flex;
             align-items: center;
+            min-width: 0;
+          }
+
+          .mdc-form-field__input-container {
+            flex: 1;
+            min-width: 0;
+          }
+
+          .mdc-checkbox {
+            flex-shrink: 0;
+            margin-right: 8px;
+          }
+
+          .mdc-form-field__label {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+            min-width: 0;
+          }
         }
+      }
 
-        mat-card-content {
-            padding-top: 16px;
-        }
+      // 移除 checklist-leaf-node 的 margin-left，因为按钮已经占位了
+      .checklist-leaf-node {
+        margin-left: 0;
+      }
 
-        @media #{$mat-md} {
-            width: 80%;
-        }
+      // 移动端响应式样式
+      @media #{$mat-xs} {
+        .mat-tree-node {
+          min-height: 48px;
+          padding-right: 8px;
 
-        @media #{$mat-gt-md} {
-            width: 60%;
-        }
-    }
+          button[mat-icon-button] {
+            width: 48px;
+            height: 48px;
+            min-width: 48px;
+            min-height: 48px;
+            padding: 0;
+            margin: 0;
+          }
 
-    .mat-headline-5 {
-        margin-bottom: 0;
-    }
-
-    .mat-mdc-card-title {
-        margin: 0;
-    }
-
-    ::ng-deep {
-        .mat-tree {
-            .mat-tree-node {
-                min-height: 40px;
-                display: flex;
-                align-items: center;
-                flex-wrap: nowrap;
-                width: 100%;
-
-                // 确保按钮位置一致，无论是否 disabled
-                button[mat-icon-button] {
-                    flex-shrink: 0;
-                    width: 40px;
-                    height: 40px;
-                    min-width: 40px;
-                    min-height: 40px;
-                    margin: 0;
-                    padding: 0;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-
-                    &[disabled] {
-                        opacity: 0.38;
-                        cursor: default;
-                    }
-
-                    mat-icon {
-                        width: 24px;
-                        height: 24px;
-                        font-size: 24px;
-                        line-height: 24px;
-                    }
-                }
-
-                mat-checkbox {
-                    flex: 1;
-                    min-width: 0;
-                    display: flex;
-                    align-items: center;
-                    margin-left: 0; // 移除任何默认的 margin-left
-
-                    .mdc-form-field {
-                        width: 100%;
-                        display: flex;
-                        align-items: center;
-                        min-width: 0;
-                    }
-
-                    .mdc-form-field__input-container {
-                        flex: 1;
-                        min-width: 0;
-                    }
-
-                    .mdc-checkbox {
-                        flex-shrink: 0;
-                        margin-right: 8px;
-                    }
-
-                    .mdc-form-field__label {
-                        overflow: hidden;
-                        text-overflow: ellipsis;
-                        white-space: nowrap;
-                        flex: 1;
-                        min-width: 0;
-                    }
-                }
+          mat-checkbox {
+            .mdc-form-field {
+              padding-left: 0;
             }
 
-            // 移除 checklist-leaf-node 的 margin-left，因为按钮已经占位了
-            .checklist-leaf-node {
-                margin-left: 0;
+            .mdc-checkbox {
+              margin-right: 4px;
             }
-
-            // 移动端响应式样式
-            @media #{$mat-xs} {
-                .mat-tree-node {
-                    min-height: 48px;
-                    padding-right: 8px;
-
-                    button[mat-icon-button] {
-                        width: 48px;
-                        height: 48px;
-                        min-width: 48px;
-                        min-height: 48px;
-                        padding: 0;
-                        margin: 0;
-                    }
-
-                    mat-checkbox {
-                        .mdc-form-field {
-                            padding-left: 0;
-                        }
-
-                        .mdc-checkbox {
-                            margin-right: 4px;
-                        }
-                    }
-                }
-
-                .checklist-leaf-node {
-                    margin-left: 0;
-                }
-            }
+          }
         }
+
+        .checklist-leaf-node {
+          margin-left: 0;
+        }
+      }
     }
+  }
 }

@@ -48,6 +48,7 @@ import { MenuId } from '@core/services/menu.models';
 import { catchError } from 'rxjs/operators';
 import { JsLibraryTableConfigResolver } from '@home/pages/admin/resource/js-library-table-config.resolver';
 import { TrendzSettingsComponent } from '@home/pages/admin/trendz-settings.component';
+import { PersonalizationSettingsComponent } from '@home/pages/admin/personalization-settings.component';
 import { MenuSettingsComponent } from '@home/pages/admin/menu-settings/menu-settings.component';
 import { PersonalizationSettingsComponent } from '@home/pages/admin/personalization-settings.component';
 

@@ -61,7 +61,6 @@ import { MenuSettingsComponent } from '@home/pages/admin/menu-settings/menu-sett
       TwoFactorAuthSettingsComponent,
       TrendzSettingsComponent,
       MenuSettingsComponent,
-      TrendzSettingsComponent,
       PersonalizationSettingsComponent
     ],
   imports: [
