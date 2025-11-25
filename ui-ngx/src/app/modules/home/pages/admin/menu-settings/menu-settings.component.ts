@@ -72,8 +72,8 @@ export class MenuSettingsComponent extends PageComponent implements OnInit {
   checklistSelection = new SelectionModel<string>(true /* multiple */);
 
   constructor(protected store: Store<AppState>,
-              private menuSettingService: MenuSettingService,
-              private fb: FormBuilder) {
+    private menuSettingService: MenuSettingService,
+    private fb: FormBuilder) {
     super(store);
     this.menuSettingsForm = this.fb.group({});
   }
@@ -109,6 +109,7 @@ export class MenuSettingsComponent extends PageComponent implements OnInit {
 
   authorityChanged(event: MatSelectChange) {
     this.authority = event.value;
+    this.isAllExpanded = false;
     this.buildDisplayTree();
     this.loadSettings();
     this.menuSettingsForm.markAsDirty();

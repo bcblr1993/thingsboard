@@ -25,7 +25,7 @@
     <mat-progress-bar color="warn" mode="indeterminate" *ngIf="isLoading$ | async"></mat-progress-bar>
     <div style="height: 4px;" *ngIf="!(isLoading$ | async)"></div>
     <mat-card-content style="padding-top: 16px;">
-      <form (ngSubmit)="save()">
+      <form (submit)="$event.preventDefault()">
         <fieldset [disabled]="(isLoading$ | async)">
           <div fxLayout="column">
             <mat-form-field class="mat-block">
@@ -44,14 +44,14 @@
 
             <mat-tree [dataSource]="dataSource" [treeControl]="treeControl">
               <mat-tree-node *matTreeNodeDef="let node" matTreeNodeToggle matTreeNodePadding>
-                <button mat-icon-button disabled></button>
+                <button mat-icon-button type="button" disabled></button>
                 <mat-checkbox class="checklist-leaf-node"
                               [checked]="checklistSelection.isSelected(node.id)" [disabled]="isNodeDisabled(node)"
                               (change)="leafItemSelectionToggle(node)">{{node.name | translate}}</mat-checkbox>
               </mat-tree-node>
 
               <mat-tree-node *matTreeNodeDef="let node; when: hasChild" matTreeNodePadding>
-                <button mat-icon-button matTreeNodeToggle [attr.aria-label]="'toggle ' + node.name">
+                <button mat-icon-button type="button" matTreeNodeToggle [attr.aria-label]="'toggle ' + node.name" (click)="$event.stopPropagation()">
                   <mat-icon class="mat-icon-rtl-mirror">
                     {{treeControl.isExpanded(node) ? 'expand_more' : 'chevron_right'}}
                   </mat-icon>
