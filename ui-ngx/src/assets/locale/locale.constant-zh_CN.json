@@ -10,11 +10,17 @@
         "permission-denied": "权限被拒绝",
         "permission-denied-text": "您没有执行此操作的权限！"
     },
+    "permission": {
+        "no-menu-permission": "暂无菜单权限",
+        "no-menu-permission-description": "您当前没有访问任何菜单的权限，请联系管理员分配菜单权限。"
+    },
     "account": {
         "account": "账号",
         "notification-settings": "通知设置"
     },
     "action": {
+        "expand-all": "展开",
+        "collapse-all": "折叠",
         "activate": "激活",
         "suspend": "暂停",
         "save": "保存",
@@ -98,14 +104,14 @@
     "admin": {
         "settings": "设置",
         "permission-menu-allocation": "权限菜单分配",
-         "menu-settings": {
-             "role": "选择配置的角色",
-             "authority":{
-                 "sys_admin": "系统管理员",
-                 "tenant_admin": "租户管理员",
-                 "customer_user": "用户"
-             }
-         },
+        "menu-settings": {
+            "role": "选择配置的角色",
+            "authority":{
+                "sys_admin": "系统管理员",
+                "tenant_admin": "租户管理员",
+                "customer_user": "用户"
+            }
+        },
         "general": "基本设置",
         "general-settings": "基本设置",
         "home-settings": "首页设置",
@@ -553,8 +559,34 @@
         "slack-settings": "Slack设置",
         "mobile-settings": "移动设置",
         "firebase-service-account-file": "Firebase服务帐户JSON凭据文件",
-        "select-firebase-service-account-file": "拖放Firebase服务帐户凭据文件"
-    },
+        "select-firebase-service-account-file": "拖放Firebase服务帐户凭据文件",
+        "trendz": "Trendz",
+        "trendz-settings": "Trendz 设置",
+        "trendz-url": "Trendz 链接",
+        "trendz-url-required": "Trendz 链接必填",
+        "trendz-api-key": "Trendz API 密钥",
+        "trendz-enable": "启用 Trendz",
+        "personalization": {
+            "title": "个性化设置",
+            "description": "平台的全局个性化设置。",
+            "page-title": "页面标题",
+            "primary-color": "主色",
+            "favicon": "网站图标 (.ico 文件) [此图标将显示在浏览器选项卡中,大小不超过20KB]",
+            "favicon-hint": " 此图标将显示在浏览器选项卡中。",
+            "logo": "主徽标 (.svg 文件) [此图标用于登录页面以及首页 logo 展示大小不超过100KB]",
+            "logo-height": "主徽标高度 (px)",
+            "login-logo": "登录页面徽标",
+            "login-logo-height": "登录徽标高度 (px)",
+            "restore-defaults": "恢复默认",
+            "confirm-restore-title": "确认恢复默认颜色吗？",
+            "confirm-restore-message": "一旦恢复，当前颜色将还原为系统默认设置。",
+            "logo-hint": "仅支持SVG格式，大小不超过40KB。",
+            "invalid-svg-format": "必须使用SVG格式的图片",
+            "max-size-exceeded": "图片大小不能超过40KB",
+            "title-max-length": "标题长度不能超过{{max}}个字符",
+            "invalid-ico-format": "必须使用ICO格式的图片",
+            "max-size-exceeded-kb": "文件大小不能超过{{maxSize}}KB"
+        }    },
     "alarm": {
         "alarm": "告警",
         "alarms": "告警",
@@ -1490,6 +1522,7 @@
         "manage-credentials": "管理凭据",
         "delete": "删除设备",
         "assign-devices": "分配设备",
+        "assign-devices-by-label": "按标签分配设备",
         "assign-devices-text": "将 {count,plural,=1 {1 个设备} other {# 个设备} }分配给客户",
         "delete-devices": "删除设备",
         "unassign-from-customer": "取消分配客户",
@@ -1584,6 +1617,8 @@
         "label-max-length": "标签应该小于256个字符。",
         "description": "说明",
         "label": "标签",
+        "label-required": "标签必填。",
+        "no-existing-label": "标签不存在。",
         "events": "事件",
         "details": "详情",
         "copyId": "复制设备ID",
@@ -2235,6 +2270,7 @@
         "unassign-edge-text": "确定后，边缘将被取消分配，并且客户将无法访问。",
         "unassign-edges-title": "确定要取消分配 {count,plural, =1 {1 个边缘} other {# 个边缘} } 吗？",
         "unassign-edges-text": "确定后，所有选定的边缘将被取消分配，并且客户将无法访问。",
+        "entities-hint": "已经分配到边缘的不会再显示出来, 默认最多显示 10 条记录",
         "make-public": "公开",
         "make-public-edge-title": "确定要将边缘 '{{edgeName}}' 设为公开吗？",
         "make-public-edge-text": "确认后，边缘及其所有数据将被设为公开并可被其他人访问。",

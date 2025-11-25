@@ -78,6 +78,7 @@ export enum MenuId {
   repository_settings = 'repository_settings',
   auto_commit_settings = 'auto_commit_settings',
   queues = 'queues',
+  personalization = 'personalization',
   security_settings = 'security_settings',
   security_settings_general = 'security_settings_general',
   two_fa = 'two_fa',
@@ -411,6 +412,16 @@ export const menuSectionMap = new Map<MenuId, MenuSection>([
       type: 'link',
       path: '/settings/queues',
       icon: 'swap_calls'
+    }
+  ],
+  [
+    MenuId.personalization,
+    {
+      id: MenuId.personalization,
+      name: 'admin.personalization.title',
+      type: 'link',
+      path: '/settings/personalization',
+      icon: 'palette'
     }
   ],
   [
@@ -770,6 +781,7 @@ export const defaultUserMenuMap = new Map<Authority, MenuReference[]>([
           {id: MenuId.mail_server},
           {id: MenuId.notification_settings},
           {id: MenuId.queues},
+          {id: MenuId.personalization},
           {id: MenuId.permission_menu_allocation}
         ]
       },

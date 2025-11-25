@@ -11,6 +11,8 @@
         "permission-denied-text": "您沒有執行此操作的許可權！"
     },
     "action": {
+        "expand-all": "展開",
+        "collapse-all": "摺疊",
         "activate": "啟動",
         "suspend": "暫停",
         "save": "儲存",

@@ -38,6 +38,7 @@ import { JsLibraryTableHeaderComponent } from '@home/pages/admin/resource/js-lib
 import { JsResourceComponent } from '@home/pages/admin/resource/js-resource.component';
 import { NgxFlowModule } from '@flowjs/ngx-flow';
 import { TrendzSettingsComponent } from '@home/pages/admin/trendz-settings.component';
+import { PersonalizationSettingsComponent } from '@home/pages/admin/personalization-settings.component';
 import { MenuSettingsComponent } from '@home/pages/admin/menu-settings/menu-settings.component';
 
 @NgModule({
@@ -59,7 +60,8 @@ import { MenuSettingsComponent } from '@home/pages/admin/menu-settings/menu-sett
       AutoCommitAdminSettingsComponent,
       TwoFactorAuthSettingsComponent,
       TrendzSettingsComponent,
-      MenuSettingsComponent
+      MenuSettingsComponent,
+      PersonalizationSettingsComponent
     ],
   imports: [
     CommonModule,

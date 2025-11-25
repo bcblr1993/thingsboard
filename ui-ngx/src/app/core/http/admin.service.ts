@@ -49,6 +49,10 @@ export class AdminService {
     return this.http.get<AdminSettings<T>>(`/api/admin/settings/${key}`, defaultHttpOptionsFromConfig(config));
   }
 
+  public getPublicAdminSettings<T>(key: string, config?: RequestConfig): Observable<AdminSettings<T>> {
+    return this.http.get<AdminSettings<T>>(`/api/noauth/settings/${key}`, defaultHttpOptionsFromConfig(config));
+  }
+
   public saveAdminSettings<T>(adminSettings: AdminSettings<T>,
                               config?: RequestConfig): Observable<AdminSettings<T>> {
     return this.http.post<AdminSettings<T>>('/api/admin/settings', adminSettings, defaultHttpOptionsFromConfig(config));

@@ -1,0 +1,289 @@
+/**
+ * Copyright © 2016-2025 The Thingsboard Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+///
+/// Copyright © 2016-2025 The Thingsboard Authors
+///
+/// Licensed under the Apache License, Version 2.0 (the "License");
+/// you may not use this file except in compliance with the License.
+/// You may obtain a copy of the License at
+///
+///     http://www.apache.org/licenses/LICENSE-2.0
+///
+/// Unless required by applicable law or agreed to in writing, software
+/// distributed under the License is distributed on an "AS IS" BASIS,
+/// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+/// See the License for the specific language governing permissions and
+/// limitations under the License.
+///
+
+.settings-card {
+    margin-bottom: 24px;
+}
+
+.theme-settings-card {
+    margin-top: 24px;
+}
+
+.tb-form-row {
+    margin-bottom: 24px;
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+}
+
+// 设置区域样式
+.setting-section {
+    .setting-section-title {
+        margin: 0 0 16px 0;
+        font-size: 16px;
+        font-weight: 500;
+        color: rgba(0, 0, 0, 0.87);
+        border-bottom: 1px solid #e0e0e0;
+        padding-bottom: 8px;
+    }
+
+    .setting-content {
+        padding-left: 16px;
+    }
+}
+
+// Logo和Favicon设置容器
+.logo-settings-container,
+.favicon-settings-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.logo-actions,
+.favicon-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+// 上传区域样式
+.upload-section {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+
+    .upload-button {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 120px;
+        justify-content: center;
+    }
+}
+
+// 上传按钮样式
+.upload-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 120px;
+    justify-content: center;
+    height: 36px;
+    padding: 0 16px;
+}
+
+// 预览图片样式
+.preview-image {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    background-color: #f5f5f5;
+    padding: 4px;
+
+    &.small {
+        width: 32px;
+        height: 32px;
+    }
+}
+
+.logo-preview,
+.favicon-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+// 颜色设置区域
+.color-settings-section {
+    margin-bottom: 24px;
+
+    .setting-section-title {
+        margin: 0 0 16px 0;
+        font-size: 16px;
+        font-weight: 500;
+        color: rgba(0, 0, 0, 0.87);
+        border-bottom: 1px solid #e0e0e0;
+        padding-bottom: 8px;
+    }
+}
+
+.color-input-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+    margin-bottom: 16px;
+
+    @media (max-width: 768px) {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+}
+
+.color-input-item {
+    .color-input-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 8px;
+
+        .color-picker {
+            width: 60px;
+            height: 40px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background: none;
+
+            &::-webkit-color-swatch-wrapper {
+                padding: 0;
+            }
+
+            &::-webkit-color-swatch {
+                border: 2px solid #e0e0e0;
+                border-radius: 4px;
+            }
+        }
+
+        .color-preview {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+    }
+}
+
+// 深色模式切换
+.dark-mode-section {
+    margin: 24px 0;
+    padding: 16px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #1976d2;
+}
+
+// 自定义CSS编辑器
+.custom-css-editor {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    padding: 8px;
+}
+
+// 操作按钮区域
+.action-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 16px;
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid #e0e0e0;
+
+    button {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 100px;
+        justify-content: center;
+    }
+
+    @media (max-width: 768px) {
+        flex-direction: column;
+        align-items: stretch;
+
+        button {
+            min-width: auto;
+        }
+    }
+}
+
+// 响应式设计
+@media (max-width: 768px) {
+
+    .logo-actions,
+    .favicon-actions {
+        flex-direction: column;
+        align-items: stretch;
+
+        .upload-button {
+            min-width: auto;
+        }
+    }
+
+    .color-input-group {
+        grid-template-columns: 1fr;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+// 加载状态样式
+mat-progress-bar {
+    margin-bottom: 16px;
+}
+
+// 表单字段样式优化
+mat-form-field {
+
+    &.logo-url-field,
+    &.favicon-url-field {
+        margin-bottom: 0;
+    }
+}
+
+// 卡片内容间距
+mat-card-content {
+    padding: 24px;
+}
+
+// 设置卡片标题样式
+mat-card-title {
+    margin-bottom: 16px;
+
+    .mat-headline-5 {
+        font-weight: 500;
+        color: rgba(0, 0, 0, 0.87);
+    }
+}

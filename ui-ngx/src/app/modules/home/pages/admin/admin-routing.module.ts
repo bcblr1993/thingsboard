@@ -47,6 +47,7 @@ import { MenuId } from '@core/services/menu.models';
 import { catchError } from 'rxjs/operators';
 import { JsLibraryTableConfigResolver } from '@home/pages/admin/resource/js-library-table-config.resolver';
 import { TrendzSettingsComponent } from '@home/pages/admin/trendz-settings.component';
+import { PersonalizationSettingsComponent } from '@home/pages/admin/personalization-settings.component';
 import { MenuSettingsComponent } from '@home/pages/admin/menu-settings/menu-settings.component';
 
 export const scadaSymbolResolver: ResolveFn<ScadaSymbolData> =
@@ -314,6 +315,18 @@ const routes: Routes = [
             }
           }
         ]
+      },
+      {
+        path: 'personalization',
+        component: PersonalizationSettingsComponent,
+        canDeactivate: [ConfirmOnExitGuard],
+        data: {
+          auth: [Authority.SYS_ADMIN, Authority.TENANT_ADMIN],
+          title: 'admin.personalization.title',
+          breadcrumb: {
+            menuId: MenuId.personalization
+          }
+        }
       },
       {
         path: 'home',
