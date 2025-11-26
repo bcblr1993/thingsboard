@@ -20,7 +20,6 @@ import { NgModule } from '@angular/core';
 import { otaUpdatesRoutes } from '@home/pages/ota-update/ota-update-routing.module';
 import { vcRoutes } from '@home/pages/vc/vc-routing.module';
 import { MenuId } from '@core/services/menu.models';
-import { DynamicMenuRedirectGuard } from '@core/guards/dynamic-menu-redirect.guard';
 
 const routes: Routes = [
   {
@@ -34,11 +33,10 @@ const routes: Routes = [
     children: [
       {
         path: '',
-        canActivate: [DynamicMenuRedirectGuard],
         children: [],
         data: {
           auth: [Authority.TENANT_ADMIN],
-          parentMenuId: MenuId.features
+          redirectTo: '/features/otaUpdates'
         }
       },
       ...otaUpdatesRoutes,

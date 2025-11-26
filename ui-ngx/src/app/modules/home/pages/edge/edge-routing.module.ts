@@ -29,7 +29,6 @@ import { dashboardBreadcumbLabelFunction, DashboardResolver } from '@home/pages/
 import { BreadCrumbConfig } from '@shared/components/breadcrumb';
 import { RuleChainPageComponent } from '@home/pages/rulechain/rulechain-page.component';
 import { ConfirmOnExitGuard } from '@core/guards/confirm-on-exit.guard';
-import { DynamicMenuRedirectGuard } from '@core/guards/dynamic-menu-redirect.guard';
 import { RuleChainType } from '@shared/models/rule-chain.models';
 import {
   importRuleChainBreadcumbLabelFunction,
@@ -55,11 +54,10 @@ const routes: Routes = [
     children: [
       {
         path: '',
-        canActivate: [DynamicMenuRedirectGuard],
         children: [],
         data: {
           auth: [Authority.TENANT_ADMIN, Authority.CUSTOMER_USER],
-          parentMenuId: MenuId.edge_management
+          redirectTo: '/edgeManagement/instances'
         }
       },
       {

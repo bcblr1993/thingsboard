@@ -27,7 +27,6 @@ import { EntityDetailsPageComponent } from '@home/components/entity/entity-detai
 import { entityDetailsPageBreadcrumbLabelFunction } from '@home/pages/home-pages.models';
 import { BreadCrumbConfig } from '@shared/components/breadcrumb';
 import { MenuId } from '@core/services/menu.models';
-import { DynamicMenuRedirectGuard } from '@core/guards/dynamic-menu-redirect.guard';
 
 @Injectable()
 export class OAuth2LoginProcessingUrlResolver  {
@@ -54,11 +53,13 @@ export const oAuth2Routes: Routes = [
     children: [
       {
         path: '',
-        canActivate: [DynamicMenuRedirectGuard],
         children: [],
         data: {
           auth: [Authority.SYS_ADMIN, Authority.TENANT_ADMIN],
-          parentMenuId: MenuId.oauth2
+          redirectTo: {
+            SYS_ADMIN: '/security-settings/oauth2/domains',
+            TENANT_ADMIN: '/security-settings/oauth2/clients'
+          }
         }
       },
       {

@@ -19,7 +19,6 @@ import { ActivatedRouteSnapshot, ResolveFn, Router, RouterModule, RouterStateSna
 
 import { MailServerComponent } from '@modules/home/pages/admin/mail-server.component';
 import { ConfirmOnExitGuard } from '@core/guards/confirm-on-exit.guard';
-import { DynamicMenuRedirectGuard } from '@core/guards/dynamic-menu-redirect.guard';
 import { Authority } from '@shared/models/authority.enum';
 import { GeneralSettingsComponent } from '@modules/home/pages/admin/general-settings.component';
 import { SecuritySettingsComponent } from '@modules/home/pages/admin/security-settings.component';
@@ -50,7 +49,6 @@ import { JsLibraryTableConfigResolver } from '@home/pages/admin/resource/js-libr
 import { TrendzSettingsComponent } from '@home/pages/admin/trendz-settings.component';
 import { PersonalizationSettingsComponent } from '@home/pages/admin/personalization-settings.component';
 import { MenuSettingsComponent } from '@home/pages/admin/menu-settings/menu-settings.component';
-import { PersonalizationSettingsComponent } from '@home/pages/admin/personalization-settings.component';
 
 export const scadaSymbolResolver: ResolveFn<ScadaSymbolData> =
   (route: ActivatedRouteSnapshot,
@@ -68,7 +66,7 @@ export const scadaSymbolResolver: ResolveFn<ScadaSymbolData> =
         return of(null);
       })
     );
-};
+  };
 
 export const scadaSymbolBreadcumbLabelFunction: BreadCrumbLabelFunction<ScadaSymbolComponent>
   = ((route, translate, component) =>
@@ -86,11 +84,10 @@ const routes: Routes = [
     children: [
       {
         path: '',
-        canActivate: [DynamicMenuRedirectGuard],
         children: [],
         data: {
           auth: [Authority.SYS_ADMIN, Authority.TENANT_ADMIN],
-          parentMenuId: MenuId.resources
+          redirectTo: '/resources/widgets-library'
         }
       },
       ...widgetsLibraryRoutes,
@@ -237,11 +234,13 @@ const routes: Routes = [
     children: [
       {
         path: '',
-        canActivate: [DynamicMenuRedirectGuard],
         children: [],
         data: {
           auth: [Authority.SYS_ADMIN, Authority.TENANT_ADMIN],
-          parentMenuId: MenuId.settings
+          redirectTo: {
+            SYS_ADMIN: '/settings/general',
+            TENANT_ADMIN: '/settings/home'
+          }
         }
       },
       {
@@ -427,11 +426,13 @@ const routes: Routes = [
     children: [
       {
         path: '',
-        canActivate: [DynamicMenuRedirectGuard],
         children: [],
         data: {
           auth: [Authority.SYS_ADMIN, Authority.TENANT_ADMIN],
-          parentMenuId: MenuId.security_settings
+          redirectTo: {
+            SYS_ADMIN: '/security-settings/general',
+            TENANT_ADMIN: '/security-settings/auditLogs'
+          }
         }
       },
       {

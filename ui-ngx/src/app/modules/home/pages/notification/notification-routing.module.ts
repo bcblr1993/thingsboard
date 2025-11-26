@@ -26,7 +26,6 @@ import { TemplateTableConfigResolver } from '@home/pages/notification/template/t
 import { RuleTableConfigResolver } from '@home/pages/notification/rule/rule-table-config.resolver';
 import { SendNotificationButtonComponent } from '@home/components/notification/send-notification-button.component';
 import { MenuId } from '@core/services/menu.models';
-import { DynamicMenuRedirectGuard } from '@core/guards/dynamic-menu-redirect.guard';
 
 const routes: Routes = [
   {
@@ -42,11 +41,10 @@ const routes: Routes = [
     children: [
       {
         path: '',
-        canActivate: [DynamicMenuRedirectGuard],
         children: [],
         data: {
           auth: [Authority.TENANT_ADMIN, Authority.CUSTOMER_USER, Authority.SYS_ADMIN],
-          parentMenuId: MenuId.notifications_center
+          redirectTo: '/notification/inbox'
         }
       },
       {
