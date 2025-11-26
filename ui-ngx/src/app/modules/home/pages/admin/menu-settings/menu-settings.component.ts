@@ -72,8 +72,8 @@ export class MenuSettingsComponent extends PageComponent implements OnInit {
   checklistSelection = new SelectionModel<string>(true /* multiple */);
 
   constructor(protected store: Store<AppState>,
-              private menuSettingService: MenuSettingService,
-              private fb: FormBuilder) {
+    private menuSettingService: MenuSettingService,
+    private fb: FormBuilder) {
     super(store);
     this.menuSettingsForm = this.fb.group({});
   }
@@ -145,7 +145,11 @@ export class MenuSettingsComponent extends PageComponent implements OnInit {
   }
 
   reset(): void {
-    this.loadSettings();
+    const allSelected = this.treeControl.dataNodes.every(node => this.checklistSelection.isSelected(node.id));
+    if (!allSelected) {
+      this.treeControl.dataNodes.forEach(node => this.checklistSelection.select(node.id));
+      this.menuSettingsForm.markAsDirty();
+    }
   }
 
   isAllExpanded = false;
