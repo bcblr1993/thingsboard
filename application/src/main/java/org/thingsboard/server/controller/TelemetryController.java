@@ -57,6 +57,7 @@ import org.thingsboard.server.common.data.EntityType;
 import org.thingsboard.server.common.data.StringUtils;
 import org.thingsboard.server.common.data.TenantProfile;
 import org.thingsboard.server.common.data.audit.ActionType;
+import org.thingsboard.server.common.data.exception.ThingsboardErrorCode;
 import org.thingsboard.server.common.data.exception.ThingsboardException;
 import org.thingsboard.server.common.data.id.DeviceId;
 import org.thingsboard.server.common.data.id.EntityId;
@@ -89,6 +90,7 @@ import org.thingsboard.server.service.security.AccessValidator;
 import org.thingsboard.server.service.security.model.SecurityUser;
 import org.thingsboard.server.service.security.permission.Operation;
 import org.thingsboard.server.service.telemetry.AttributeData;
+import org.thingsboard.server.service.telemetry.FormattedTsData;
 import org.thingsboard.server.service.telemetry.TbTelemetryService;
 import org.thingsboard.server.service.telemetry.TsData;
 
@@ -328,6 +330,62 @@ public class TelemetryController extends BaseController {
         Futures.addCallback(tbTelemetryService.getTimeseries(EntityIdFactory.getByTypeAndId(entityType, entityIdStr), toKeysList(keys), startTs, endTs,
                         intervalType, interval, timeZone, limit, Aggregation.valueOf(aggStr), orderBy, useStrictDataTypes, getCurrentUser()),
                 getTsKvListCallback(response, useStrictDataTypes), MoreExecutors.directExecutor());
+        return response;
+    }
+
+    @ApiOperation(value = "Get first time series value in each interval (getTimeseriesFirstValue)",
+            notes = "Returns the first value of time series data for each interval within the specified time range. " +
+                    "Unlike aggregation functions, this returns the actual first value in each time bucket. " +
+                    "\n\n" + INVALID_ENTITY_ID_OR_ENTITY_TYPE_DESCRIPTION + TENANT_OR_CUSTOMER_AUTHORITY_PARAGRAPH)
+    @PreAuthorize("hasAnyAuthority('SYS_ADMIN', 'TENANT_ADMIN', 'CUSTOMER_USER')")
+    @RequestMapping(value = "/{entityType}/{entityId}/values/timeseries/firstOfInterval", method = RequestMethod.GET)
+    @ResponseBody
+    public DeferredResult<ResponseEntity> getTimeseriesFirstOfIntervale(
+            @Parameter(description = ENTITY_TYPE_PARAM_DESCRIPTION, required = true) @PathVariable("entityType") String entityType,
+            @Parameter(description = ENTITY_ID_PARAM_DESCRIPTION, required = true) @PathVariable("entityId") String entityIdStr,
+            @Parameter(description = TELEMETRY_KEYS_BASE_DESCRIPTION, required = true) @RequestParam(name = "keys") String keys,
+            @Parameter(description = "A long value representing the start timestamp of the time range in milliseconds, UTC.")
+            @RequestParam(name = "startTs") Long startTs,
+            @Parameter(description = "A long value representing the end timestamp of the time range in milliseconds, UTC.")
+            @RequestParam(name = "endTs") Long endTs,
+            @Parameter(description = "A long value representing the interval range in milliseconds.")
+            @RequestParam(name = "interval") Long interval,
+            @Parameter(description = STRICT_DATA_TYPES_DESCRIPTION)
+            @RequestParam(name = "useStrictDataTypes", required = false, defaultValue = "false") Boolean useStrictDataTypes) throws ThingsboardException {
+
+        // 参数校验
+        // 1. 校验时间间隔必须在一天以内（24小时 = 86400000毫秒）
+        long timeDiff = endTs - startTs;
+        if (timeDiff > 86400000L) {
+            throw new ThingsboardException("Time range must be within 24 hours", ThingsboardErrorCode.BAD_REQUEST_PARAMS);
+        }
+
+        // 2. 校验interval不得少于一分钟
+        if (interval < 60000L) {
+            throw new ThingsboardException("Interval can't less than 60000", ThingsboardErrorCode.BAD_REQUEST_PARAMS);
+        }
+
+        List<String> keyList = toKeysList(keys);
+        if (keyList.size() > 10) {
+            throw new ThingsboardException("keys can't more than 10", ThingsboardErrorCode.BAD_REQUEST_PARAMS);
+
+        }
+        DeferredResult<ResponseEntity> response = new DeferredResult<>();
+        EntityId entityId = EntityIdFactory.getByTypeAndId(entityType, entityIdStr);
+
+        Futures.addCallback(tbTelemetryService.getTimeseriesFirstValue(entityId, keyList, startTs, endTs, interval, useStrictDataTypes, getCurrentUser()),
+                new FutureCallback<>() {
+                    @Override
+                    public void onSuccess(Map<String, List<FormattedTsData>> result) {
+                        response.setResult(new ResponseEntity<>(result, HttpStatus.OK));
+                    }
+
+                    @Override
+                    public void onFailure(Throwable t) {
+                        AccessValidator.handleError(t, response, HttpStatus.INTERNAL_SERVER_ERROR);
+                    }
+                }, MoreExecutors.directExecutor());
+
         return response;
     }
 

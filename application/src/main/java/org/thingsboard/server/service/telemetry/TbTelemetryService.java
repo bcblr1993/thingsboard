@@ -24,6 +24,7 @@ import org.thingsboard.server.common.data.kv.TsKvEntry;
 import org.thingsboard.server.service.security.model.SecurityUser;
 
 import java.util.List;
+import java.util.Map;
 
 public interface TbTelemetryService {
 
@@ -39,5 +40,25 @@ public interface TbTelemetryService {
                                                    String orderBy,
                                                    Boolean useStrictDataTypes,
                                                    SecurityUser currentUser) throws ThingsboardException;
+    /**
+     * 获取单设备单测点从{@code startTs}到{@code endTs}的每个{@code interval}内的第一个值。
+     *
+     * @param entityId the entity ID
+     * @param keys the time series keys
+     * @param startTs the start timestamp (inclusive)
+     * @param endTs the end timestamp (inclusive)
+     * @param interval the interval size in milliseconds
+     * @param useStrictDataTypes whether to use strict data types
+     * @param currentUser the current user for permission check
+     * @return a future containing the first values in each interval, sorted by timestamp
+     */
+    ListenableFuture<Map<String, List<FormattedTsData>>> getTimeseriesFirstValue(EntityId entityId,
+                                                                                 List<String> keys,
+                                                                                 Long startTs,
+                                                                                 Long endTs,
+                                                                                 Long interval,
+                                                                                 Boolean useStrictDataTypes,
+                                                                                 SecurityUser currentUser) throws ThingsboardException;
+
 
 }
