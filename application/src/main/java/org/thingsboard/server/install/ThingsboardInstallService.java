@@ -89,6 +89,9 @@ public class ThingsboardInstallService {
     private InstallScripts installScripts;
 
     @Autowired
+    private org.thingsboard.server.service.install.CustomSqlDatabaseUpgradeService customSqlDatabaseUpgradeService;
+
+    @Autowired
     private DatabaseSchemaSettingsService databaseSchemaVersionService;
 
     public void performInstall() {
@@ -107,6 +110,13 @@ public class ThingsboardInstallService {
                     // Apply the schema_update.sql script. The script may include DDL statements to change structure
                     // of *existing* tables and DML statements to manipulate the DB records.
                     databaseEntitiesUpgradeService.upgradeDatabase();
+
+                    // CUSTOM UPGRADE LOGIC START
+                    if (customSqlDatabaseUpgradeService != null) {
+                        customSqlDatabaseUpgradeService.upgradeDatabase();
+                    }
+                    // CUSTOM UPGRADE LOGIC END
+
                     // All new tables that do not have any data will be automatically created here.
                     entityDatabaseSchemaService.createDatabaseSchema(false);
                     // Re-create all views, functions.
@@ -170,6 +180,13 @@ public class ThingsboardInstallService {
 //                systemDataLoaderService.loadSystemRules();
                 installScripts.loadSystemLwm2mResources();
                 installScripts.loadSystemImagesAndResources();
+
+                // CUSTOM UPGRADE LOGIC START (For Fresh Install)
+                if (customSqlDatabaseUpgradeService != null) {
+                    customSqlDatabaseUpgradeService.upgradeDatabase();
+                }
+                // CUSTOM UPGRADE LOGIC END
+
                 installScripts.createDefaultMenuSettings();
 
                 if (loadDemo) {

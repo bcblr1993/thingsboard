@@ -17,6 +17,8 @@ package org.thingsboard.server.service.install;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -36,6 +38,12 @@ public class DefaultDatabaseSchemaSettingsService implements DatabaseSchemaSetti
 
     private final ProjectInfo projectInfo;
     private final JdbcTemplate jdbcTemplate;
+
+    @Value("${install.upgrade.custom_strategy_enabled:false}")
+    private boolean customStrategyEnabled;
+
+    @Value("${install.upgrade.custom_version:}")
+    private String customVersion;
 
     private String packageSchemaVersion;
     private String schemaVersionFromDb;
@@ -57,10 +65,12 @@ public class DefaultDatabaseSchemaSettingsService implements DatabaseSchemaSetti
             onSchemaSettingsError("Upgrade failed: database already upgraded to current version. You can set SKIP_SCHEMA_VERSION_CHECK to 'true' if force re-upgrade needed.");
         }
 
-        if (!SUPPORTED_VERSIONS_FOR_UPGRADE.contains(dbSchemaVersion)) {
+        if (!customStrategyEnabled && !SUPPORTED_VERSIONS_FOR_UPGRADE.contains(dbSchemaVersion)) {
             onSchemaSettingsError(String.format("Upgrade failed: database version '%s' is not supported for upgrade. Supported versions are: %s.",
                     dbSchemaVersion, SUPPORTED_VERSIONS_FOR_UPGRADE
             ));
+        } else if (customStrategyEnabled) {
+             log.info("Custom upgrade strategy enabled. Current DB version: {}, Target version: {}", dbSchemaVersion, getPackageSchemaVersion());
         }
     }
 
@@ -68,8 +78,42 @@ public class DefaultDatabaseSchemaSettingsService implements DatabaseSchemaSetti
     public void createSchemaSettings() {
         Long schemaVersion = getSchemaVersionFromDb();
         if (schemaVersion == null) {
-            jdbcTemplate.execute("INSERT INTO tb_schema_settings (schema_version, product) VALUES (" + getPackageSchemaVersionForDb() + ", '" + projectInfo.getProductType() + "')");
+            long initialVersion = getPackageSchemaVersionForDb();
+            
+            // If custom strategy is enabled, we start with the BASE version in the DB (e.g. 4.1.0).
+            // This allows the CustomSqlDatabaseUpgradeService to detect a difference (Base vs Target) 
+            // and execute the custom scripts during the initial install.
+            if (customStrategyEnabled) {
+                initialVersion = getBasePackageSchemaVersionForDb();
+            }
+            
+            jdbcTemplate.execute("INSERT INTO tb_schema_settings (schema_version, product) VALUES (" + initialVersion + ", '" + projectInfo.getProductType() + "')");
         }
+    }
+
+    private long getBasePackageSchemaVersionForDb() {
+        String version = getPackageSchemaVersion();
+        String baseVersionStr = version;
+
+        // Try Hyphen first
+        if (version.contains("-")) {
+            baseVersionStr = version.split("-")[0];
+        } else {
+            // Try Dot (if last part is 8 digits)
+            String[] parts = version.split("\\.");
+            if (parts.length > 2 && parts[parts.length-1].length() == 8) {
+                 // Reconstruct base: 4.1.2025 -> 4.1
+                 baseVersionStr = version.substring(0, version.lastIndexOf('.'));
+            }
+        }
+        
+        // Parse Standard ID from baseVersionStr
+        String[] parts = baseVersionStr.split("\\.");
+        long major = Integer.parseInt(parts[0]);
+        long minor = parts.length > 1 ? Integer.parseInt(parts[1]) : 0;
+        long patch = parts.length > 2 ? Integer.parseInt(parts[2]) : 0;
+        
+        return major * 1000000 + minor * 1000 + patch;
     }
 
     @Override
@@ -80,7 +124,11 @@ public class DefaultDatabaseSchemaSettingsService implements DatabaseSchemaSetti
     @Override
     public String getPackageSchemaVersion() {
         if (packageSchemaVersion == null) {
-            packageSchemaVersion = projectInfo.getProjectVersion();
+            if (customStrategyEnabled && org.apache.commons.lang3.StringUtils.isNotEmpty(customVersion)) {
+                packageSchemaVersion = customVersion;
+            } else {
+                packageSchemaVersion = projectInfo.getProjectVersion();
+            }
         }
         return packageSchemaVersion;
     }
@@ -93,12 +141,20 @@ public class DefaultDatabaseSchemaSettingsService implements DatabaseSchemaSetti
                 onSchemaSettingsError("Upgrade failed: the database schema version is missing.");
             }
 
-            @SuppressWarnings("DataFlowIssue")
-            long major = version / 1000000;
-            long minor = (version % 1000000) / 1000;
-            long patch = version % 1000;
-
-            schemaVersionFromDb = major + "." + minor + "." + patch;
+            if (customStrategyEnabled && version > 1000000000L) {
+                 // Hybrid Long Logic: Major * 100,000,000,000 + Minor * 100,000,000 + Date
+                 long major = version / 100000000000L;
+                 long remaining = version % 100000000000L;
+                 long minor = remaining / 100000000L;
+                 long date = remaining % 100000000L;
+                 schemaVersionFromDb = major + "." + minor + "." + date;
+            } else {
+                @SuppressWarnings("DataFlowIssue")
+                long major = version / 1000000;
+                long minor = (version % 1000000) / 1000;
+                long patch = version % 1000;
+                schemaVersionFromDb = major + "." + minor + "." + patch;
+            }
         }
         return schemaVersionFromDb;
     }
@@ -112,12 +168,32 @@ public class DefaultDatabaseSchemaSettingsService implements DatabaseSchemaSetti
     }
 
     private long getPackageSchemaVersionForDb() {
-        String[] versionParts = getPackageSchemaVersion().split("\\.");
-
+        String version = getPackageSchemaVersion();
+        
+        // Flexible Date Support using Hyphen: Official-Date (e.g. 4.1-20251230 or 4.2.1.1-20251230)
+        if (customStrategyEnabled && version.contains("-")) {
+            String[] hyphenParts = version.split("-");
+            if (hyphenParts.length == 2) {
+                String baseVersion = hyphenParts[0];
+                String datePart = hyphenParts[1];
+                
+                if (datePart.length() == 8 && StringUtils.isNumeric(datePart)) {
+                    long date = Long.parseLong(datePart);
+                    String[] baseParts = baseVersion.split("\\.");
+                    long major = Integer.parseInt(baseParts[0]);
+                    long minor = baseParts.length > 1 ? Integer.parseInt(baseParts[1]) : 0;
+                    
+                    // Formula: Major * 100,000,000,000 + Minor * 100,000,000 + Date
+                    return major * 100000000000L + minor * 100000000L + date;
+                }
+            }
+        }
+        
+        // Standard Logic (Fallback)
+        String[] versionParts = version.split("\\.");
         long major = Integer.parseInt(versionParts[0]);
         long minor = Integer.parseInt(versionParts[1]);
         long patch = versionParts.length > 2 ? Integer.parseInt(versionParts[2]) : 0;
-
         return major * 1000000 + minor * 1000 + patch;
     }
 
