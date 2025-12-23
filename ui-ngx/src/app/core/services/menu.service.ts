@@ -207,6 +207,9 @@ export class MenuService {
               if (path.startsWith(item.path)) {
                 return true;
               }
+              if (item.path.startsWith(path + '/')) {
+                return true;
+              }
               // 特殊处理 dashboard 路径，因为它在菜单中是 /dashboards，但 URL 可能是 /dashboard/xxx
               if (path.startsWith('/dashboard/') && item.path === '/dashboards') {
                 return true;

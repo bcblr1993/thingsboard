@@ -110,7 +110,7 @@
             "authority":{
                 "sys_admin": "sys admin",
                 "tenant_admin": "tenant admin",
-                "customer_user": "user"
+                "customer_user": "customer"
             }
         },
         "general": "General",
