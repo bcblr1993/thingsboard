@@ -2028,7 +2028,7 @@ mqtt:
 # 遥测专用gRPC服务配置
 telemetry_grpc:
   # 是否启用遥测专用gRPC服务
-  enabled: "${TELEMETRY_GRPC_ENABLED:false}"
+  enabled: "${TELEMETRY_GRPC_ENABLED:true}"
   # 遥测gRPC服务端口
   port: "${TELEMETRY_GRPC_PORT:7071}"
   # 最大客户端连接数
