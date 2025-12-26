@@ -353,35 +353,51 @@ public class TelemetryController extends BaseController {
             @Parameter(description = STRICT_DATA_TYPES_DESCRIPTION)
             @RequestParam(name = "useStrictDataTypes", required = false, defaultValue = "false") Boolean useStrictDataTypes) throws ThingsboardException {
 
+        log.info("Starting getTimeseriesFirstOfIntervale - entityType: {}, entityId: {}, keys: {}, startTs: {}, endTs: {}, interval: {}, useStrictDataTypes: {}",
+                entityType, entityIdStr, keys, startTs, endTs, interval, useStrictDataTypes);
+
         // 参数校验
         // 1. 校验时间间隔必须在一天以内（24小时 = 86400000毫秒）
         long timeDiff = endTs - startTs;
+        log.debug("Time difference calculation - startTs: {}, endTs: {}, timeDiff: {}", startTs, endTs, timeDiff);
         if (timeDiff > 86400000L) {
+            log.warn("Time range validation failed - time difference {} exceeds 24 hours limit", timeDiff);
             throw new ThingsboardException("Time range must be within 24 hours", ThingsboardErrorCode.BAD_REQUEST_PARAMS);
         }
 
         // 2. 校验interval不得少于一分钟
         if (interval < 60000L) {
+            log.warn("Interval validation failed - interval {} is less than minimum 60000", interval);
             throw new ThingsboardException("Interval can't less than 60000", ThingsboardErrorCode.BAD_REQUEST_PARAMS);
         }
 
         List<String> keyList = toKeysList(keys);
+        log.debug("Parsed keys list - original keys: {}, parsed list size: {}", keys, keyList.size());
         if (keyList.size() > 10) {
+            log.warn("Keys validation failed - number of keys {} exceeds maximum limit of 10", keyList.size());
             throw new ThingsboardException("keys can't more than 10", ThingsboardErrorCode.BAD_REQUEST_PARAMS);
 
         }
         DeferredResult<ResponseEntity> response = new DeferredResult<>();
         EntityId entityId = EntityIdFactory.getByTypeAndId(entityType, entityIdStr);
+        log.debug("Created EntityId - type: {}, id: {}", entityType, entityIdStr);
+
+        log.info("Calling tbTelemetryService.getTimeseriesFirstValue with parameters - entityId: {}, keys: {}, startTs: {}, endTs: {}, interval: {}",
+                entityId, keyList, startTs, endTs, interval);
 
         Futures.addCallback(tbTelemetryService.getTimeseriesFirstValue(entityId, keyList, startTs, endTs, interval, useStrictDataTypes, getCurrentUser()),
                 new FutureCallback<>() {
                     @Override
                     public void onSuccess(Map<String, List<FormattedTsData>> result) {
+                        log.info("getTimeseriesFirstOfIntervale completed successfully - result keys: {}, total data points: {}",
+                                result.keySet(), result.values().stream().mapToInt(List::size).sum());
                         response.setResult(new ResponseEntity<>(result, HttpStatus.OK));
                     }
 
                     @Override
                     public void onFailure(Throwable t) {
+                        log.error("getTimeseriesFirstOfIntervale failed with error - entityType: {}, entityId: {}, error: {}",
+                                entityType, entityIdStr, t.getMessage(), t);
                         AccessValidator.handleError(t, response, HttpStatus.INTERNAL_SERVER_ERROR);
                     }
                 }, MoreExecutors.directExecutor());

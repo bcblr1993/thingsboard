@@ -360,7 +360,7 @@ public class CassandraBaseTimeseriesDao extends AbstractCassandraBaseTimeseriesD
             stmtBuilder.setInt(6, cursor.getCurrentLimit());
 
             BoundStatement stmt = stmtBuilder.build();
-
+            //查询
             Futures.addCallback(executeAsyncRead(tenantId, stmt), new FutureCallback<TbResultSet>() {
                 @Override
                 public void onSuccess(@Nullable TbResultSet result) {

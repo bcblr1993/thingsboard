@@ -108,6 +108,8 @@ public class DefaultTbTelemetryService implements TbTelemetryService {
                                                                                  Long startTs, Long endTs, Long interval,
                                                                                  Boolean useStrictDataTypes, SecurityUser currentUser) {
         SettableFuture<Map<String, List<FormattedTsData>>> future = SettableFuture.create();
+        log.info("Entering getTimeseriesFirstValueSingleQuery - entityId: {}, keys: {}, startTs: {}, endTs: {}, interval: {}, useStrictDataTypes: {}",
+                entityId, keys, startTs, endTs, interval, useStrictDataTypes);
 
         accessValidator.validate(currentUser, Operation.READ_TELEMETRY, entityId, new FutureCallback<>() {
             @Override
@@ -117,28 +119,36 @@ public class DefaultTbTelemetryService implements TbTelemetryService {
                     List<ReadTsKvQuery> queries = keys.stream()
                             .map(key -> new BaseReadTsKvQuery(key, startTs, endTs, AggregationParams.none(), 86400, "ASC"))
                             .collect(Collectors.toList());
+                    log.debug("Created queries for single query approach - query count: {}, limit per query: {}", queries.size(), 86400);
 
                     Futures.addCallback(tsService.findAll(currentUser.getTenantId(), entityId, queries),
                             new FutureCallback<List<TsKvEntry>>() {
                                 @Override
                                 public void onSuccess(List<TsKvEntry> allData) {
+                                    log.info("Single query returned data - record count: {}, key count: {}", allData.size(),
+                                            allData.stream().map(TsKvEntry::getKey).distinct().count());
                                     // 内存分桶处理，返回每个间隔的第一个值
                                     Map<String, List<FormattedTsData>> firstValues = extractFirstValuesFromBuckets(allData, startTs, endTs, interval, useStrictDataTypes);
+                                    log.info("Extracted first values from buckets - result key count: {}, total data points: {}",
+                                            firstValues.size(), firstValues.values().stream().mapToInt(List::size).sum());
                                     future.set(firstValues);
                                 }
 
                                 @Override
                                 public void onFailure(Throwable t) {
+                                    log.error("Single query failed for entityId: {}, error: {}", entityId, t.getMessage(), t);
                                     future.setException(t);
                                 }
                             }, MoreExecutors.directExecutor());
                 } catch (Throwable e) {
+                    log.error("Exception in getTimeseriesFirstValueSingleQuery for entityId: {}, error: {}", entityId, e.getMessage(), e);
                     future.setException(e);
                 }
             }
 
             @Override
             public void onFailure(Throwable t) {
+                log.error("Access validation failed in getTimeseriesFirstValueSingleQuery for entityId: {}, error: {}", entityId, t.getMessage(), t);
                 future.setException(t);
             }
         });
@@ -150,6 +160,8 @@ public class DefaultTbTelemetryService implements TbTelemetryService {
                                                                                 Long startTs, Long endTs, Long interval,
                                                                                 Boolean useStrictDataTypes, SecurityUser currentUser) {
         SettableFuture<Map<String, List<FormattedTsData>>> future = SettableFuture.create();
+        log.info("Entering getTimeseriesFirstValueBatchQuery - entityId: {}, keys: {}, startTs: {}, endTs: {}, interval: {}, useStrictDataTypes: {}",
+                entityId, keys, startTs, endTs, interval, useStrictDataTypes);
 
         accessValidator.validate(currentUser, Operation.READ_TELEMETRY, entityId, new FutureCallback<>() {
             @Override
@@ -157,9 +169,11 @@ public class DefaultTbTelemetryService implements TbTelemetryService {
                 try {
                     // 计算bucket数量
                     long bucketCount = (endTs - startTs) / interval + 1;
+                    log.debug("Calculated bucket count - startTs: {}, endTs: {}, interval: {}, bucketCount: {}", startTs, endTs, interval, bucketCount);
 
                     // 为每个key和每个bucket创建一个查询
                     List<ListenableFuture<List<TsKvEntry>>> futures = new ArrayList<>();
+                    log.info("Creating batch queries - key count: {}, bucket count: {}, total queries: {}", keys.size(), bucketCount, keys.size() * bucketCount);
 
                     for (String key : keys) {
                         for (int i = 0; i < bucketCount; i++) {
@@ -171,13 +185,18 @@ public class DefaultTbTelemetryService implements TbTelemetryService {
                             futures.add(tsService.findAll(currentUser.getTenantId(), entityId, List.of(query)));
                         }
                     }
+                    log.debug("Created all {} batch queries", futures.size());
 
                     // 合并所有结果
                     Futures.addCallback(Futures.allAsList(futures),
-                            new FutureCallback<>() {
+                            new FutureCallback<List<List<TsKvEntry>>>() {
                                 @Override
                                 public void onSuccess(List<List<TsKvEntry>> results) {
+                                    log.info("Batch queries completed successfully - total results: {}, non-empty results: {}",
+                                            results.size(), results.stream().filter(list -> !list.isEmpty()).count());
+
                                     Map<String, List<FormattedTsData>> keys2ListData = new HashMap<>();
+                                    int validDataCount = 0;
                                     for (List<TsKvEntry> bucketData : results) {
                                         if (!bucketData.isEmpty()) {
                                             TsKvEntry entry = bucketData.get(0);
@@ -186,26 +205,36 @@ public class DefaultTbTelemetryService implements TbTelemetryService {
                                             long bucketStartTs = (timestamp - startTs) / interval * interval + startTs;
                                             Object value = useStrictDataTypes ? getKvValue(entry) : entry.getValueAsString();
                                             keys2ListData.computeIfAbsent(entry.getKey(), k -> new ArrayList<>())
-                                                            .add(new FormattedTsData(bucketStartTs, timestamp, value));
+                                                            .add(FormattedTsData
+                                                                    .builder()
+                                                                    .ts(bucketStartTs)
+                                                                    .originalTs(timestamp)
+                                                                    .value(value).build());
+                                            validDataCount++;
                                         }
                                     }
 
+                                    log.info("Processed batch query results - result keys: {}, total valid data points: {}",
+                                            keys2ListData.size(), validDataCount);
                                     future.set(keys2ListData);
                                 }
 
                                 @Override
                                 public void onFailure(Throwable t) {
+                                    log.error("Batch queries failed for entityId: {}, error: {}", entityId, t.getMessage(), t);
                                     future.setException(t);
                                 }
                             }, MoreExecutors.directExecutor());
 
                 } catch (Throwable e) {
+                    log.error("Exception in getTimeseriesFirstValueBatchQuery for entityId: {}, error: {}", entityId, e.getMessage(), e);
                     future.setException(e);
                 }
             }
 
             @Override
             public void onFailure(Throwable t) {
+                log.error("Access validation failed in getTimeseriesFirstValueBatchQuery for entityId: {}, error: {}", entityId, t.getMessage(), t);
                 future.setException(t);
             }
         });
@@ -224,8 +253,13 @@ public class DefaultTbTelemetryService implements TbTelemetryService {
      * @return
      */
     private Map<String, List<FormattedTsData>> extractFirstValuesFromBuckets(List<TsKvEntry> allData, Long startTs, Long endTs, Long interval, Boolean useStrictDataTypes) {
+        log.debug("Entering extractFirstValuesFromBuckets - data size: {}, time range: {} to {}, interval: {}",
+                allData.size(), startTs, endTs, interval);
+
         Map<String, List<FormattedTsData>> result = new HashMap<>();
         Map<String, Set<Long>> bucketFirstSeen = new java.util.HashMap<>();
+        int processedRecords = 0;
+        int addedRecords = 0;
 
         for (TsKvEntry entry : allData) {
             long timestamp = entry.getTs();
@@ -240,12 +274,24 @@ public class DefaultTbTelemetryService implements TbTelemetryService {
             if (!seenBuckets.contains(bucketStart)) {
                 Object value = useStrictDataTypes ? getKvValue(entry) : entry.getValueAsString();
                 result.computeIfAbsent(key, k -> new ArrayList<>())
-                        .add(new FormattedTsData(bucketStart, timestamp, value));
+                        .add(FormattedTsData
+                                .builder()
+                                .ts(bucketStart)
+                                .originalTs(timestamp)
+                                .value(value).build());
 
                 seenBuckets.add(bucketStart);
+                addedRecords++;
+            }
+            processedRecords++;
+
+            if (processedRecords % 10000 == 0) {
+                log.debug("Processing progress - processed: {} records, added: {} first values", processedRecords, addedRecords);
             }
         }
 
+        log.info("Completed extractFirstValuesFromBuckets - processed records: {}, unique keys: {}, first values extracted: {}",
+                processedRecords, result.size(), addedRecords);
         return result;
     }
     private Object getKvValue(KvEntry entry) {
