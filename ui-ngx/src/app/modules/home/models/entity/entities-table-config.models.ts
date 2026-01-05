@@ -51,7 +51,7 @@ export type HeaderCellStyleFunction<T extends BaseData<HasId>> = (key: string) =
 export type CellStyleFunction<T extends BaseData<HasId>> = (entity: T, key: string) => object;
 export type CopyCellContent<T extends BaseData<HasId>> = (entity: T, key: string, length: number) => object;
 
-export enum CellActionDescriptorType { 'DEFAULT', 'COPY_BUTTON'}
+export enum CellActionDescriptorType { 'DEFAULT', 'COPY_BUTTON' }
 
 export interface CellActionDescriptor<T extends BaseData<HasId>> {
   name: string;
@@ -82,74 +82,75 @@ export type EntityTableColumnType = 'content' | 'action' | 'link' | 'entityChips
 
 export class BaseEntityTableColumn<T extends BaseData<HasId>> {
   constructor(public type: EntityTableColumnType,
-              public key: string,
-              public title: string,
-              public width: string = '0px',
-              public sortable: boolean = true,
-              public ignoreTranslate: boolean = false,
-              public mobileHide: boolean = false) {
+    public key: string,
+    public title: string,
+    public width: string = '0px',
+    public sortable: boolean = true,
+    public ignoreTranslate: boolean = false,
+    public mobileHide: boolean = false) {
   }
 }
 
 export class EntityTableColumn<T extends BaseData<HasId>> extends BaseEntityTableColumn<T> {
   constructor(public key: string,
-              public title: string,
-              public width: string = '0px',
-              public cellContentFunction: CellContentFunction<T> = (entity, property) => entity[property] ? entity[property] : '',
-              public cellStyleFunction: CellStyleFunction<T> = () => ({}),
-              public sortable: boolean = true,
-              public headerCellStyleFunction: HeaderCellStyleFunction<T> = () => ({}),
-              public cellTooltipFunction: CellTooltipFunction<T> = () => undefined,
-              public isNumberColumn: boolean = false,
-              public actionCell: CellActionDescriptor<T> = null) {
+    public title: string,
+    public width: string = '0px',
+    public cellContentFunction: CellContentFunction<T> = (entity, property) => entity[property] ? entity[property] : '',
+    public cellStyleFunction: CellStyleFunction<T> = () => ({}),
+    public sortable: boolean = true,
+    public headerCellStyleFunction: HeaderCellStyleFunction<T> = () => ({}),
+    public cellTooltipFunction: CellTooltipFunction<T> = () => undefined,
+    public isNumberColumn: boolean = false,
+    public actionCell: CellActionDescriptor<T> = null,
+    public isEditable: boolean = false) {
     super('content', key, title, width, sortable);
   }
 }
 
 export class EntityActionTableColumn<T extends BaseData<HasId>> extends BaseEntityTableColumn<T> {
   constructor(public key: string,
-              public title: string,
-              public actionDescriptor: CellActionDescriptor<T>,
-              public width: string = '0px') {
+    public title: string,
+    public actionDescriptor: CellActionDescriptor<T>,
+    public width: string = '0px') {
     super('action', key, title, width, false);
   }
 }
 
 export class EntityLinkTableColumn<T extends BaseData<HasId>> extends BaseEntityTableColumn<T> {
   constructor(public key: string,
-              public title: string,
-              public width: string = '0px',
-              public cellContentFunction: CellContentFunction<T> = (entity, property) => entity[property] ? entity[property] : '',
-              public entityURL: (entity) => string,
-              public sortable: boolean = true,
-              public cellStyleFunction: CellStyleFunction<T> = () => ({}),
-              public headerCellStyleFunction: HeaderCellStyleFunction<T> = () => ({}),
-              public cellTooltipFunction: CellTooltipFunction<T> = () => undefined,
-              public actionCell: CellActionDescriptor<T> = null) {
+    public title: string,
+    public width: string = '0px',
+    public cellContentFunction: CellContentFunction<T> = (entity, property) => entity[property] ? entity[property] : '',
+    public entityURL: (entity) => string,
+    public sortable: boolean = true,
+    public cellStyleFunction: CellStyleFunction<T> = () => ({}),
+    public headerCellStyleFunction: HeaderCellStyleFunction<T> = () => ({}),
+    public cellTooltipFunction: CellTooltipFunction<T> = () => undefined,
+    public actionCell: CellActionDescriptor<T> = null) {
     super('link', key, title, width, sortable);
   }
 }
 
 export class DateEntityTableColumn<T extends BaseData<HasId>> extends EntityTableColumn<T> {
   constructor(key: string,
-              title: string,
-              datePipe: DatePipe,
-              width: string = '0px',
-              dateFormat: string = 'yyyy-MM-dd HH:mm:ss',
-              cellStyleFunction: CellStyleFunction<T> = () => ({})) {
+    title: string,
+    datePipe: DatePipe,
+    width: string = '0px',
+    dateFormat: string = 'yyyy-MM-dd HH:mm:ss',
+    cellStyleFunction: CellStyleFunction<T> = () => ({})) {
     super(key,
-          title,
-          width,
-          (entity, property) => datePipe.transform(entity[property], dateFormat),
-          cellStyleFunction);
+      title,
+      width,
+      (entity, property) => datePipe.transform(entity[property], dateFormat),
+      cellStyleFunction);
   }
 }
 
 export class EntityChipsEntityTableColumn<T extends BaseData<HasId>> extends BaseEntityTableColumn<T> {
   constructor(public key: string,
-              public title: string,
-              public width: string = '0px',
-              public entityURL?: (entity) => string) {
+    public title: string,
+    public width: string = '0px',
+    public entityURL?: (entity) => string) {
     super('entityChips', key, title, width, false);
   }
 }
@@ -158,7 +159,7 @@ export type EntityColumn<T extends BaseData<HasId>> = EntityTableColumn<T> | Ent
 
 export class EntityTableConfig<T extends BaseData<HasId>, P extends PageLink = PageLink, L extends BaseData<HasId> = T> {
 
-  constructor() {}
+  constructor() { }
 
   private table: IEntitiesTableComponent = null;
   private entityDetailsPage: IEntityDetailsPageComponent = null;
@@ -180,13 +181,14 @@ export class EntityTableConfig<T extends BaseData<HasId>, P extends PageLink = P
   detailsPanelEnabled = true;
   hideDetailsTabsOnEdit = true;
   rowPointer = false;
+  isQuickEditEnabled = false;
   actionsColumnTitle = null;
   entityTranslations: EntityTypeTranslation;
   entityResources: EntityTypeResource<T>;
   entityComponent: Type<EntityComponent<T, P, L>>;
   entityTabsComponent: Type<EntityTabsComponent<T, P, L>>;
   addDialogStyle = {};
-  defaultSortOrder: SortOrder = {property: 'createdTime', direction: Direction.DESC};
+  defaultSortOrder: SortOrder = { property: 'createdTime', direction: Direction.DESC };
   displayPagination = true;
   pageMode = true;
   defaultPageSize = 10;
@@ -199,7 +201,7 @@ export class EntityTableConfig<T extends BaseData<HasId>, P extends PageLink = P
   addEntity: CreateEntityOperation<T> = null;
   dataSource: (dataLoadedFunction: (col?: number, row?: number) => void)
     => EntitiesDataSource<L> = (dataLoadedFunction: (col?: number, row?: number) => void) =>
-    new EntitiesDataSource(this.entitiesFetchFunction, this.entitySelectionEnabled, dataLoadedFunction);
+      new EntitiesDataSource(this.entitiesFetchFunction, this.entitySelectionEnabled, dataLoadedFunction);
   detailsReadonly: EntityBooleanFunction<T> = () => false;
   entitySelectionEnabled: EntityBooleanFunction<L> = () => true;
   deleteEnabled: EntityBooleanFunction<T | L> = () => true;
@@ -214,9 +216,9 @@ export class EntityTableConfig<T extends BaseData<HasId>, P extends PageLink = P
   onEntityAction: EntityActionFunction<T> = () => false;
   handleRowClick: EntityRowClickFunction<L> = () => false;
   entityTitle: EntityStringFunction<T> = (entity) => entity?.name;
-  entityAdded: EntityVoidFunction<T> = () => {};
-  entityUpdated: EntityVoidFunction<T> = () => {};
-  entitiesDeleted: EntityIdsVoidFunction<T> = () => {};
+  entityAdded: EntityVoidFunction<T> = () => { };
+  entityUpdated: EntityVoidFunction<T> = () => { };
+  entitiesDeleted: EntityIdsVoidFunction<T> = () => { };
 
   getTable(): IEntitiesTableComponent {
     return this.table;

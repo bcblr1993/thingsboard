@@ -116,7 +116,7 @@ export class EntitiesTableComponent extends PageComponent implements IEntitiesTa
   isDetailsOpen = false;
   detailsPanelOpened = new EventEmitter<boolean>();
 
-  @ViewChild('entityTableHeader', {static: true}) entityTableHeaderAnchor: TbAnchorComponent;
+  @ViewChild('entityTableHeader', { static: true }) entityTableHeaderAnchor: TbAnchorComponent;
 
   @ViewChild('searchInput') searchInputField: ElementRef;
 
@@ -125,7 +125,11 @@ export class EntitiesTableComponent extends PageComponent implements IEntitiesTa
 
   @ViewChild('entityDetailsPanel') entityDetailsPanel: EntityDetailsPanelComponent;
 
-  textSearch = this.fb.control('', {nonNullable: true});
+  textSearch = this.fb.control('', { nonNullable: true });
+
+  quickEditEnabled = false;
+  editingEntity: BaseData<HasId> = null;
+  editingColumn: EntityTableColumn<BaseData<HasId>> = null;
 
   private updateDataSubscription: Subscription;
   private viewInited = false;
@@ -134,17 +138,17 @@ export class EntitiesTableComponent extends PageComponent implements IEntitiesTa
   private destroy$ = new Subject<void>();
 
   constructor(protected store: Store<AppState>,
-              public route: ActivatedRoute,
-              public translate: TranslateService,
-              public dialog: MatDialog,
-              private dialogService: DialogService,
-              private domSanitizer: DomSanitizer,
-              private cd: ChangeDetectorRef,
-              private router: Router,
-              private elementRef: ElementRef,
-              private fb: FormBuilder,
-              private zone: NgZone,
-              public viewContainerRef: ViewContainerRef) {
+    public route: ActivatedRoute,
+    public translate: TranslateService,
+    public dialog: MatDialog,
+    private dialogService: DialogService,
+    private domSanitizer: DomSanitizer,
+    private cd: ChangeDetectorRef,
+    private router: Router,
+    private elementRef: ElementRef,
+    private fb: FormBuilder,
+    private zone: NgZone,
+    public viewContainerRef: ViewContainerRef) {
     super(store);
   }
 
@@ -155,7 +159,7 @@ export class EntitiesTableComponent extends PageComponent implements IEntitiesTa
       this.route.data.pipe(
         takeUntil(this.destroy$)
       ).subscribe((data) => {
-          this.init(data.entitiesTableConfig);
+        this.init(data.entitiesTableConfig);
       });
     }
     this.widgetResize$ = new ResizeObserver(() => {
@@ -247,7 +251,7 @@ export class EntitiesTableComponent extends PageComponent implements IEntitiesTa
           direction: routerQueryParams?.direction || this.entitiesTableConfig.defaultSortOrder.direction
         };
       }
-    } else if (this.entitiesTableConfig.defaultSortOrder){
+    } else if (this.entitiesTableConfig.defaultSortOrder) {
       sortOrder = {
         property: this.entitiesTableConfig.defaultSortOrder.property,
         direction: this.entitiesTableConfig.defaultSortOrder.direction
@@ -279,7 +283,7 @@ export class EntitiesTableComponent extends PageComponent implements IEntitiesTa
         const decodedTextSearch = decodeURI(textSearchParam);
         this.textSearchMode = true;
         this.pageLink.textSearch = decodedTextSearch.trim();
-        this.textSearch.setValue(decodedTextSearch, {emitEvent: false});
+        this.textSearch.setValue(decodedTextSearch, { emitEvent: false });
       }
     }
     this.dataSource = this.entitiesTableConfig.dataSource(this.dataLoaded.bind(this));
@@ -349,10 +353,10 @@ export class EntitiesTableComponent extends PageComponent implements IEntitiesTa
           const decodedTextSearch = decodeURI(textSearchParam);
           this.textSearchMode = true;
           this.pageLink.textSearch = decodedTextSearch.trim();
-          this.textSearch.setValue(decodedTextSearch, {emitEvent: false});
+          this.textSearch.setValue(decodedTextSearch, { emitEvent: false });
         } else {
           this.pageLink.textSearch = null;
-          this.textSearch.reset('', {emitEvent: false});
+          this.textSearch.reset('', { emitEvent: false });
         }
         this.updateData();
       });
@@ -392,8 +396,8 @@ export class EntitiesTableComponent extends PageComponent implements IEntitiesTa
     }
     this.updateDataSubscription = ((this.displayPagination ? merge(sortSubscription$, paginatorSubscription$)
       : sortSubscription$) as Observable<PageQueryParam>).pipe(
-      takeUntil(this.destroy$)
-    ).subscribe(queryParams => this.updatedRouterParamsAndData(queryParams));
+        takeUntil(this.destroy$)
+      ).subscribe(queryParams => this.updatedRouterParamsAndData(queryParams));
   }
 
   addEnabled() {
@@ -447,6 +451,9 @@ export class EntitiesTableComponent extends PageComponent implements IEntitiesTa
   }
 
   onRowClick($event: Event, entity) {
+    if (this.editingEntity) {
+      return;
+    }
     if (!this.entitiesTableConfig.handleRowClick($event, entity)) {
       this.toggleEntityDetails($event, entity);
     }
@@ -470,13 +477,13 @@ export class EntitiesTableComponent extends PageComponent implements IEntitiesTa
       entity$ = this.entitiesTableConfig.addEntity();
     } else {
       entity$ = this.dialog.open<AddEntityDialogComponent, AddEntityDialogData<BaseData<HasId>>,
-                                 BaseData<HasId>>(AddEntityDialogComponent, {
-        disableClose: true,
-        panelClass: ['tb-dialog', 'tb-fullscreen-dialog'],
-        data: {
-          entitiesTableConfig: this.entitiesTableConfig
-        }
-      }).afterClosed();
+        BaseData<HasId>>(AddEntityDialogComponent, {
+          disableClose: true,
+          panelClass: ['tb-dialog', 'tb-fullscreen-dialog'],
+          data: {
+            entitiesTableConfig: this.entitiesTableConfig
+          }
+        }).afterClosed();
     }
     entity$.subscribe(
       (entity) => {
@@ -539,7 +546,7 @@ export class EntitiesTableComponent extends PageComponent implements IEntitiesTa
             tasks.push(this.entitiesTableConfig.deleteEntity(entity.id).pipe(
               map(() => entity.id),
               catchError(() => of(null)
-            )));
+              )));
           }
         });
         forkJoin(tasks).subscribe(
@@ -575,7 +582,7 @@ export class EntitiesTableComponent extends PageComponent implements IEntitiesTa
   resetSortAndFilter(update: boolean = true, preserveTimewindow: boolean = false) {
     this.textSearchMode = false;
     this.pageLink.textSearch = null;
-    this.textSearch.reset('', {emitEvent: false});
+    this.textSearch.reset('', { emitEvent: false });
     if (this.entitiesTableConfig.useTimePageLink && !preserveTimewindow) {
       this.timewindow = this.entitiesTableConfig.defaultTimewindowInterval;
     }
@@ -627,13 +634,13 @@ export class EntitiesTableComponent extends PageComponent implements IEntitiesTa
     const index = this.entitiesTableConfig.columns.indexOf(column);
     let res = this.headerCellStyleCache[index];
     if (!res) {
-      const widthStyle: any = {width: column.width};
+      const widthStyle: any = { width: column.width };
       if (column.width !== '0px') {
         widthStyle.minWidth = column.width;
         widthStyle.maxWidth = column.width;
       }
       if (column instanceof EntityTableColumn) {
-        res = {...column.headerCellStyleFunction(column.key), ...widthStyle};
+        res = { ...column.headerCellStyleFunction(column.key), ...widthStyle };
       } else {
         res = widthStyle;
       }
@@ -686,13 +693,13 @@ export class EntitiesTableComponent extends PageComponent implements IEntitiesTa
     const index = row * this.entitiesTableConfig.columns.length + col;
     let res = this.cellStyleCache[index];
     if (!res) {
-      const widthStyle: any = {width: column.width};
+      const widthStyle: any = { width: column.width };
       if (column.width !== '0px') {
         widthStyle.minWidth = column.width;
         widthStyle.maxWidth = column.width;
       }
       if (column instanceof EntityTableColumn) {
-        res = {...column.cellStyleFunction(entity, column.key), ...widthStyle};
+        res = { ...column.cellStyleFunction(entity, column.key), ...widthStyle };
       } else {
         res = widthStyle;
       }
@@ -726,5 +733,39 @@ export class EntitiesTableComponent extends PageComponent implements IEntitiesTa
 
   detectChanges() {
     this.cd.markForCheck();
+  }
+
+  toggleQuickEditMode() {
+    this.quickEditEnabled = !this.quickEditEnabled;
+    this.cancelEdit();
+  }
+
+  onCellDoubleClick($event: Event, entity: BaseData<HasId>, column: EntityTableColumn<BaseData<HasId>>) {
+    if (this.quickEditEnabled && column.isEditable) {
+      $event.stopPropagation();
+      this.editingEntity = entity;
+      this.editingColumn = column;
+    }
+  }
+
+  saveCell(entity: BaseData<HasId>, column: EntityTableColumn<BaseData<HasId>>, value: any) {
+    if (entity[column.key] !== value) {
+      const newEntity = { ...entity };
+      newEntity[column.key] = value;
+      this.entitiesTableConfig.saveEntity(newEntity, entity).subscribe(
+        (savedEntity) => {
+          this.updateData(false, false);
+          this.entitiesTableConfig.entityUpdated(savedEntity);
+          this.cancelEdit();
+        }
+      );
+    } else {
+      this.cancelEdit();
+    }
+  }
+
+  cancelEdit() {
+    this.editingEntity = null;
+    this.editingColumn = null;
   }
 }

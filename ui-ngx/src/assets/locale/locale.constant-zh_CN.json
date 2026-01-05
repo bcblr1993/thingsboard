@@ -87,7 +87,10 @@
         "upload": "上传",
         "delete-anyway": "仍要删除",
         "delete-selected": "删除所选",
-        "set": "设置"
+        "set": "设置",
+        "quick-edit": "快速编辑",
+        "enable-quick-edit": "启用快速编辑",
+        "disable-quick-edit": "禁用快速编辑"
     },
     "aggregation": {
         "aggregation": "聚合",
@@ -106,7 +109,7 @@
         "permission-menu-allocation": "权限菜单分配",
         "menu-settings": {
             "role": "选择配置的角色",
-            "authority":{
+            "authority": {
                 "sys_admin": "系统管理员",
                 "tenant_admin": "租户管理员",
                 "customer_user": "用户"
@@ -586,7 +589,8 @@
             "title-max-length": "标题长度不能超过{{max}}个字符",
             "invalid-ico-format": "必须使用ICO格式的图片",
             "max-size-exceeded-kb": "文件大小不能超过{{maxSize}}KB"
-        }    },
+        }
+    },
     "alarm": {
         "alarm": "告警",
         "alarms": "告警",
@@ -1467,7 +1471,7 @@
     },
     "device": {
         "assets-device-config": "设备资产配置文件",
-        "import-assets-device-config":"导入资产设备配置",
+        "import-assets-device-config": "导入资产设备配置",
         "validate-assets-device-config": "校验资产设备配置",
         "asset-file": "资产文件",
         "validation-result": "验证结果",
