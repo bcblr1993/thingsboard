@@ -39,7 +39,7 @@
                 [forAllTimeEnabled]="entitiesTableConfig.forAllTimeEnabled"></tb-timewindow>
             </div>
             <span class="flex-1"></span>
-            <mat-slide-toggle class="lt-md:!hidden" *ngIf="entitiesTableConfig.isQuickEditEnabled"
+            <mat-slide-toggle class="lt-lg:!hidden" *ngIf="entitiesTableConfig.isQuickEditEnabled"
               [checked]="quickEditEnabled" (change)="toggleQuickEditMode()" [disabled]="isLoading$ | async"
               matTooltip="{{ (quickEditEnabled ? 'action.disable-quick-edit' : 'action.enable-quick-edit') | translate }}"
               matTooltipPosition="above">
