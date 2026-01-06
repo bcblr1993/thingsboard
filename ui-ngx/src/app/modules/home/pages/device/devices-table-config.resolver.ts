@@ -138,8 +138,6 @@ export class DevicesTableConfigResolver {
       (this.config.componentsData.deviceScope === 'customer_user' || this.config.componentsData.deviceScope === 'edge_customer_user');
     this.config.onLoadAction = (route) => this.onLoadAction(route);
 
-    this.config.onLoadAction = (route) => this.onLoadAction(route);
-
     this.config.isQuickEditEnabled = true;
 
     this.config.headerComponent = DeviceTableHeaderComponent;

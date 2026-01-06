@@ -107,9 +107,6 @@ export class AssetsTableConfigResolver {
     this.config.detailsReadonly = () => (this.config.componentsData.assetScope === 'customer_user' ||
       this.config.componentsData.assetScope === 'edge_customer_user');
 
-    this.config.detailsReadonly = () => (this.config.componentsData.assetScope === 'customer_user' ||
-      this.config.componentsData.assetScope === 'edge_customer_user');
-
     this.config.isQuickEditEnabled = true;
 
     this.config.headerComponent = AssetTableHeaderComponent;
