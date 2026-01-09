@@ -962,10 +962,10 @@ CREATE TABLE IF NOT EXISTS job (
     result varchar
 );
 
-CREATE TABLE IF NOT EXISTS menu_settings (
-     id uuid NOT NULL CONSTRAINT menu_settings_pkey PRIMARY KEY,
-     created_time bigint NOT NULL,
-     authority varchar(255),
-    menu_config jsonb,
-    CONSTRAINT menu_settings_authority_unq_key UNIQUE (authority)
-);
+-- CREATE TABLE IF NOT EXISTS menu_settings (
+--      id uuid NOT NULL CONSTRAINT menu_settings_pkey PRIMARY KEY,
+--      created_time bigint NOT NULL,
+--      authority varchar(255),
+--     menu_config jsonb,
+--     CONSTRAINT menu_settings_authority_unq_key UNIQUE (authority)
+-- );
