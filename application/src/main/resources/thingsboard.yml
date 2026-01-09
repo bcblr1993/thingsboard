@@ -14,15 +14,16 @@
 # limitations under the License.
 #
 
-# 是否进行版本安装升级 默认false,设置true为进行安装升级
 install:
-  upgrade:
-    # 启用默认官方升级逻辑 (如果为 true)
-    enabled: false
-    # 是否启用自定义日期版本策略 (默认 false)
-    custom_strategy_enabled: "${INSTALL_UPGRADE_CUSTOM_STRATEGY_ENABLED:false}"
-    # 自定义版本格式 (例如: 4.1-20251230 或 4.1.20250930)
-    custom_version: "${INSTALL_UPGRADE_CUSTOM_VERSION:}"
+  # 是否启用升级模式（默认 false）
+  # - false: 执行全新安装（从零创建 schema 和加载默认数据，适用于新部署或测试环境）
+  # - true: 执行旧版升级（从现有数据库版本迁移，适用于生产升级场景）
+  # 注意：生产升级时必须设置为 true
+  upgrade: true
+  # 【必须显式配置】自定义目标版本（用于控制自定义脚本执行范围和版本回退防护）
+  # 推荐格式: 主版本-日期（YYYYMMDD），例如 4.1-20251230
+  # 示例: 发布时注入当前日期，确保版本递增
+  upgrade.custom_version: "${INSTALL_UPGRADE_CUSTOM_VERSION:4.1-20251230}"
 # Server common parameters
 server:
   # Server bind-address
