@@ -2035,7 +2035,7 @@ mqtt:
 # 遥测专用gRPC服务配置
 telemetry_grpc:
   # 是否启用遥测专用gRPC服务
-  enabled: "${TELEMETRY_GRPC_ENABLED:false}"
+  enabled: "${TELEMETRY_GRPC_ENABLED:true}"
   # 遥测gRPC服务端口
   port: "${TELEMETRY_GRPC_PORT:7071}"
   # 最大客户端连接数
@@ -2054,13 +2054,4 @@ telemetry_grpc:
   max_inbound_message_size: "${TELEMETRY_GRPC_MAX_INBOUND_MESSAGE_SIZE:4194304}"
   # 线程池配置
   thread_pool_size: "${TELEMETRY_GRPC_THREAD_POOL_SIZE:4}"
-  # 认证配置
-  auth:
-    # 认证方式: edge_credentials (使用Edge凭证) 或 custom_tokens (使用自定义令牌)
-    type: "${TELEMETRY_GRPC_AUTH_TYPE:edge_credentials}"
-    # 自定义令牌配置 (当type为custom_tokens时使用)
-    custom_tokens:
-      # 允许的令牌列表，格式: token1,token2,token3
-      allowed_tokens: "${TELEMETRY_GRPC_ALLOWED_TOKENS:}"
-      # 令牌验证超时时间(秒)
-      validation_timeout: "${TELEMETRY_GRPC_TOKEN_VALIDATION_TIMEOUT:30}"
+
