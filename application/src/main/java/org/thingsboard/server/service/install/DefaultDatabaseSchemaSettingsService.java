@@ -40,7 +40,7 @@ public class DefaultDatabaseSchemaSettingsService implements DatabaseSchemaSetti
     private final JdbcTemplate jdbcTemplate;    // 用于直接执行 SQL 操作
 
     // 是否启用自定义升级策略（通过配置控制）
-    @Value("${install.upgrade.custom_strategy_enabled:false}")
+    @Value("${install.upgrade.custom_strategy_enabled:true}")
     private boolean customStrategyEnabled;
 
     // 自定义目标版本（例如 4.1-20251230），优先级高于包内版本

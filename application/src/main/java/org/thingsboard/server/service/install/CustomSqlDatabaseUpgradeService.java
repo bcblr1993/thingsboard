@@ -56,7 +56,7 @@ public class CustomSqlDatabaseUpgradeService {
     private final DatabaseSchemaSettingsService schemaSettingsService;
 
     // 是否启用自定义升级策略（通过配置控制）
-    @Value("${install.upgrade.custom_strategy_enabled:false}")
+    @Value("${install.upgrade.custom_strategy_enabled:true}")
     private boolean customStrategyEnabled;
 
     /**

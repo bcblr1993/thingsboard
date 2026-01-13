@@ -214,6 +214,8 @@ public class ThingsboardInstallService {
                     log.info("Loading demo data...");
                     systemDataLoaderService.loadDemoData();
                 }
+                // 更新数据库中的 schema_version 为当前包版本
+                databaseSchemaVersionService.updateSchemaVersion();
                 log.info("Installation finished successfully!");
             }
         } catch (Exception e) {
