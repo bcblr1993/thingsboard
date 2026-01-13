@@ -19,7 +19,7 @@ install:
   # - false: 执行全新安装（从零创建 schema 和加载默认数据，适用于新部署或测试环境）
   # - true: 执行旧版升级（从现有数据库版本迁移，适用于生产升级场景）
   # 注意：生产升级时必须设置为 true
-  upgrade: "${INSTALL_UPGRADE_ENABLED:true}"
+  upgrade: "${INSTALL_UPGRADE_ENABLED:false}"
   # 【必须显式配置】自定义目标版本（用于控制自定义脚本执行范围和版本回退防护）
   # 推荐格式: 主版本-日期（YYYYMMDD），例如 4.1-20251230
   # 示例: 发布时注入当前日期，确保版本递增
