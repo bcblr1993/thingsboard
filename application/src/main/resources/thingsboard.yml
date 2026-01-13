@@ -19,7 +19,7 @@ install:
   # - false: 执行全新安装（从零创建 schema 和加载默认数据，适用于新部署或测试环境）
   # - true: 执行旧版升级（从现有数据库版本迁移，适用于生产升级场景）
   # 注意：生产升级时必须设置为 true
-  upgrade: true
+  upgrade: "${INSTALL_UPGRADE_ENABLED:true}"
   # 【必须显式配置】自定义目标版本（用于控制自定义脚本执行范围和版本回退防护）
   # 推荐格式: 主版本-日期（YYYYMMDD），例如 4.1-20251230
   # 示例: 发布时注入当前日期，确保版本递增
@@ -112,8 +112,8 @@ server:
       reset_password_per_user: "${RESET_PASSWORD_PER_USER_RATE_LIMIT_CONFIGURATION:5:3600}"
   #启用了压缩功能，用于压缩 JavaScript、CSS、JSON、XML 和 HTML 等文件，以提高网页加载速度和减小网络传输大小
   compression:
-    enabled: true
-    mime-types: application/javascript,text/css,application/json,application/xml,text/html,text/xml,text/plain
+    enabled: "${SERVER_COMPRESSION_ENABLED:true}"
+    mime-types: "${SERVER_COMPRESSION_MIME_TYPES:application/javascript,text/css,application/json,application/xml,text/html,text/xml,text/plain}"
 # Application info parameters
 app:
   # Application version
