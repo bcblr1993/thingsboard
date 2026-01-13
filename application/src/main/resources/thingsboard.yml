@@ -766,7 +766,7 @@ redis:
 # Update version parameters
 updates:
   # Enable/disable checks for the new version
-  enabled: "${UPDATES_ENABLED:true}"
+  enabled: "${UPDATES_ENABLED:false}"
 
 # Spring CORS configuration parameters
 spring.mvc.cors:
