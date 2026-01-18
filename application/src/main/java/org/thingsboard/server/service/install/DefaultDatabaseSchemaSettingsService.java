@@ -63,6 +63,13 @@ public class DefaultDatabaseSchemaSettingsService implements DatabaseSchemaSetti
             return;
         }
 
+        // 新增：自定义策略启用时，必须配置 custom_version
+        if (customStrategyEnabled && StringUtils.isEmpty(customVersion)) {
+            onSchemaSettingsError(
+                    "自定义升级策略已启用 (install.upgrade.custom_strategy_enabled=true)，但未配置自定义目标版本 (install.upgrade.custom_version)。请设置有效的自定义版本，例如：install.upgrade.custom_version=4.1-20251230"
+            );
+        }
+
         // 检查产品类型是否匹配（防止用错误的产品包升级数据库）
         String product = getProductFromDb();
         if (!projectInfo.getProductType().equals(product)) {
