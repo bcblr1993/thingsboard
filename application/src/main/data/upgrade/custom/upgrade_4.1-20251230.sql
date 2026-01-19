@@ -41,5 +41,5 @@ VALUES
         (extract(epoch from now()) * 1000)::bigint,
         'CUSTOMER_USER',
         '[{"id": "home", "selected": true}, {"id": "alarms", "selected": true}, {"id": "dashboards", "selected": true}, {"id": "entities", "pages": [{"id": "devices", "selected": true}, {"id": "assets", "selected": true}, {"id": "entity_views", "selected": true}], "selected": true}, {"id": "edge_instances", "selected": true}, {"id": "notifications_center", "pages": [{"id": "notification_inbox", "selected": true}], "selected": true}]'::jsonb
-    ) ON CONFLICT (id) DO NOTHING;;
+    ) ON CONFLICT (authority) DO NOTHING;
 
