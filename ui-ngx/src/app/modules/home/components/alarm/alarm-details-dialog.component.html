@@ -52,6 +52,16 @@
           <input matInput formControlName="duration" readonly>
         </mat-form-field>
       </div>
+      <div class="flex flex-row gap-1.5" *ngIf="alarmFormGroup.get('clearTime').value">
+        <mat-form-field class="mat-block flex-1">
+          <mat-label translate>alarm.clear-time</mat-label>
+          <input matInput formControlName="clearTime" readonly>
+        </mat-form-field>
+        <mat-form-field class="mat-block flex-1" *ngIf="alarmFormGroup.get('timeToClear').value">
+          <mat-label translate>alarm.time-to-clear</mat-label>
+          <input matInput formControlName="timeToClear" readonly>
+        </mat-form-field>
+      </div>
       <div class="flex flex-row gap-1.5">
         <mat-form-field class="mat-block flex-1">
           <mat-label translate>alarm.type</mat-label>

@@ -641,6 +641,7 @@
         "end-time": "结束时间",
         "ack-time": "确认时间",
         "clear-time": "清除时间",
+        "time-to-clear": "告警时长",
         "duration": "持续时间",
         "alarm-severity": "警报严重程度",
         "alarm-severity-list": "警报严重程度列表",

@@ -642,6 +642,7 @@
         "end-time": "End time",
         "ack-time": "Acknowledged time",
         "clear-time": "Cleared time",
+        "time-to-clear": "Alarm duration",
         "duration": "Duration",
         "alarm-severity": "Alarm severity",
         "alarm-severity-list": "Alarm severity list",

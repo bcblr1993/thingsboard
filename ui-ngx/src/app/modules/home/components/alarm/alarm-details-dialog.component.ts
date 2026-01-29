@@ -74,15 +74,15 @@ export class AlarmDetailsDialogComponent extends DialogComponent<AlarmDetailsDia
   @ViewChild('alarmCommentComponent', { static: true }) alarmCommentComponent: AlarmCommentComponent;
 
   constructor(protected store: Store<AppState>,
-              protected router: Router,
-              private datePipe: DatePipe,
-              private millisecondsToTimeStringPipe: MillisecondsToTimeStringPipe,
-              private translate: TranslateService,
-              @Inject(MAT_DIALOG_DATA) public data: AlarmDetailsDialogData,
-              private alarmService: AlarmService,
-              private utils: UtilsService,
-              public dialogRef: MatDialogRef<AlarmDetailsDialogComponent, boolean>,
-              public fb: UntypedFormBuilder) {
+    protected router: Router,
+    private datePipe: DatePipe,
+    private millisecondsToTimeStringPipe: MillisecondsToTimeStringPipe,
+    private translate: TranslateService,
+    @Inject(MAT_DIALOG_DATA) public data: AlarmDetailsDialogData,
+    private alarmService: AlarmService,
+    private utils: UtilsService,
+    public dialogRef: MatDialogRef<AlarmDetailsDialogComponent, boolean>,
+    public fb: UntypedFormBuilder) {
     super(store, router, dialogRef);
 
     this.allowAcknowledgment = data.allowAcknowledgment;
@@ -98,6 +98,8 @@ export class AlarmDetailsDialogComponent extends DialogComponent<AlarmDetailsDia
         duration: [''],
         type: [''],
         alarmStatus: [''],
+        clearTime: [''],
+        timeToClear: [''],
         alarmDetails: [null]
       }
     );
@@ -114,7 +116,7 @@ export class AlarmDetailsDialogComponent extends DialogComponent<AlarmDetailsDia
   }
 
   loadAlarm() {
-    this.alarmService.getAlarmInfo(this.alarmId, {ignoreLoading: true}).subscribe(
+    this.alarmService.getAlarmInfo(this.alarmId, { ignoreLoading: true }).subscribe(
       alarm => this.loadAlarmSubject.next(alarm)
     );
   }
@@ -127,6 +129,14 @@ export class AlarmDetailsDialogComponent extends DialogComponent<AlarmDetailsDia
     if (alarm.startTs) {
       this.alarmFormGroup.get('startTime')
         .patchValue(this.datePipe.transform(alarm.startTs, 'yyyy-MM-dd HH:mm:ss'));
+    }
+    if (alarm.clearTs && (alarm.status === AlarmStatus.CLEARED_ACK || alarm.status === AlarmStatus.CLEARED_UNACK)) {
+      this.alarmFormGroup.get('clearTime')
+        .patchValue(this.datePipe.transform(alarm.clearTs, 'yyyy-MM-dd HH:mm:ss'));
+      if (alarm.startTs) {
+        this.alarmFormGroup.get('timeToClear')
+          .patchValue(this.millisecondsToTimeStringPipe.transform(alarm.clearTs - alarm.startTs));
+      }
     }
     if (alarm.startTs || alarm.endTs) {
       let duration = '';
