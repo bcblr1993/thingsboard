@@ -18,6 +18,7 @@ import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SharedModule } from '@shared/public-api';
 import { CheckMessageConfigComponent } from './check-message-config.component';
+import { CheckValuesConfigComponent } from './check-values-config.component';
 import { CheckRelationConfigComponent } from './check-relation-config.component';
 import { GpsGeoFilterConfigComponent } from './gps-geo-filter-config.component';
 import { MessageTypeConfigComponent } from './message-type-config.component';
@@ -29,6 +30,7 @@ import { CommonRuleNodeConfigModule } from '../common/common-rule-node-config.mo
 
 @NgModule({
   declarations: [
+    CheckValuesConfigComponent,
     CheckMessageConfigComponent,
     CheckRelationConfigComponent,
     GpsGeoFilterConfigComponent,
@@ -44,6 +46,7 @@ import { CommonRuleNodeConfigModule } from '../common/common-rule-node-config.mo
     CommonRuleNodeConfigModule
   ],
   exports: [
+    CheckValuesConfigComponent,
     CheckMessageConfigComponent,
     CheckRelationConfigComponent,
     GpsGeoFilterConfigComponent,
