@@ -5108,7 +5108,7 @@
         "metadata-values": "Metadata values",
         "operator": "Operator",
         "check-all-values": "Check that all selected values are present",
-        "check-all-values-tooltip": "If enabled, checks that all specified key-value pairs are present and match the selected operator in the message and metadata.",
+        "check-all-values-tooltip": "The toggle is enabled only when both data and metadata have at least one row and every row has key/value filled. When enabled, it checks that all specified key-value pairs are present and match the selected operator in the message and metadata.",
         "add-detail": "Add detail",
         "check-all-keys-tooltip": "If enabled, checks the presence of all fields listed in the message and metadata field names within the incoming message and its metadata.",
         "fields-to-check-hint": "Press \"Enter\" to complete field name input. Multiple field names supported.",

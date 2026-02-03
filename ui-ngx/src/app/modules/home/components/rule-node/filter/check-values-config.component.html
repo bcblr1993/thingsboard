@@ -51,23 +51,10 @@
             <mat-form-field class="tb-inline-field field-space" appearance="outline" subscriptSizing="dynamic">
               <input [placeholder]="'rule-node-config.key-val.value' | translate" formControlName="value" matInput/>
             </mat-form-field>
-            <div class="tb-form-table-row-cell-buttons">
-              <button type="button"
-                      mat-icon-button
-                      (click)="removeMessageKeyValue($index)"
-                      matTooltip="{{ 'rule-node-config.key-val.remove-mapping-entry' | translate }}"
-                      matTooltipPosition="above">
-                <mat-icon>delete</mat-icon>
-              </button>
-            </div>
+            <div class="tb-form-table-row-cell-buttons"></div>
           </div>
         </div>
       </div>
-    </div>
-    <div>
-      <button type="button" mat-stroked-button color="primary" (click)="addMessageKeyValue()">
-        {{ 'rule-node-config.key-val.add-mapping-entry' | translate }}
-      </button>
     </div>
   </div>
   <div class="tb-form-panel stroked" formArrayName="metadataKeyValue">
@@ -99,28 +86,15 @@
             <mat-form-field class="tb-inline-field field-space" appearance="outline" subscriptSizing="dynamic">
               <input [placeholder]="'rule-node-config.key-val.value' | translate" formControlName="value" matInput/>
             </mat-form-field>
-            <div class="tb-form-table-row-cell-buttons">
-              <button type="button"
-                      mat-icon-button
-                      (click)="removeMetadataKeyValue($index)"
-                      matTooltip="{{ 'rule-node-config.key-val.remove-mapping-entry' | translate }}"
-                      matTooltipPosition="above">
-                <mat-icon>delete</mat-icon>
-              </button>
-            </div>
+            <div class="tb-form-table-row-cell-buttons"></div>
           </div>
         </div>
       </div>
     </div>
-    <div>
-      <button type="button" mat-stroked-button color="primary" (click)="addMetadataKeyValue()">
-        {{ 'rule-node-config.key-val.add-mapping-entry' | translate }}
-      </button>
-    </div>
   </div>
   <div tb-hint-tooltip-icon="{{ 'rule-node-config.check-all-values-tooltip' | translate }}"
        class="tb-form-row no-border no-padding">
-    <mat-slide-toggle class="mat-slide" formControlName="checkAllKeys">
+    <mat-slide-toggle class="mat-slide" formControlName="checkAllKeys" [disabled]="!canToggleCheckAllKeys">
       {{ 'rule-node-config.check-all-values' | translate }}
     </mat-slide-toggle>
   </div>

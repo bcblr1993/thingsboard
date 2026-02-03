@@ -15,8 +15,17 @@
 ///
 
 import { Component } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { isDefinedAndNotNull } from '@core/public-api';
-import { AbstractControl, FormArray, FormBuilder, FormGroup, ValidationErrors, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  FormArray,
+  FormBuilder,
+  FormGroup,
+  ValidationErrors,
+  ValidatorFn,
+  Validators
+} from '@angular/forms';
 import { RuleNodeConfiguration, RuleNodeConfigurationComponent } from '@app/shared/models/rule-node.models';
 
 interface KeyValueCheck {
@@ -40,6 +49,7 @@ export class CheckValuesConfigComponent extends RuleNodeConfigurationComponent {
     { value: 'LT', name: '<' }
   ];
   private readonly defaultOperation = 'EQ';
+  private readonly keyValuePattern = /(?:.|\s)*\S(&:.|\s)*/;
 
   constructor(private fb: FormBuilder) {
     super();
@@ -61,14 +71,14 @@ export class CheckValuesConfigComponent extends RuleNodeConfigurationComponent {
     return {
       messageKeyValue: this.normalizeKeyValueChecks(configuration?.messageKeyValue),
       metadataKeyValue: this.normalizeKeyValueChecks(configuration?.metadataKeyValue),
-      checkAllKeys: isDefinedAndNotNull(configuration?.checkAllKeys) ? configuration.checkAllKeys : true
+      checkAllKeys: isDefinedAndNotNull(configuration?.checkAllKeys) ? configuration.checkAllKeys : false
     };
   }
 
   protected prepareOutputConfig(configuration: RuleNodeConfiguration): RuleNodeConfiguration {
     return {
-      messageKeyValue: this.normalizeKeyValueChecks(configuration?.messageKeyValue),
-      metadataKeyValue: this.normalizeKeyValueChecks(configuration?.metadataKeyValue),
+      messageKeyValue: this.filterEmptyKeyValueChecks(this.normalizeKeyValueChecks(configuration?.messageKeyValue)),
+      metadataKeyValue: this.filterEmptyKeyValueChecks(this.normalizeKeyValueChecks(configuration?.metadataKeyValue)),
       checkAllKeys: configuration.checkAllKeys
     };
   }
@@ -78,8 +88,10 @@ export class CheckValuesConfigComponent extends RuleNodeConfigurationComponent {
       if (!controls) {
         controls = Object.keys(group.controls);
       }
-      const hasAtLeastOne = group?.controls && controls.some(k =>
-        (group.controls[k] as FormArray).length > 0);
+      const hasAtLeastOne = group?.controls && controls.some((key) => {
+        const formArray = group.controls[key] as FormArray;
+        return this.hasAnyCompleteKeyValue(formArray);
+      });
 
       return hasAtLeastOne ? null : {atLeastOne: true};
     };
@@ -91,6 +103,12 @@ export class CheckValuesConfigComponent extends RuleNodeConfigurationComponent {
       metadataKeyValue: this.buildKeyValueChecksArray(configuration.metadataKeyValue),
       checkAllKeys: [configuration.checkAllKeys, []]
     }, {validators: this.atLeastOneList(['messageKeyValue', 'metadataKeyValue'])});
+    this.updateCheckAllKeysAvailability();
+    this.checkValuesConfigForm.valueChanges.pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(() => {
+      this.updateCheckAllKeysAvailability();
+    });
   }
 
   protected updateConfiguration(configuration: RuleNodeConfiguration) {
@@ -98,6 +116,7 @@ export class CheckValuesConfigComponent extends RuleNodeConfigurationComponent {
     this.checkValuesConfigForm.setControl('messageKeyValue', this.buildKeyValueChecksArray(prepared.messageKeyValue));
     this.checkValuesConfigForm.setControl('metadataKeyValue', this.buildKeyValueChecksArray(prepared.metadataKeyValue));
     this.checkValuesConfigForm.patchValue({checkAllKeys: prepared.checkAllKeys}, {emitEvent: false});
+    this.updateCheckAllKeysAvailability();
     this.updateValidators(false);
   }
 
@@ -105,33 +124,52 @@ export class CheckValuesConfigComponent extends RuleNodeConfigurationComponent {
     return ['messageKeyValue', 'metadataKeyValue'].some(name => this.checkValuesConfigForm.get(name).touched);
   }
 
-  addMessageKeyValue() {
-    this.messageKeyValueArray().push(this.buildKeyValueCheckGroup());
-  }
-
-  removeMessageKeyValue(index: number) {
-    this.messageKeyValueArray().removeAt(index);
-  }
-
-  addMetadataKeyValue() {
-    this.metadataKeyValueArray().push(this.buildKeyValueCheckGroup());
-  }
-
-  removeMetadataKeyValue(index: number) {
-    this.metadataKeyValueArray().removeAt(index);
+  get canToggleCheckAllKeys(): boolean {
+    return this.hasAllKeyValuesProvided(this.messageKeyValueArray()) &&
+      this.hasAllKeyValuesProvided(this.metadataKeyValueArray());
   }
 
   private buildKeyValueCheckGroup(check?: KeyValueCheck): AbstractControl {
     return this.fb.group({
-      key: [check?.key ?? '', [Validators.required, Validators.pattern(/(?:.|\s)*\S(&:.|\s)*/)]],
+      key: [check?.key ?? '', [this.optionalPatternValidator()]],
       operation: [check?.operation ?? this.defaultOperation, [Validators.required]],
-      value: [check?.value ?? '', [Validators.required, Validators.pattern(/(?:.|\s)*\S(&:.|\s)*/)]]
-    });
+      value: [check?.value ?? '', [this.optionalPatternValidator()]]
+    }, {validators: this.keyValuePairValidator()});
   }
 
   private buildKeyValueChecksArray(checks: KeyValueCheck[]): FormArray {
     const items = (checks || []).map((check) => this.buildKeyValueCheckGroup(check));
+    if (!items.length) {
+      items.push(this.buildKeyValueCheckGroup());
+    }
     return this.fb.array(items);
+  }
+
+  private hasAnyCompleteKeyValue(formArray: FormArray): boolean {
+    const controls = formArray?.controls || [];
+    return controls.some((control) => this.isCompleteKeyValueRow(control));
+  }
+
+  private hasAllKeyValuesProvided(formArray: FormArray): boolean {
+    const controls = formArray?.controls || [];
+    if (!controls.length) {
+      return false;
+    }
+    return controls.every((control) => this.isCompleteKeyValueRow(control));
+  }
+
+  private updateCheckAllKeysAvailability(): void {
+    const control = this.checkValuesConfigForm.get('checkAllKeys');
+    if (!control) {
+      return;
+    }
+    if (this.canToggleCheckAllKeys) {
+      if (control.disabled) {
+        control.enable({emitEvent: false});
+      }
+    } else if (control.enabled) {
+      control.disable({emitEvent: false});
+    }
   }
 
   private normalizeKeyValueChecks(input: any): KeyValueCheck[] {
@@ -153,5 +191,50 @@ export class CheckValuesConfigComponent extends RuleNodeConfigurationComponent {
       }));
     }
     return [];
+  }
+
+  private filterEmptyKeyValueChecks(checks: KeyValueCheck[]): KeyValueCheck[] {
+    return (checks || []).filter((check) => {
+      const key = this.normalizeText(check?.key);
+      const value = this.normalizeText(check?.value);
+      return key.length > 0 && value.length > 0;
+    });
+  }
+
+  private optionalPatternValidator(): ValidatorFn {
+    return (control: AbstractControl): ValidationErrors | null => {
+      const value = control?.value;
+      if (value === null || value === undefined || value === '') {
+        return null;
+      }
+      return Validators.pattern(this.keyValuePattern)(control);
+    };
+  }
+
+  private keyValuePairValidator(): ValidatorFn {
+    return (control: AbstractControl): ValidationErrors | null => {
+      const key = this.normalizeText(control?.get('key')?.value);
+      const value = this.normalizeText(control?.get('value')?.value);
+      if (!key && !value) {
+        return null;
+      }
+      return key && value ? null : {keyValuePairRequired: true};
+    };
+  }
+
+  private normalizeText(value: unknown): string {
+    return String(value ?? '').trim();
+  }
+
+  private isEmptyKeyValueRow(control: AbstractControl): boolean {
+    const key = this.normalizeText(control?.get('key')?.value);
+    const value = this.normalizeText(control?.get('value')?.value);
+    return !key && !value;
+  }
+
+  private isCompleteKeyValueRow(control: AbstractControl): boolean {
+    const key = this.normalizeText(control?.get('key')?.value);
+    const value = this.normalizeText(control?.get('value')?.value);
+    return key.length > 0 && value.length > 0;
   }
 }

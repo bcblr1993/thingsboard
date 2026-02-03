@@ -49,7 +49,7 @@ public class TbCheckValuesNodeConfiguration implements NodeConfiguration<TbCheck
         TbCheckValuesNodeConfiguration configuration = new TbCheckValuesNodeConfiguration();
         configuration.setMessageKeyValue(Collections.emptyList());
         configuration.setMetadataKeyValue(Collections.emptyList());
-        configuration.setCheckAllKeys(true);
+        configuration.setCheckAllKeys(false);
         return configuration;
     }
 
