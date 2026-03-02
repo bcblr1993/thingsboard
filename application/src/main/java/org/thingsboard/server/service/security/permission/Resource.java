@@ -52,7 +52,8 @@ public enum Resource {
             EntityType.NOTIFICATION_REQUEST, EntityType.NOTIFICATION_RULE),
     MOBILE_APP_SETTINGS,
         JOB(EntityType.JOB),
-    MENU_SETTING(EntityType.MENU_SETTING);
+    MENU_SETTING(EntityType.MENU_SETTING),
+    TOPOLOGY_TEMPLATE(EntityType.TOPOLOGY_TEMPLATE);
 
     private final Set<EntityType> entityTypes;
 

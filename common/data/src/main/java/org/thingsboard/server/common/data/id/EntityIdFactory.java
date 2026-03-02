@@ -113,6 +113,8 @@ public class EntityIdFactory {
                 return new DomainId(uuid);
             case MOBILE_APP_BUNDLE:
                 return new MobileAppBundleId(uuid);
+            case TOPOLOGY_TEMPLATE:
+                return new TopologyTemplateId(uuid);
             case CALCULATED_FIELD:
                 return new CalculatedFieldId(uuid);
             case CALCULATED_FIELD_LINK:

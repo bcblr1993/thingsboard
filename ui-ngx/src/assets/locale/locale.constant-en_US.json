@@ -19,8 +19,12 @@
         "notification-settings": "Notification settings"
     },
     "action": {
+        "preview": "Preview",
         "expand-all": "Expand",
         "collapse-all": "Collapse",
+        "action": "Action",
+        "toggle-node": "Toggle node",
+        "add-child": "Add child",
         "activate": "Activate",
         "suspend": "Suspend",
         "save": "Save",
@@ -987,6 +991,8 @@
         "edge-uplink-messages-per-edge": "Edge uplink messages per edge"
     },
     "audit-log": {
+        "created-time": "Created time",
+        "type-deploy-topology": "Deploy Topology",
         "audit": "Audit",
         "audit-logs": "Audit logs",
         "timestamp": "Timestamp",
@@ -1754,7 +1760,6 @@
         "select-device": "Select device",
         "import": "Import device",
         "device-file": "Device file",
-        "label-invalid": "Invalid label format.",
         "no-existing-label": "Label does not exist.",
         "search": "Search devices",
         "selected-devices": "{ count, plural, =1 {1 device} other {# devices} } selected",
@@ -3013,7 +3018,8 @@
         "invalid-file-error": "Invalid extension file"
     },
     "feature": {
-        "advanced-features": "Advanced features"
+        "advanced-features": "Advanced features",
+        "version-control": "Version Control"
     },
     "filter": {
         "add": "Add filter",
@@ -3637,6 +3643,7 @@
         }
     },
     "item": {
+        "projects": "Projects",
         "selected": "Selected"
     },
     "js-func": {
@@ -6559,6 +6566,8 @@
         "type": "Value type",
         "string": "String",
         "string-value": "String value",
+        "expression": "Expression",
+        "expression-value": "Expression value",
         "string-value-required": "String value is required",
         "integer": "Integer",
         "integer-value": "Integer value",
@@ -8118,8 +8127,16 @@
             "map-type": {
                 "type": "Map type",
                 "map": "Map",
-                "image": "Image"
+                "image": "Image",
+                "add": "Add attribute",
+                "key": "Key",
+                "no-attributes": "No attributes"
             },
+            "topology-invalid": "Topology configuration is invalid",
+            "node-configuration-invalid": "Node \"{{nodeLabel}}\" configuration is incomplete. Please check name, attributes or other settings.",
+            "save-error-invalid-node": "Save failed: Node \"{{nodeLabel}}\" configuration is incomplete.",
+            "preview-error-invalid-node": "Preview failed: Node \"{{nodeLabel}}\" configuration is incomplete. Please check name pattern and attributes.",
+            "deploy-error-invalid-node": "Deployment failed: Node \"{{nodeLabel}}\" configuration is incomplete.",
             "image": {
                 "image-source": "Image source",
                 "image-source-image": "Image",
@@ -9511,6 +9528,115 @@
             "uk_UA": "українська (Україна)",
             "zh_CN": "中文 (中国)",
             "zh_TW": "中文 (台灣)"
+        }
+    },
+    "model": {
+        "search": "Search models",
+        "selected-models": "Selected models",
+        "no-models-text": "No models found",
+        "scope": "Scope",
+        "scope-system": "System",
+        "scope-tenant": "Tenant",
+        "management": "Model Management",
+        "default": "Default",
+        "name": "Model Name",
+        "name-required": "Model name is required",
+        "version-required": "Version is required",
+        "relation": {
+            "additional-info": "Relation Additional Info"
+        },
+        "node-details": "Node Details",
+        "description": "Description",
+        "credentials": {
+            "strategy": "Credential Strategy",
+            "strategy-name": "Device Name",
+            "strategy-pinyin": "Pinyin Initials",
+            "strategy-custom": "Custom Pattern",
+            "custom-pattern": "Custom Pattern",
+            "custom-pattern-hint": "Use ${DeviceName} as placeholder"
+        },
+        "created-time": "Created Time",
+        "add-title": "Add Configuration Template",
+        "add": "Add Configuration Template",
+        "delete": "Delete Model",
+        "delete-title": "Are you sure you want to delete model '{{modelName}}'?",
+        "delete-text": "Once deleted, the model definition cannot be recovered.",
+        "delete-models-title": "Are you sure you want to delete {{count}} models?",
+        "delete-models-text": "Once deleted, the selected models cannot be recovered.",
+        "delete-default-title": "Cannot delete default model",
+        "delete-default-message": "Please set another model as default before deleting this one.",
+        "details": "Details",
+        "topology": "Topology",
+        "export": "Export model",
+        "import": "Import model",
+        "import-file": "Model JSON file",
+        "invalid-template-file-error": "Invalid model template file",
+        "export-failed-error": "Failed to export model: {{error}}",
+        "deployment-history": "Deployment History",
+        "no-deployment-history": "No deployment history found",
+        "export-credentials": "Export Credentials",
+        "preview": "Preview Model",
+        "preview-title": "Preview Model Structure",
+        "no-structure": "No structure defined for this model.",
+        "attributes": {
+            "title": "Server Side Attributes",
+            "key": "Key",
+            "value": "Value",
+            "add": "Add Attribute"
+        },
+        "node": {
+            "delete-confirmation": "Are you sure you want to delete node {{name}}?",
+            "delete-confirmation-title": "Delete Node"
+        },
+        "type": "Type",
+        "profile": {
+            "type": "Profile Type",
+            "default": "Default Profile",
+            "custom": "Custom Profile",
+            "name": "Profile Name"
+        }
+    },
+    "project": {
+        "projects": "Projects",
+        "export-credentials": "Export Credentials",
+        "deployment-wizard": {
+            "template-required": "Please select a model template first",
+            "cropping-confirm-title": "Confirm Navigation",
+            "cropping-confirm-message": "You have excluded some nodes. Navigating away might lose these changes. Are you sure?",
+            "cropping-level-restricted": "Cropping Level 1 and Level 2 nodes is not allowed due to system restrictions",
+            "total-assets": "Total Assets",
+            "total-devices": "Total Devices",
+            "no-devices-found": "No devices found with credentials information",
+            "template": "Template",
+            "use-station-name-as-prefix": "Use station name as device prefix",
+            "title": "Deploy New Project",
+            "select-template": "Select Template",
+            "global-config": "Global Configuration",
+            "topology-preview": "Topology Preview & Configuration",
+            "review": "Review",
+            "deploy": "Deploy",
+            "company-name": "Company Name",
+            "station-name": "Station Name",
+            "station-sn": "Station SN",
+            "result": "Result",
+            "success": "Deployment Successful!",
+            "go-to-assets": "Go to Assets",
+            "name": "Name",
+            "node-name": "Node Name",
+            "name-pattern": "Name Rule",
+            "vars-hint": "Vars: ${ParentName}, ${Index}, ${Type}, ${StationSn}, ${HierarchicalIndex}",
+            "vars-help": "Available Variables & Examples:\n\n${StationSn}: Global Station SN or Name (Global scope parameter)\n  ▶ Ex: 'SN100-PCS' → 'SN100-PCS'\n\n${Type}: Current Node Type Name (Entity Type Label)\n  ▶ Ex: 'Device-${Type}' → 'Device-BMS'\n\n${Index}: Local Loop Index (e.g., 1, 2, 3...)\n  ▶ Represents the local sibling order based on count.\n\n${HierarchicalIndex}: Global Hierarchical Index Coordinate (e.g., 1-2-1)\n  ▶ Concatenates parent hierarchical index with current index, representing the true position in the topology tree.\n\n${ParentName}: Final Parent Node Name\n  ▶ The exact generated name of the parent node after all rule applications.",
+            "var-help-trigger": "Variable Description",
+            "count": "Count",
+            "update-node": "Update Node",
+            "select-node-help": "Select a node to edit",
+            "select-node-hint": "Select a node to configure",
+            "resolved-preview": "Resolved Preview"
+        },
+        "deployment-history": {
+            "title": "Deployment History",
+            "no-history-prompt": "No deployment history records found",
+            "no-data-to-export": "No deployment data found for export"
         }
     }
 }

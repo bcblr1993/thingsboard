@@ -1,0 +1,208 @@
+<!--
+
+    Copyright © 2016-2025 The Thingsboard Authors
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+
+-->
+<div class="node-details-container" *ngIf="node">
+    <div class="header">
+        <h3 class="title">{{ 'model.node-details' | translate }}</h3>
+    </div>
+
+    <form [formGroup]="editForm" class="details-form">
+        <div class="form-row">
+            <mat-form-field appearance="outline" class="full-width">
+                <mat-label>{{ 'model.type' | translate }}</mat-label>
+                <mat-select formControlName="type">
+                    <mat-option *ngFor="let type of assetNodeTypes" [value]="type">
+                        {{ 'model.wizard.node-type.' + type | translate }}
+                    </mat-option>
+                </mat-select>
+            </mat-form-field>
+        </div>
+
+        <div class="form-row">
+            <mat-form-field appearance="outline" class="full-width">
+                <mat-label>{{ 'model.wizard.node-name' | translate }}</mat-label>
+                <input matInput formControlName="entityTypeLabel" required
+                    placeholder="{{ 'model.wizard.node-name' | translate }}">
+            </mat-form-field>
+        </div>
+
+        <div class="form-row" fxLayout="row" fxLayoutGap="16px">
+            <mat-form-field appearance="outline" class="full-width">
+                <mat-label>{{ 'model.profile.type' | translate }}</mat-label>
+                <mat-select formControlName="profileType">
+                    <mat-option value="default">{{ 'model.profile.default' | translate }}</mat-option>
+                    <mat-option value="custom">{{ 'model.profile.custom' | translate }}</mat-option>
+                </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width"
+                *ngIf="editForm.get('profileType').value === 'custom'">
+                <mat-label>{{ 'model.profile.name' | translate }}</mat-label>
+                <input matInput formControlName="customProfileName" required
+                    placeholder="{{ 'model.profile.name' | translate }}">
+            </mat-form-field>
+        </div>
+
+        <div class="form-row" fxLayout="row" fxLayoutGap="16px" *ngIf="editForm.get('type').value === 'DEVICE'">
+            <mat-form-field appearance="outline" class="full-width">
+                <mat-label>{{ 'model.credentials.strategy' | translate }}</mat-label>
+                <mat-select formControlName="credentialStrategy">
+                    <mat-option value="name">{{ 'model.credentials.strategy-name' | translate }}</mat-option>
+                    <mat-option value="pinyin">{{ 'model.credentials.strategy-pinyin' | translate }}</mat-option>
+                    <mat-option value="custom">{{ 'model.credentials.strategy-custom' | translate }}</mat-option>
+                </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width"
+                *ngIf="editForm.get('credentialStrategy').value === 'custom'">
+                <mat-label>{{ 'model.credentials.custom-pattern' | translate }}</mat-label>
+                <input matInput formControlName="customCredentialName" required
+                    placeholder="{{ 'model.credentials.custom-pattern-hint' | translate }}">
+            </mat-form-field>
+        </div>
+
+        <div class="form-row">
+            <mat-form-field class="mat-block">
+                <mat-label>{{ 'model.wizard.name-pattern' | translate }}</mat-label>
+                <input matInput formControlName="namePattern"
+                    placeholder="{{ 'model.wizard.name-pattern' | translate }}">
+                <mat-icon matSuffix [matMenuTriggerFor]="varsHelpMenu"
+                    style="cursor: pointer; color: rgba(0,0,0,0.54);">
+                    help_outline
+                </mat-icon>
+            </mat-form-field>
+        </div>
+
+        <div class="form-row">
+            <mat-form-field appearance="outline" class="full-width">
+                <mat-label>{{ 'model.wizard.count' | translate }}</mat-label>
+                <input matInput type="number" formControlName="defaultCount" min="1"
+                    placeholder="{{ 'model.wizard.count' | translate }}">
+            </mat-form-field>
+        </div>
+
+        <div class="form-row compact-json-editor">
+            <tb-json-object-edit formControlName="relationAdditionalInfo"
+                label="{{ 'model.relation.additional-info' | translate }}"></tb-json-object-edit>
+        </div>
+
+        <mat-divider class="divider"></mat-divider>
+
+        <div class="attributes-section">
+            <div class="section-header">
+                <h4 class="section-title">{{ 'model.attributes.title' | translate }}</h4>
+                <button mat-icon-button type="button" (click)="addAttribute()" color="primary" *ngIf="!isReadOnly"
+                    matTooltip="{{ 'model.attributes.add' | translate }}">
+                    <mat-icon>add_circle_outline</mat-icon>
+                </button>
+            </div>
+
+            <div formArrayName="attributes" class="attributes-list">
+                <div *ngFor="let attr of attributesFormArray.controls; let i = index" [formGroupName]="i"
+                    class="attribute-row">
+                    <mat-form-field appearance="outline" class="attr-key tb-inline-field" subscriptSizing="dynamic">
+                        <mat-label>{{ 'model.attributes.key' | translate }}</mat-label>
+                        <input matInput formControlName="key" required
+                            placeholder="{{ 'model.attributes.key' | translate }}">
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline" class="attr-type tb-inline-field" subscriptSizing="dynamic">
+                        <mat-select formControlName="valueType">
+                            <mat-select-trigger>
+                                <div class="tb-value-type-row">
+                                    <mat-icon class="tb-mat-18"
+                                        [svgIcon]="getSelectedIcon(attr.get('valueType')?.value)"></mat-icon>
+                                    <span>{{ getSelectedName(attr.get('valueType')?.value) | translate }}</span>
+                                </div>
+                            </mat-select-trigger>
+                            <mat-option *ngFor="let vt of attributeValueTypes" [value]="vt.value">
+                                <mat-icon class="tb-mat-20" [svgIcon]="vt.icon"></mat-icon>
+                                <span>{{ vt.name | translate }}</span>
+                            </mat-option>
+                        </mat-select>
+                    </mat-form-field>
+
+                    <!-- String -->
+                    <mat-form-field *ngIf="attr.get('valueType')?.value === 'STRING'" appearance="outline"
+                        subscriptSizing="dynamic" class="attr-value tb-inline-field">
+                        <input matInput formControlName="value" required
+                            placeholder="{{ 'value.string-value' | translate }}">
+                    </mat-form-field>
+
+                    <!-- Integer -->
+                    <mat-form-field *ngIf="attr.get('valueType')?.value === 'INTEGER'" appearance="outline"
+                        subscriptSizing="dynamic" class="attr-value tb-inline-field">
+                        <input matInput formControlName="value" required type="number" step="1" pattern="^-?[0-9]+$"
+                            placeholder="{{ 'value.integer-value' | translate }}">
+                    </mat-form-field>
+
+                    <!-- Double -->
+                    <mat-form-field *ngIf="attr.get('valueType')?.value === 'DOUBLE'" appearance="outline"
+                        subscriptSizing="dynamic" class="attr-value tb-inline-field">
+                        <input matInput formControlName="value" required type="number" step="any"
+                            placeholder="{{ 'value.double-value' | translate }}">
+                    </mat-form-field>
+
+                    <!-- Boolean -->
+                    <div *ngIf="attr.get('valueType')?.value === 'BOOLEAN'"
+                        class="attr-value flex items-center justify-start pl-2">
+                        <mat-slide-toggle formControlName="value">
+                            {{ (attr.get('value')?.value ? 'value.true' : 'value.false') | translate }}
+                        </mat-slide-toggle>
+                    </div>
+
+                    <!-- JSON -->
+                    <mat-form-field *ngIf="attr.get('valueType')?.value === 'JSON'" appearance="outline"
+                        subscriptSizing="dynamic" class="attr-value tb-inline-field">
+                        <input matInput tb-json-to-string formControlName="value" required
+                            placeholder="{{ 'value.json-value' | translate }}">
+                    </mat-form-field>
+
+                    <!-- Expression -->
+                    <mat-form-field *ngIf="attr.get('valueType')?.value === 'EXPRESSION'" appearance="outline"
+                        class="attr-value tb-inline-field" subscriptSizing="dynamic">
+                        <input matInput formControlName="value" required placeholder="${Index}_Value">
+                        <mat-icon matSuffix [matMenuTriggerFor]="varsHelpMenu"
+                            style="cursor: pointer; color: rgba(0,0,0,0.54);">
+                            help_outline
+                        </mat-icon>
+                    </mat-form-field>
+
+                    <button mat-icon-button color="warn" type="button" (click)="removeAttribute(i)" *ngIf="!isReadOnly"
+                        matTooltip="{{ 'action.remove' | translate }}" matTooltipPosition="above">
+                        <mat-icon>remove_circle_outline</mat-icon>
+                    </button>
+                </div>
+                <!-- Empty State -->
+                <div *ngIf="attributesFormArray.controls.length === 0" class="empty-attributes">
+                    {{ 'model.attributes.no-attributes' | translate }}
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+<div *ngIf="!node" class="no-selection">
+    <mat-icon class="placeholder-icon">touch_app</mat-icon>
+    <span>{{ 'model.wizard.select-node-hint' | translate }}</span>
+</div>
+
+<!-- Shared Menus -->
+<mat-menu #varsHelpMenu="matMenu" xPosition="before">
+    <div class="tb-vars-help-menu" (click)="$event.stopPropagation()">
+        {{ 'model.wizard.vars-help' | translate }}
+    </div>
+</mat-menu>

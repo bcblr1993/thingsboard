@@ -58,7 +58,8 @@ public enum ActionType {
     ADDED_COMMENT(TbMsgType.COMMENT_CREATED),
     UPDATED_COMMENT(TbMsgType.COMMENT_UPDATED),
     DELETED_COMMENT,
-    SMS_SENT;
+    SMS_SENT,
+    DEPLOY_TOPOLOGY(TbMsgType.ENTITY_CREATED);
 
     @Getter
     private final boolean read;

@@ -1,0 +1,175 @@
+<!--
+
+    Copyright © 2016-2025 The Thingsboard Authors
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+
+-->
+<mat-toolbar color="primary">
+    <h2 translate>model.add-title</h2>
+    <span class="flex-1"></span>
+    <button mat-icon-button (click)="cancel()" type="button">
+        <mat-icon class="material-icons">close</mat-icon>
+    </button>
+</mat-toolbar>
+<mat-progress-bar color="warn" mode="indeterminate" *ngIf="isLoading$ | async">
+</mat-progress-bar>
+<div mat-dialog-content>
+    <mat-horizontal-stepper #addModelWizardStepper [linear]="true" [labelPosition]="(stepperLabelPosition | async)"
+        [orientation]="(stepperOrientation | async)" (selectionChange)="changeStep($event)">
+        <ng-template matStepperIcon="edit">
+            <mat-icon>check</mat-icon>
+        </ng-template>
+
+        <!-- Step 0: 选择模板来源 -->
+        <mat-step>
+            <ng-template matStepLabel>{{ 'model.wizard.select-source' | translate }}</ng-template>
+            <div class="source-selection-step">
+                <h3 class="source-title">{{ 'model.wizard.select-source-hint' | translate }}</h3>
+                <div class="source-options">
+                    <!-- 空白模型选项 -->
+                    <div class="source-option-card" tabindex="0"
+                        [class.selected]="templateSource === TemplateSource.EMPTY"
+                        (click)="onTemplateSourceChange(TemplateSource.EMPTY)"
+                        (keydown.enter)="onTemplateSourceChange(TemplateSource.EMPTY)">
+                        <mat-icon class="source-icon">add_circle_outline</mat-icon>
+                        <div class="source-label">{{ 'model.wizard.source-empty' | translate }}</div>
+                        <div class="source-desc">{{ 'model.wizard.source-empty-desc' | translate }}</div>
+                    </div>
+
+                    <!-- 基于模板选项 -->
+                    <div class="source-option-card" tabindex="0"
+                        [class.selected]="templateSource === TemplateSource.FROM_TEMPLATE"
+                        [class.disabled]="availableTemplates.length === 0 && !templatesLoading"
+                        (click)="availableTemplates.length > 0 ? onTemplateSourceChange(TemplateSource.FROM_TEMPLATE) : null"
+                        (keydown.enter)="availableTemplates.length > 0 ? onTemplateSourceChange(TemplateSource.FROM_TEMPLATE) : null">
+                        <mat-icon class="source-icon">content_copy</mat-icon>
+                        <div class="source-label">{{ 'model.wizard.source-from-template' | translate }}</div>
+                        <div class="source-desc">{{ 'model.wizard.source-from-template-desc' | translate }}</div>
+                        <div class="template-count" *ngIf="!templatesLoading">
+                            {{ 'model.wizard.available-count' | translate:{count: availableTemplates.length} }}
+                        </div>
+                        <mat-progress-spinner *ngIf="templatesLoading" mode="indeterminate" diameter="24">
+                        </mat-progress-spinner>
+                    </div>
+                </div>
+
+                <!-- 模板选择列表（仅在选择"基于模板"时显示） -->
+                <div class="template-list"
+                    *ngIf="templateSource === TemplateSource.FROM_TEMPLATE && availableTemplates.length > 0">
+                    <mat-form-field appearance="outline" class="mat-block">
+                        <mat-label>{{ 'model.wizard.choose-template' | translate }}</mat-label>
+                        <input matInput type="text" placeholder="{{ 'model.wizard.choose-template' | translate }}"
+                            [formControl]="templateControl" [matAutocomplete]="templateAuto" required>
+                        <mat-autocomplete #templateAuto="matAutocomplete" panelClass="template-autocomplete-panel"
+                            [displayWith]="displayTemplateFn"
+                            (optionSelected)="onTemplateSelected($event.option.value)">
+                            <mat-option *ngFor="let tpl of filteredTemplates$ | async" [value]="tpl">
+                                <span class="template-scope-badge" [class.system]="isSystemTemplate(tpl)"
+                                    [class.tenant]="!isSystemTemplate(tpl)">
+                                    {{ isSystemTemplate(tpl) ? ('model.scope-public' | translate) :
+                                    ('model.scope-tenant' | translate) }}
+                                </span>
+                                <span class="template-option-name">{{ tpl.name }}</span>
+                                <span class="template-version" *ngIf="tpl.modelVersion"> ({{ tpl.modelVersion }})</span>
+                            </mat-option>
+                        </mat-autocomplete>
+                    </mat-form-field>
+                </div>
+            </div>
+        </mat-step>
+
+        <!-- Step 1: Model Details -->
+        <mat-step [stepControl]="modelWizardFormGroup">
+            <form [formGroup]="modelWizardFormGroup" class="wizard-form-padding">
+                <ng-template matStepLabel>{{ 'model.wizard.model-details' | translate}}</ng-template>
+                <fieldset [disabled]="isLoading$ | async">
+                    <mat-form-field class="mat-block">
+                        <mat-label translate>model.name</mat-label>
+                        <input matInput formControlName="name" required placeholder="{{ 'model.name' | translate }}">
+                        <mat-error *ngIf="modelWizardFormGroup.get('name').hasError('required')">
+                            {{ 'model.name-required' | translate }}
+                        </mat-error>
+                        <mat-error *ngIf="modelWizardFormGroup.get('name').hasError('maxlength')">
+                            {{ 'model.name-max-length' | translate }}
+                        </mat-error>
+                    </mat-form-field>
+
+                    <mat-form-field class="mat-block">
+                        <mat-label translate>feature.version-control</mat-label>
+                        <input matInput formControlName="version" required
+                            placeholder="{{ 'feature.version-control' | translate }}">
+                        <mat-error *ngIf="modelWizardFormGroup.get('version').hasError('required')">
+                            {{ 'model.version-required' | translate }}
+                        </mat-error>
+                        <mat-error *ngIf="modelWizardFormGroup.get('version').hasError('maxlength')">
+                            {{ 'model.version-max-length' | translate }}
+                        </mat-error>
+                    </mat-form-field>
+
+                    <mat-form-field class="mat-block">
+                        <mat-label translate>model.description</mat-label>
+                        <textarea matInput formControlName="description" rows="3"
+                            placeholder="{{ 'model.description' | translate }}"></textarea>
+                    </mat-form-field>
+                </fieldset>
+            </form>
+        </mat-step>
+
+        <!-- Step 2: Customize Model (Topology Tree) -->
+        <mat-step [stepControl]="customizeFormGroup">
+            <ng-template matStepLabel>{{ 'model.wizard.customize-model' | translate }}</ng-template>
+            <div class="step-content">
+                <div class="topology-editor mat-elevation-z2">
+                    <div class="tree-wrapper">
+                        <tb-topology-tree #topologyTree [topology]="defaultTopology" [isReadOnly]="false"
+                            (topologyChange)="onTopologyChange($event)" (nodeSelected)="onNodeSelected($event)">
+                        </tb-topology-tree>
+                    </div>
+                    <div class="details-wrapper">
+                        <tb-model-node-details [node]="selectedNode"
+                            [isCountLocked]="topologyTree.isRootNode(selectedNode) || topologyTree.isSecondLevelNode(selectedNode)"
+                            (nodeChange)="onNodeDetailsChange($event)">
+                        </tb-model-node-details>
+                    </div>
+                </div>
+            </div>
+        </mat-step>
+
+        <!-- Step 3: Preview -->
+        <mat-step>
+            <ng-template matStepLabel>{{ 'model.wizard.preview' | translate }}</ng-template>
+            <div class="preview-step-content">
+                <pre>{{ customizeFormGroup.get('configuration').value | json }}</pre>
+            </div>
+        </mat-step>
+
+    </mat-horizontal-stepper>
+</div>
+<div mat-dialog-actions class="tb-dialog-actions">
+    <div class="dialog-actions-row">
+        <button mat-stroked-button *ngIf="selectedIndex > 0" [disabled]="(isLoading$ | async)"
+            (click)="previousStep()">{{ 'action.back' | translate }}</button>
+        <span class="flex-1"></span>
+        <button mat-stroked-button color="primary" *ngIf="showNext" [disabled]="(isLoading$ | async)"
+            (click)="nextStep()">{{ 'action.next-with-label' | translate:{label: (getFormLabel(this.selectedIndex+1) |
+            translate)} }}</button>
+    </div>
+    <mat-divider class="full-width"></mat-divider>
+    <div class="dialog-actions-row">
+        <button mat-button [disabled]="(isLoading$ | async)" (click)="cancel()">{{ 'action.cancel' | translate
+            }}</button>
+        <button mat-raised-button [disabled]="(isLoading$ | async)" color="primary" (click)="add()">{{ 'action.add' |
+            translate }}</button>
+    </div>
+</div>

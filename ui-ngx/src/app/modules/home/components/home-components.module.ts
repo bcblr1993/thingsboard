@@ -203,6 +203,7 @@ import {
 import {
   CalculatedFieldTestArgumentsComponent
 } from '@home/components/calculated-fields/components/test-arguments/calculated-field-test-arguments.component';
+import { TopologyTreeComponent } from '@home/components/topology-tree/topology-tree.component';
 
 @NgModule({
   declarations:
@@ -354,6 +355,7 @@ import {
       CalculatedFieldDebugDialogComponent,
       CalculatedFieldScriptTestDialogComponent,
       CalculatedFieldTestArgumentsComponent,
+      TopologyTreeComponent
     ],
   imports: [
     CommonModule,
@@ -499,6 +501,7 @@ import {
     CalculatedFieldDebugDialogComponent,
     CalculatedFieldScriptTestDialogComponent,
     CalculatedFieldTestArgumentsComponent,
+    TopologyTreeComponent
   ],
   providers: [
     WidgetComponentService,

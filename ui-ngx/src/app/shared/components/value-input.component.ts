@@ -83,6 +83,10 @@ export class ValueInputComponent implements OnInit, OnDestroy, OnChanges, Contro
 
   @Input()
   @coerceBoolean()
+  switchBooleanField = false;
+
+  @Input()
+  @coerceBoolean()
   required = true;
 
   @Input()

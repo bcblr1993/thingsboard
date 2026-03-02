@@ -1,0 +1,210 @@
+<!--
+
+    Copyright © 2016-2025 The Thingsboard Authors
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+
+-->
+<div class="deployment-wizard-container">
+    <mat-horizontal-stepper linear #stepper class="wizard-stepper" [labelPosition]="(stepperLabelPosition | async)"
+        [orientation]="(stepperOrientation | async)" (selectionChange)="changeStep($event)">
+        <!-- Step 1: Select Template -->
+        <mat-step [stepControl]="selectTemplateForm">
+            <ng-template matStepLabel>{{ 'project.deployment-wizard.select-template' | translate }}</ng-template>
+            <ng-template matStepContent>
+            <div class="step-content">
+                <form [formGroup]="selectTemplateForm" fxLayout="column" fxLayoutGap="16px">
+                    <mat-form-field appearance="outline" class="mat-block">
+                        <mat-label>{{ 'project.deployment-wizard.select-template' | translate }}</mat-label>
+                        <input matInput type="text"
+                            placeholder="{{ 'project.deployment-wizard.select-template' | translate }}"
+                            formControlName="templateId" [matAutocomplete]="templateAuto" required>
+                        <mat-autocomplete #templateAuto="matAutocomplete" panelClass="template-autocomplete-panel"
+                            [displayWith]="displayTemplateFn"
+                            (optionSelected)="onTemplateSelected($event.option.value)">
+                            <mat-option *ngFor="let tpl of filteredTemplates$ | async" [value]="tpl">
+                                <span class="template-scope-badge" [class.system]="isSystemTemplate(tpl)"
+                                    [class.tenant]="!isSystemTemplate(tpl)">
+                                    {{ isSystemTemplate(tpl) ? ('model.scope-public' | translate) :
+                                    ('model.scope-tenant' | translate) }}
+                                </span>
+                                <span>{{ tpl.name }}</span>
+                                <span class="template-version" *ngIf="tpl.modelVersion"> ({{ tpl.modelVersion }})</span>
+                            </mat-option>
+                        </mat-autocomplete>
+                        <mat-error *ngIf="selectTemplateForm.get('templateId').hasError('required')">
+                            {{ 'project.deployment-wizard.template-required' | translate }}
+                        </mat-error>
+                    </mat-form-field>
+
+                    <!-- Preview Section within Step 1 -->
+                    <div *ngIf="finalTopology" class="topology-preview-container mat-elevation-z1 mat-padding">
+                        <div class="preview-title">{{ 'project.deployment-wizard.topology-preview' | translate }}
+                        </div>
+                        <div class="preview-tree-wrapper">
+                            <tb-topology-tree #topologyTreePreview [topology]="finalTopology" [isReadOnly]="true"
+                                [defaultExpandAll]="true">
+                            </tb-topology-tree>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            </ng-template>
+        </mat-step>
+
+        <!-- Step 2: Global Configuration -->
+        <mat-step [stepControl]="basicInfoForm">
+            <ng-template matStepLabel>{{ 'project.deployment-wizard.global-config' | translate }}</ng-template>
+            <ng-template matStepContent>
+            <div class="step-content">
+                <form [formGroup]="basicInfoForm" class="basic-info-form mat-padding flex flex-col">
+                    <mat-form-field appearance="fill" class="mat-block">
+                        <mat-label>{{ 'project.deployment-wizard.company-name' | translate }}</mat-label>
+                        <input matInput formControlName="companyName" required
+                            placeholder="{{ 'project.deployment-wizard.company-name' | translate }}">
+                    </mat-form-field>
+                    <mat-form-field appearance="fill" class="mat-block">
+                        <mat-label>{{ 'project.deployment-wizard.station-name' | translate }}</mat-label>
+                        <input matInput formControlName="stationName" required
+                            placeholder="{{ 'project.deployment-wizard.station-name' | translate }}">
+                    </mat-form-field>
+                    <mat-form-field appearance="fill" class="mat-block">
+                        <mat-label>{{ 'project.deployment-wizard.station-sn' | translate }}</mat-label>
+                        <input matInput formControlName="stationSn" required
+                            placeholder="{{ 'project.deployment-wizard.station-sn' | translate }}">
+                    </mat-form-field>
+                    <div class="mat-block checkbox-block mb-4">
+                        <mat-checkbox formControlName="useStationNameAsPrefix">
+                            {{ 'project.deployment-wizard.use-station-name-as-prefix' | translate }}
+                        </mat-checkbox>
+                    </div>
+                </form>
+            </div>
+            </ng-template>
+        </mat-step>
+
+        <!-- Step 3: Topology Preview & Edit -->
+        <mat-step>
+            <ng-template matStepLabel>{{ 'project.deployment-wizard.topology-preview' | translate }}</ng-template>
+            <ng-template matStepContent>
+            <div class="step-content">
+                <div *ngIf="finalTopology" class="topology-editor mat-elevation-z2">
+                    <div class="tree-wrapper">
+                        <tb-topology-tree #topologyTree [topology]="finalTopology" [isReadOnly]="false"
+                            [defaultExpandAll]="true" (nodeSelected)="onNodeSelected($event)"
+                            (topologyChange)="updateTopology($event)">
+                        </tb-topology-tree>
+                    </div>
+                    <div class="details-wrapper">
+                        <tb-model-node-details *ngIf="selectedNode" [node]="selectedNode" [isReadOnly]="false"
+                            [isCountLocked]="topologyTree.isRootNode(selectedNode) || topologyTree.isSecondLevelNode(selectedNode)"
+                            (nodeChange)="onNodeDetailsChange($event)">
+                        </tb-model-node-details>
+                        <div *ngIf="!selectedNode" class="no-selection">
+                            <mat-icon>touch_app</mat-icon>
+                            <span>{{ 'project.deployment-wizard.select-node-hint' | translate }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </ng-template>
+        </mat-step>
+
+        <!-- Step 4: Resolved Preview -->
+        <mat-step>
+            <ng-template matStepLabel>{{ 'project.deployment-wizard.resolved-preview' | translate }}</ng-template>
+            <ng-template matStepContent>
+            <div class="step-content">
+                <div class="preview-container mat-elevation-z2" *ngIf="previewNode">
+                    <div class="preview-header-search">
+                        <mat-form-field appearance="outline" class="mat-block">
+                            <mat-icon matPrefix>search</mat-icon>
+                            <input matInput #searchInput type="text"
+                                placeholder="{{ 'action.search' | translate }}"
+                                (keydown.enter)="$event.preventDefault()"
+                                (input)="onSearch(searchInput.value)">
+                            <button type="button" *ngIf="searchInput.value" matSuffix mat-icon-button aria-label="Clear"
+                                (click)="searchInput.value=''; onSearch('')">
+                                <mat-icon>close</mat-icon>
+                            </button>
+                        </mat-form-field>
+                    </div>
+                    <cdk-virtual-scroll-viewport itemSize="46" class="preview-virtual-viewport">
+                        <div *cdkVirtualFor="let node of visibleNodes; trackBy: trackByNodePath" class="tree-node-item">
+                            <div class="node-content" [style.padding-left.px]="node.level * 24">
+                                <button mat-icon-button class="expand-btn" *ngIf="node.children && node.children.length > 0"
+                                    (click)="toggleExpanded(node, $event)">
+                                    <mat-icon>{{ node.expanded ? 'expand_more' : 'chevron_right' }}</mat-icon>
+                                </button>
+                                <div class="expand-placeholder" *ngIf="!node.children || node.children.length === 0"></div>
+                                <mat-checkbox [checked]="node.included" [disabled]="node.disabled"
+                                    (change)="toggleExclusion(node, $event.checked)" (click)="$event.stopPropagation()">
+                                </mat-checkbox>
+                                <mat-icon class="node-icon" [class.device-icon]="node.type === 'DEVICE'"
+                                    [class.asset-icon]="node.type !== 'DEVICE'">{{ node.type === 'DEVICE' ? 'devices' :
+                                    'domain' }}</mat-icon>
+                                <span class="node-name" [class.excluded-node]="!node.included"><strong>{{
+                                        node.name }}</strong></span>
+                                <span class="node-type">({{ node.label || node.type }})</span>
+                                <div *ngIf="node.credentialsValue" class="node-creds">
+                                    <small>MQTT User/Pass: {{ node.credentialsId }}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </cdk-virtual-scroll-viewport>
+                </div>
+            </div>
+            </ng-template>
+        </mat-step>
+
+        <!-- Step 5: Finish -->
+        <mat-step>
+            <ng-template matStepLabel>{{ 'project.deployment-wizard.result' | translate }}</ng-template>
+            <ng-template matStepContent>
+            <div class="step-content result-content" *ngIf="deployResult">
+                <div class="result-container">
+                    <div class="success-header">
+                        <mat-icon class="success-icon">check_circle</mat-icon>
+                        <h2 class="success-title">{{ 'project.deployment-wizard.success' | translate }}</h2>
+                        <span class="job-id">ID: {{ deployResult.id }}</span>
+                    </div>
+
+                    <div class="result-stats-cards">
+                        <div class="stat-card asset-card">
+                            <mat-icon>domain</mat-icon>
+                            <span class="stat-value">{{ createdAssetsCount }}</span>
+                            <span class="stat-label">{{ 'project.deployment-wizard.total-assets' | translate }}</span>
+                        </div>
+                        <div class="stat-card device-card">
+                            <mat-icon>devices</mat-icon>
+                            <span class="stat-value">{{ createdDevicesCount }}</span>
+                            <span class="stat-label">{{ 'project.deployment-wizard.total-devices' | translate }}</span>
+                        </div>
+                    </div>
+
+                    <div class="result-actions">
+                        <button mat-stroked-button color="accent" (click)="exportCredentials()" class="action-btn">
+                            <mat-icon>file_download</mat-icon>
+                            {{ 'model.export-credentials' | translate }}
+                        </button>
+                        <button mat-stroked-button color="primary" routerLink="/entities/assets" class="action-btn">
+                            <mat-icon>launch</mat-icon>
+                            {{ 'project.deployment-wizard.go-to-assets' | translate }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+            </ng-template>
+        </mat-step>
+    </mat-horizontal-stepper>
+</div>

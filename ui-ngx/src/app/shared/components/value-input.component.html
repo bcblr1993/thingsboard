@@ -69,7 +69,7 @@
       </mat-icon>
     </mat-form-field>
     <ng-container *ngIf="valueType === valueTypeEnum.BOOLEAN">
-      <mat-chip-listbox *ngIf="!shortBooleanField" class="tb-boolean-input center-stretch flex-1"
+      <mat-chip-listbox *ngIf="!shortBooleanField && !switchBooleanField" class="tb-boolean-input center-stretch flex-1"
                         [disabled]="disabled" name="value" #value="ngModel" [(ngModel)]="modelValue" (ngModelChange)="onValueChanged()">
         <mat-chip-option [selectable]="!modelValue" [value]="true">{{ trueLabel }}</mat-chip-option>
         <mat-chip-option [selectable]="modelValue" [value]="false">{{ falseLabel }}</mat-chip-option>
@@ -77,6 +77,10 @@
       <mat-checkbox *ngIf="shortBooleanField" name="value" #value="ngModel" [disabled]="disabled" [(ngModel)]="modelValue" (ngModelChange)="onValueChanged()">
         {{ modelValue ? trueLabel : falseLabel }}
       </mat-checkbox>
+      <mat-slide-toggle *ngIf="switchBooleanField" name="value" #value="ngModel" [disabled]="disabled"
+        [(ngModel)]="modelValue" (ngModelChange)="onValueChanged()">
+        {{ modelValue ? trueLabel : falseLabel }}
+      </mat-slide-toggle>
     </ng-container>
     <div *ngIf="valueType === valueTypeEnum.JSON" class="flex flex-1 flex-row items-center justify-start gap-2">
       <mat-form-field appearance="outline" subscriptSizing="dynamic" class="tb-inline-field tb-suffix-absolute flex flex-1">

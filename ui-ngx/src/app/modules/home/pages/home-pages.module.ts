@@ -46,6 +46,8 @@ import { AccountModule } from '@home/pages/account/account.module';
 import { ScadaSymbolModule } from '@home/pages/scada-symbol/scada-symbol.module';
 import { GatewaysModule } from '@home/pages/gateways/gateways.module';
 import { MobileModule } from '@home/pages/mobile/mobile.module';
+import { ModelManagementModule } from '@home/pages/model-management/model-management.module';
+import { ProjectDeploymentModule } from '@home/pages/project-deployment/project-deployment.module';
 
 @NgModule({
   exports: [
@@ -78,7 +80,9 @@ import { MobileModule } from '@home/pages/mobile/mobile.module';
     UserModule,
     VcModule,
     AccountModule,
-    ScadaSymbolModule
+    ScadaSymbolModule,
+    ModelManagementModule,
+    ProjectDeploymentModule
   ]
 })
 export class HomePagesModule { }

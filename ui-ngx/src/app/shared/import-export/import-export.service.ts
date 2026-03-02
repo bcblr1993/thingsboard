@@ -90,6 +90,8 @@ import {
 import { FormProperty, propertyValid } from '@shared/models/dynamic-form.models';
 import { CalculatedFieldsService } from '@core/http/calculated-fields.service';
 import { CalculatedField } from '@shared/models/calculated-field.models';
+import { TopologyTemplate } from '@shared/models/topology.models';
+import { TopologyTemplateService } from '@core/http/topology-template.service';
 
 export type editMissingAliasesFunction = (widgets: Array<Widget>, isSingleWidget: boolean,
                                           customTitle: string, missingEntityAliases: EntityAliases) => Observable<EntityAliases>;
@@ -119,6 +121,7 @@ export class ImportExportService {
               private utils: UtilsService,
               private itembuffer: ItemBufferService,
               private calculatedFieldsService: CalculatedFieldsService,
+              private topologyTemplateService: TopologyTemplateService,
               private dialog: MatDialog) {
 
   }
@@ -1282,6 +1285,67 @@ export class ImportExportService {
         data: { title, prompt, include: includeResources, ignoreLoading }
       }
     ).afterClosed();
+  }
+
+  public exportTopologyTemplate(templateId: string) {
+    this.topologyTemplateService.getTopologyTemplate(templateId).subscribe({
+      next: (template) => {
+        let name = template.name;
+        // 保留字母、数字、中文和空格，将其他非单词字符替换为下划线，避免中文被错误替换
+        name = name.toLowerCase().replace(/[^\w\u4e00-\u9fa5\s]/g, '_');
+        this.exportToPc(this.prepareTopologyTemplateExport(template), name);
+      },
+      error: (e) => {
+        this.handleExportError(e, 'model.export-failed-error');
+      }
+    });
+  }
+
+  public importTopologyTemplate(): Observable<TopologyTemplate> {
+    return this.openImportDialog('model.import', 'model.import-file').pipe(
+      mergeMap((template: TopologyTemplate) => {
+        if (!this.validateImportedTopologyTemplate(template)) {
+          this.store.dispatch(new ActionNotificationShow(
+            {
+              message: this.translate.instant('model.invalid-template-file-error'),
+              type: 'error'
+            }));
+          throw new Error('Invalid model template file');
+        } else {
+          // 修改导入模板名称，防止重名报错
+          const dateSuffix = new Date().toISOString().replace(/T/g, '_').replace(/:/g, '').split('.')[0];
+          template.name = `${template.name}_${dateSuffix}`;
+          return this.topologyTemplateService.saveTopologyTemplate(this.prepareImport(template));
+        }
+      }),
+      catchError(() => of(null))
+    );
+  }
+
+  private validateImportedTopologyTemplate(template: TopologyTemplate): boolean {
+    if (isUndefined(template.name) || isUndefined(template.configuration)) {
+      return false;
+    }
+    return true;
+  }
+
+  private prepareTopologyTemplateExport(template: TopologyTemplate): TopologyTemplate {
+    template = this.prepareExport(template);
+    if (template.configuration) {
+      this.clearNodeId(template.configuration);
+    }
+    return template;
+  }
+
+  private clearNodeId(node: any) {
+    if (node) {
+      if (isDefined(node.id)) {
+        delete node.id;
+      }
+      if (node.subNodes && Array.isArray(node.subNodes)) {
+        node.subNodes.forEach(subNode => this.clearNodeId(subNode));
+      }
+    }
   }
 
   private updateUserSettingsIncludeResourcesIfNeeded(currentValue: boolean, newValue: boolean, key: SupportEntityResources) {

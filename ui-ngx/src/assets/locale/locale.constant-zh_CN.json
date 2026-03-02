@@ -19,8 +19,12 @@
         "notification-settings": "通知设置"
     },
     "action": {
+        "preview": "预览",
         "expand-all": "展开",
         "collapse-all": "折叠",
+        "action": "操作",
+        "toggle-node": "切换节点",
+        "add-child": "添加子节点",
         "activate": "激活",
         "suspend": "暂停",
         "save": "保存",
@@ -981,6 +985,8 @@
         "edge-uplink-messages-per-edge": "Edge下行"
     },
     "audit-log": {
+        "created-time": "创建时间",
+        "type-deploy-topology": "部署拓扑",
         "audit": "审计",
         "audit-logs": "审计日志",
         "timestamp": "时间戳",
@@ -2886,7 +2892,8 @@
         "invalid-file-error": "无效的扩展文件"
     },
     "feature": {
-        "advanced-features": "高级功能"
+        "advanced-features": "高级功能",
+        "version-control": "版本控制"
     },
     "filter": {
         "add": "添加筛选器",
@@ -3192,7 +3199,7 @@
         "general": "常规",
         "tags": "标签",
         "properties": "属性",
-        "title": "标题",
+        "gateway": "网关",
         "description": "描述",
         "search-tags": "标签",
         "widget-size": "尺寸",
@@ -3426,6 +3433,7 @@
         }
     },
     "item": {
+        "projects": "项目",
         "selected": "选择"
     },
     "js-func": {
@@ -5415,6 +5423,8 @@
         "type": "值类型",
         "string": "字符串",
         "string-value": "字符串值",
+        "expression": "表达式",
+        "expression-value": "表达式值",
         "string-value-required": "字符串值必填",
         "integer": "整数",
         "integer-value": "整数值",
@@ -6260,6 +6270,12 @@
                 "Tue": "周二",
                 "Wed": "周三",
                 "Thu": "周四",
+                "attributes": {
+                    "title": "服务端属性",
+                    "add": "添加属性",
+                    "key": "键",
+                    "no-attributes": "暂无属性"
+                },
                 "Fri": "周五",
                 "Sat": "周六",
                 "Jan": "1月",
@@ -7906,5 +7922,155 @@
     },
     "language": {
         "language": "语言"
+    },
+    "model": {
+        "search": "搜索模型",
+        "selected-models": "已选择模型",
+        "no-models-text": "未找到模型",
+        "scope": "范围",
+        "scope-system": "系统",
+        "scope-tenant": "租户",
+        "profile": {
+            "type": "配置类型",
+            "default": "默认配置",
+            "custom": "自定义配置",
+            "name": "配置名称"
+        },
+        "management": "模型管理",
+        "default": "默认",
+        "name": "模型名称",
+        "name-required": "模型名称必填",
+        "version-required": "版本必填",
+        "relation": {
+            "additional-info": "关系附加信息"
+        },
+        "node-details": "节点详情",
+        "description": "说明",
+        "credentials": {
+            "strategy": "凭证生成策略",
+            "strategy-name": "设备名称",
+            "strategy-pinyin": "拼音首字母",
+            "strategy-custom": "自定义模式",
+            "custom-pattern": "自定义模式",
+            "custom-pattern-hint": "使用 ${DeviceName} 作为占位符"
+        },
+        "created-time": "创建时间",
+        "add-title": "添加配置模版",
+        "scope-public": "公共",
+        "scope-tenant": "租户",
+        "add": "添加配置模版",
+        "delete": "删除模型",
+        "delete-title": "确定要删除模型 '{{modelName}}' 吗？",
+        "delete-text": "删除后将无法恢复该模型定义。",
+        "delete-models-title": "确定要删除选中的 {{count}} 个模型吗？",
+        "delete-models-text": "删除后将无法恢复选中的模型定义。",
+        "delete-default-title": "无法删除默认模型",
+        "delete-default-message": "请在删除此模型之前将另一个模型设置为默认模型。",
+        "details": "详情",
+        "topology": "拓扑结构",
+        "export": "导出模型",
+        "import": "导入模型",
+        "import-file": "模型 JSON 文件",
+        "invalid-template-file-error": "无效的模型模板文件",
+        "export-failed-error": "导出模型失败: {{error}}",
+        "deployment-history": "部署历史",
+        "no-deployment-history": "暂无部署历史",
+        "export-credentials": "导出凭证",
+        "preview": "预览模版",
+        "preview-title": "预览模版结构",
+        "no-structure": "该模版暂无结构定义",
+        "attributes": {
+            "title": "属性",
+            "key": "键",
+            "value": "值",
+            "add": "添加属性",
+            "no-attributes": "暂无属性"
+        },
+        "type": "类型",
+        "node": {
+            "new-device": "新设备",
+            "name": "节点名称",
+            "name-pattern": "名称模式",
+            "count": "数量",
+            "delete-confirmation": "确定要删除节点 {{name}} 吗？",
+            "delete-confirmation-title": "删除节点"
+        },
+        "wizard": {
+            "model-details": "模型详情",
+            "customize-model": "自定义模型",
+            "preview": "预览",
+            "node-name": "节点名称",
+            "name-pattern": "名称规则",
+            "vars-hint": "可用变量: ${ParentName}, ${Index}, ${Type}, ${StationSn}, ${HierarchicalIndex}",
+            "vars-help": "可用变量与生成规则说明：\n\n${StationSn}：全局站点SN或首选项\n  ▶ 常作为统一前缀。 例: 'SN100-PCS' → 'SN100-PCS'\n\n${Type}：当前节点类型名称\n  ▶ 取自当前节点配置的名称。 例: '设备-${Type}' → '设备-BMS'\n\n${Index}：当前层级局部索引 (如 1, 2, 3...)\n  ▶ 由当前节点设定的\"数量\"决定，反映同级兄弟节点间的序号。\n\n${HierarchicalIndex}：全局树状结构坐标 (如 1-2-1)\n  ▶ 由父级坐标拼接当前Index而成。第1层为1且不遗传，第2层(如电站)重新从1开始并向下世代遗传，精准定位设备在整个拓扑树中的绝对位置。\n\n${ParentName}：父节点最终名称\n  ▶ 正在生成当前实体时，其父节点经过所有规则替换后生成的最终完整名称。",
+            "var-help-trigger": "变量说明",
+            "count": "数量",
+            "node-type": {
+                "ASSET": "资产",
+                "DEVICE": "设备"
+            },
+            "select-node-hint": "请选择左侧节点进行编辑",
+            "attributes": {
+                "title": "服务端属性",
+                "add": "添加属性",
+                "key": "键",
+                "no-attributes": "暂无属性"
+            },
+            "topology-invalid": "拓扑配置无效",
+            "node-configuration-invalid": "节点 \"{{nodeLabel}}\" 配置不完整，请检查名称、属性或相关设置",
+            "save-error-invalid-node": "保存失败：节点 \"{{nodeLabel}}\" 配置不完整",
+            "preview-error-invalid-node": "预览失败：节点 \"{{nodeLabel}}\" 配置不全，请检查名称模式及属性",
+            "deploy-error-invalid-node": "部署失败：节点 \"{{nodeLabel}}\" 配置不完整",
+            "select-source": "选择来源",
+            "select-source-hint": "请选择模型创建方式",
+            "source-empty": "空白模型",
+            "source-empty-desc": "从零开始定义全新的拓扑结构",
+            "source-from-template": "基于现有模板",
+            "source-from-template-desc": "选择一个已有模板作为起点，在其基础上进行修改",
+            "available-count": "可用模板: {{count}} 个",
+            "choose-template": "选择模板",
+            "select-template-required": "请先选择一个模板"
+        }
+    },
+    "project": {
+        "projects": "项目",
+        "export-credentials": "导出凭证",
+        "deployment-wizard": {
+            "template-required": "请先选择一个配置模板",
+            "cropping-confirm-title": "确认导航",
+            "cropping-confirm-message": "您已裁剪部分节点。导航离开可能会丢失这些更改。确定吗？",
+            "cropping-level-restricted": "由于系统规则限制，第一层和第二层节点不允许被裁剪",
+            "total-assets": "资产总数",
+            "total-devices": "设备总数",
+            "no-devices-found": "未发现包含凭证信息的设备",
+            "template": "模版",
+            "use-station-name-as-prefix": "使用站点名称作为设备前缀",
+            "title": "部署新项目",
+            "select-template": "选择模板",
+            "global-config": "全局配置",
+            "topology-preview": "拓扑预览与配置",
+            "review": "审查",
+            "deploy": "部署",
+            "company-name": "公司名称",
+            "station-name": "站点名称",
+            "station-sn": "站点SN",
+            "result": "结果",
+            "success": "部署成功！",
+            "go-to-assets": "前往资产",
+            "count": "数量",
+            "name": "名称",
+            "node-name": "节点名称",
+            "name-pattern": "名称规则",
+            "vars-hint": "变量: ${ParentName}, ${Index}, ${Type}, ${StationSn}, ${HierarchicalIndex}",
+            "update-node": "更新节点",
+            "select-node-help": "选择一个节点进行编辑",
+            "select-node-hint": "选择一个节点进行配置",
+            "resolved-preview": "解析结果预览"
+        },
+        "deployment-history": {
+            "title": "部署历史",
+            "no-history-prompt": "暂无部署历史记录",
+            "no-data-to-export": "未找到可导出的部署数据"
+        }
     }
 }

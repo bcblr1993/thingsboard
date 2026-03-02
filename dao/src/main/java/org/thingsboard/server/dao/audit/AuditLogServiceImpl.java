@@ -349,6 +349,16 @@ public class AuditLogServiceImpl implements AuditLogService {
                 String number = extractParameter(String.class, 0, additionalInfo);
                 actionData.put("recipientNumber", number);
                 break;
+            case DEPLOY_TOPOLOGY:
+                JsonNode genericData = extractParameter(JsonNode.class, additionalInfo);
+                if (genericData != null) {
+                    if (genericData.isArray()) {
+                        actionData.set("children", genericData);
+                    } else if (genericData.isObject()) {
+                        actionData.setAll((ObjectNode) genericData);
+                    }
+                }
+                break;
         }
         return actionData;
     }

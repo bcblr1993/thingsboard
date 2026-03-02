@@ -20,7 +20,7 @@ import { Observable } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { TimePageLink } from '@shared/models/page/page-link';
 import { PageData } from '@shared/models/page/page-data';
-import { AuditLog } from '@shared/models/audit-log.models';
+import { AuditLog, ActionType } from '@shared/models/audit-log.models';
 import { EntityId } from '@shared/models/id/entity-id';
 
 @Injectable({
@@ -33,8 +33,12 @@ export class AuditLogService {
   ) { }
 
   public getAuditLogs(pageLink: TimePageLink,
-                      config?: RequestConfig): Observable<PageData<AuditLog>> {
-    return this.http.get<PageData<AuditLog>>(`/api/audit/logs${pageLink.toQuery()}`,
+    actionTypes?: ActionType[], config?: RequestConfig): Observable<PageData<AuditLog>> {
+    let url = `/api/audit/logs${pageLink.toQuery()}`;
+    if (actionTypes && actionTypes.length) {
+      url += `&actionTypes=${actionTypes.join(',')}`;
+    }
+    return this.http.get<PageData<AuditLog>>(url,
       defaultHttpOptionsFromConfig(config));
   }
 
@@ -51,8 +55,12 @@ export class AuditLogService {
   }
 
   public getAuditLogsByEntityId(entityId: EntityId, pageLink: TimePageLink,
-                                config?: RequestConfig): Observable<PageData<AuditLog>> {
-    return this.http.get<PageData<AuditLog>>(`/api/audit/logs/entity/${entityId.entityType}/${entityId.id}${pageLink.toQuery()}`,
+    actionTypes?: ActionType[], config?: RequestConfig): Observable<PageData<AuditLog>> {
+    let url = `/api/audit/logs/entity/${entityId.entityType}/${entityId.id}${pageLink.toQuery()}`;
+    if (actionTypes && actionTypes.length) {
+      url += `&actionTypes=${actionTypes.join(',')}`;
+    }
+    return this.http.get<PageData<AuditLog>>(url,
       defaultHttpOptionsFromConfig(config));
   }
 

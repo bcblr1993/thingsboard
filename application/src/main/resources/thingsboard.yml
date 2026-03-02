@@ -23,7 +23,7 @@ install:
   # 【必须显式配置】自定义目标版本（用于控制自定义脚本执行范围和版本回退防护）
   # 推荐格式: 主版本-日期（YYYYMMDD），例如 4.1-20251230
   # 示例: 发布时注入当前日期，确保版本递增
-  upgrade.custom_version: "${INSTALL_UPGRADE_CUSTOM_VERSION:4.1-20251230}"
+  upgrade.custom_version: "${INSTALL_UPGRADE_CUSTOM_VERSION:4.1-20260330}"
 # Server common parameters
 server:
   # Server bind-address
@@ -876,6 +876,7 @@ audit-log:
       "tb_resource": "${AUDIT_LOG_MASK_RESOURCE:W}" # TB resource logging levels. Allowed values: OFF (disable), W (log write operations), RW (log read and write operation
       "ota_package": "${AUDIT_LOG_MASK_OTA_PACKAGE:W}" # Ota package logging levels. Allowed values: OFF (disable), W (log write operations), RW (log read and write operation
       "calculated_field": "${AUDIT_LOG_MASK_CALCULATED_FIELD:W}" # Calculated field logging levels. Allowed values: OFF (disable), W (log write operations), RW (log read and write operation
+      "topology_template": "${AUDIT_LOG_MASK_TOPOLOGY_TEMPLATE:W}" # Topology template logging levels. Allowed values: OFF (disable), W (log write operations), RW (log read and write operation
   sink:
     # Type of external sink. possible options: none, elasticsearch
     type: "${AUDIT_LOG_SINK_TYPE:none}"

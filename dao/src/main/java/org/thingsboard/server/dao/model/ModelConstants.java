@@ -805,4 +805,17 @@ public class ModelConstants {
         }
     }
 
+    /**
+     * Topology template constants.
+     */
+    public static final String TOPOLOGY_TEMPLATE_COLUMN_FAMILY_NAME = "topology_template";
+    public static final String TOPOLOGY_TEMPLATE_TENANT_ID_PROPERTY = TENANT_ID_PROPERTY;
+    public static final String TOPOLOGY_TEMPLATE_NAME_PROPERTY = NAME_PROPERTY;
+    public static final String TOPOLOGY_TEMPLATE_TYPE_PROPERTY = "type";
+    public static final String TOPOLOGY_TEMPLATE_CONFIGURATION_PROPERTY = "configuration";
+    public static final String TOPOLOGY_TEMPLATE_ADDITIONAL_INFO_PROPERTY = ADDITIONAL_INFO_PROPERTY;
+    public static final String TOPOLOGY_TEMPLATE_DESCRIPTION_PROPERTY = "description";
+    public static final String TOPOLOGY_TEMPLATE_MODEL_VERSION_PROPERTY = "model_version";
+    public static final String TOPOLOGY_TEMPLATE_EXTERNAL_ID_PROPERTY = EXTERNAL_ID_PROPERTY;
+
 }

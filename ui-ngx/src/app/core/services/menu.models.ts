@@ -107,7 +107,9 @@ export enum MenuId {
   version_control = 'version_control',
   api_usage = 'api_usage',
   trendz_settings = 'trendz_settings',
-  permission_menu_allocation = 'permission_menu_allocation'
+  permission_menu_allocation = 'permission_menu_allocation',
+  models = 'models',
+  projects = 'projects'
 }
 
 declare type MenuFilter = (authState: AuthState) => boolean;
@@ -718,6 +720,26 @@ export const menuSectionMap = new Map<MenuId, MenuSection>([
       path: '/settings/permission-menu-allocation',
       icon: 'rule'
     }
+  ],
+  [
+    MenuId.models,
+    {
+      id: MenuId.models,
+      name: 'model.management',
+      type: 'link',
+      path: '/models',
+      icon: 'category'
+    }
+  ],
+  [
+    MenuId.projects,
+    {
+      id: MenuId.projects,
+      name: 'item.projects',
+      type: 'link',
+      path: '/projects',
+      icon: 'rocket_launch'
+    }
   ]
 ]);
 
@@ -740,6 +762,7 @@ export const defaultUserMenuMap = new Map<Authority, MenuReference[]>([
       {id: MenuId.home},
       {id: MenuId.tenants},
       {id: MenuId.tenant_profiles},
+      { id: MenuId.models },
       {
         id: MenuId.resources,
         pages: [
@@ -807,6 +830,8 @@ export const defaultUserMenuMap = new Map<Authority, MenuReference[]>([
       {id: MenuId.home},
       {id: MenuId.alarms},
       {id: MenuId.dashboards},
+      {id: MenuId.projects},
+      { id: MenuId.models },
       {
         id: MenuId.entities,
         pages: [

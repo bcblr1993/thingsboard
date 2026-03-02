@@ -1,0 +1,53 @@
+<!--
+
+    Copyright © 2016-2025 The Thingsboard Authors
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+
+-->
+<form (ngSubmit)="true">
+    <mat-toolbar color="primary">
+        <h2>{{ 'project.deployment-wizard.title' | translate }}</h2>
+        <span class="flex-1"></span>
+        <button mat-icon-button (click)="close()" type="button">
+            <mat-icon class="material-icons">close</mat-icon>
+        </button>
+    </mat-toolbar>
+    <mat-progress-bar color="warn" mode="indeterminate" *ngIf="(isLoading$ | async) || isPreviewing || isDeploying">
+    </mat-progress-bar>
+    <div class="header-loader-spacer" *ngIf="(isLoading$ | async) === false && !isPreviewing && !isDeploying"></div>
+    <div mat-dialog-content>
+        <tb-project-deployment-wizard #wizard [stepperOrientation]="stepperOrientation"
+            [stepperLabelPosition]="stepperLabelPosition" (selectionChange)="changeStep($event)"
+            (deploymentFinished)="onDeploymentFinished($event)">
+        </tb-project-deployment-wizard>
+    </div>
+    <div mat-dialog-actions class="tb-dialog-actions">
+        <div class="dialog-actions-row">
+            <button mat-stroked-button *ngIf="selectedIndex > 0 && selectedIndex < 4" type="button"
+                [disabled]="(isLoading$ | async) || isPreviewing || isDeploying" (click)="previousStep()">{{
+                'action.back' | translate }}</button>
+            <span class="flex-1"></span>
+            <button mat-stroked-button color="primary" type="button" *ngIf="showNext"
+                [disabled]="(isLoading$ | async) || nextDisabled" (click)="nextStep()">{{ 'action.next' | translate
+                }}</button>
+        </div>
+        <mat-divider class="full-width"></mat-divider>
+        <div class="dialog-actions-row justify-end">
+            <button mat-button type="button" [disabled]="(isLoading$ | async) || isPreviewing || isDeploying"
+                (click)="close()">{{ (selectedIndex === 4 ? 'action.close' : 'action.cancel') | translate }}</button>
+            <button mat-raised-button *ngIf="showDeploy" type="button" [disabled]="(isLoading$ | async) || isDeploying"
+                color="primary" (click)="deploy()">{{ 'project.deployment-wizard.deploy' | translate }}</button>
+        </div>
+    </div>
+</form>

@@ -1,0 +1,116 @@
+<!--
+
+    Copyright © 2016-2025 The Thingsboard Authors
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+
+-->
+<div class="tree-layout">
+    <div class="tree-container">
+        <mat-tree *ngIf="isTreeVisible" [dataSource]="dataSource" [treeControl]="treeControl" class="topology-tree">
+            <!-- Leaf Node -->
+            <mat-tree-node *matTreeNodeDef="let node" matTreeNodeToggle>
+                <div class="tb-tree-node-spacer"></div>
+
+                <div class="node-content leaf-node" [class.selected]="selectedNode === node" (click)="selectNode(node)"
+                    (keydown.enter)="selectNode(node)" tabindex="0">
+
+
+
+                    <mat-icon class="type-icon" [class.device]="node.type === 'DEVICE'">
+                        {{ node.type === 'DEVICE' ? 'developer_board' : 'domain' }}
+                    </mat-icon>
+
+                    <span class="node-label" matTooltip="{{ node.entityTypeLabel }}">{{ node.entityTypeLabel
+                        }}</span>
+                    <span class="node-count" *ngIf="node.defaultCount > 1">x{{node.defaultCount}}</span>
+
+                    <span class="flex-1"></span>
+
+                    <!-- Actions Menu -->
+                    <div class="node-actions" *ngIf="!isReadOnly">
+                        <button mat-icon-button [matMenuTriggerFor]="nodeMenu" (click)="$event.stopPropagation()"
+                            matTooltip="{{ 'action.more' | translate }}" [attr.aria-label]="'action.more' | translate"
+                            type="button">
+                            <mat-icon>more_horiz</mat-icon>
+                        </button>
+                        <mat-menu #nodeMenu="matMenu">
+                            <button mat-menu-item (click)="addNode(node)" [disabled]="isRootNode(node)">
+                                <mat-icon>add_circle_outline</mat-icon>
+                                <span>{{ 'action.add-child' | translate }}</span>
+                            </button>
+                            <button mat-menu-item (click)="deleteNode(node)" [disabled]="node === dataSource.data[0]">
+                                <mat-icon>delete</mat-icon>
+                                <span>{{ 'action.delete' | translate }}</span>
+                            </button>
+                        </mat-menu>
+                    </div>
+                </div>
+
+            </mat-tree-node>
+
+            <!-- Nested Node -->
+            <mat-nested-tree-node *matTreeNodeDef="let node; when: hasChild">
+                <div class="mat-tree-node">
+                    <button mat-icon-button matTreeNodeToggle [attr.aria-label]="'action.toggle-node' | translate"
+                        type="button" (click)="$event.stopPropagation()">
+                        <mat-icon class="mat-icon-rtl-mirror">
+                            {{treeControl.isExpanded(node) ? 'expand_more' : 'chevron_right'}}
+                        </mat-icon>
+                    </button>
+
+                    <div class="node-content" [class.selected]="selectedNode === node" (click)="selectNode(node)"
+                        (keydown.enter)="selectNode(node)" tabindex="0">
+
+
+
+                        <mat-icon class="type-icon" [class.device]="node.type === 'DEVICE'">
+                            {{ node.type === 'DEVICE' ? 'developer_board' : 'domain' }}
+                        </mat-icon>
+
+                        <span class="node-label" matTooltip="{{ node.entityTypeLabel }}">{{ node.entityTypeLabel
+                            }}</span>
+                        <span class="node-count" *ngIf="node.defaultCount > 1">x{{node.defaultCount}}</span>
+
+                        <span class="flex-1"></span>
+
+                        <!-- Actions Menu -->
+                        <div class="node-actions" *ngIf="!isReadOnly">
+                            <button mat-icon-button [matMenuTriggerFor]="nestedNodeMenu"
+                                (click)="$event.stopPropagation()" matTooltip="{{ 'action.more' | translate }}"
+                                [attr.aria-label]="'action.more' | translate" type="button">
+                                <mat-icon>more_horiz</mat-icon>
+                            </button>
+                            <mat-menu #nestedNodeMenu="matMenu">
+                                <button mat-menu-item (click)="addNode(node)" [disabled]="isRootNode(node)">
+                                    <mat-icon>add_circle_outline</mat-icon>
+                                    <span>{{ 'action.add-child' | translate }}</span>
+                                </button>
+                                <button mat-menu-item (click)="deleteNode(node)"
+                                    [disabled]="node === dataSource.data[0]">
+                                    <mat-icon>delete</mat-icon>
+                                    <span>{{ 'action.delete' | translate }}</span>
+                                </button>
+                            </mat-menu>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Indented Container for Children -->
+                <div [class.topology-tree-invisible]="!treeControl.isExpanded(node)" role="group" class="nested-group">
+                    <ng-container matTreeNodeOutlet></ng-container>
+                </div>
+            </mat-nested-tree-node>
+        </mat-tree>
+    </div>
+</div>

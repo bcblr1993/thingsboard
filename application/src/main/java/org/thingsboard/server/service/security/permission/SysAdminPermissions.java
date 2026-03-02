@@ -45,6 +45,7 @@ public class SysAdminPermissions extends AbstractPermissions {
         put(Resource.QUEUE, systemEntityPermissionChecker);
         put(Resource.NOTIFICATION, systemEntityPermissionChecker);
         put(Resource.MOBILE_APP_SETTINGS, PermissionChecker.allowAllPermissionChecker);
+        put(Resource.TOPOLOGY_TEMPLATE, tenantEntityPermissionChecker);
     }
 
     private static final PermissionChecker systemEntityPermissionChecker = new PermissionChecker() {
@@ -69,6 +70,15 @@ public class SysAdminPermissions extends AbstractPermissions {
             return true;
         }
 
+    };
+
+    private static final PermissionChecker tenantEntityPermissionChecker = new PermissionChecker() {
+
+        @Override
+        public boolean hasPermission(SecurityUser user, Operation operation, EntityId entityId, HasTenantId entity) {
+            // SysAdmin can access all tenant entities
+            return true;
+        }
     };
 
 }
