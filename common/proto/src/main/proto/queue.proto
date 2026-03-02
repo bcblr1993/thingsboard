@@ -64,8 +64,8 @@ enum EntityTypeProto {
   CALCULATED_FIELD      = 39;
   CALCULATED_FIELD_LINK = 40;
   JOB                   = 41;
-  MENU_SETTING          = 42;
-  TOPOLOGY_TEMPLATE     = 43;
+  MENU_SETTING          = 1000;
+  TOPOLOGY_TEMPLATE     = 1001;
 }
 
 enum ApiUsageRecordKeyProto {
