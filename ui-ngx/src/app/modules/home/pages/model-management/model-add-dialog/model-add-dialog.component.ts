@@ -44,9 +44,9 @@ export class ModelAddDialogComponent extends DialogComponent<ModelAddDialogCompo
 
     ngOnInit(): void {
         this.modelForm = this.fb.group({
-            name: ['', [Validators.required]],
-            version: ['1.0.0', [Validators.required]],
-            description: ['']
+            name: ['', [Validators.required, Validators.maxLength(255), Validators.pattern(/.*\S.*/)]],
+            version: ['1.0.0', [Validators.required, Validators.maxLength(255), Validators.pattern(/.*\S.*/)]],
+            description: ['', [Validators.maxLength(512)]]
         });
     }
 

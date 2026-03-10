@@ -217,6 +217,31 @@ export class TopologyTreeComponent implements OnChanges, AfterViewInit {
         });
     }
 
+    public getSiblingNames(node: AssetNodeConfig | null): string[] {
+        if (!node || !this.topology) return [];
+        const parent = this.findParent(this.topology, node);
+        if (!parent || !parent.subNodes) {
+          // If no parent, it's the root node. Root node has no siblings.
+          return [];
+        }
+        return parent.subNodes
+          .filter(child => child !== node && child.id !== node.id)
+          .map(child => child.entityTypeLabel)
+          .filter(name => !!name);
+    }
+
+    private findParent(current: AssetNodeConfig, target: AssetNodeConfig): AssetNodeConfig | null {
+        if (!current.subNodes) return null;
+        if (current.subNodes.some(child => child === target || (!!child.id && !!target.id && child.id === target.id))) {
+            return current;
+        }
+        for (const child of current.subNodes) {
+            const parent = this.findParent(child, target);
+            if (parent) return parent;
+        }
+        return null;
+    }
+
     public expandAll() {
         // 安全检查：如果 treeControl.dataNodes 已就绪则直接使用原生方法
         if (this.treeControl.dataNodes && this.treeControl.dataNodes.length > 0) {

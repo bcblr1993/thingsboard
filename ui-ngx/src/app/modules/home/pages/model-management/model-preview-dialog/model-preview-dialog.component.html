@@ -32,7 +32,9 @@
             </div>
             <div class="details-wrapper">
                 <tb-model-node-details [node]="selectedNode" [isReadOnly]="true"
-                    [isCountLocked]="topologyTree.isRootNode(selectedNode) || topologyTree.isSecondLevelNode(selectedNode)">
+                    [isCountLocked]="topologyTree.isRootNode(selectedNode) || topologyTree.isSecondLevelNode(selectedNode)"
+                    [isTypeLocked]="topologyTree.isRootNode(selectedNode) || topologyTree.isSecondLevelNode(selectedNode)"
+                    [allSiblingNames]="topologyTree.getSiblingNames(selectedNode)">
                 </tb-model-node-details>
             </div>
         </div>

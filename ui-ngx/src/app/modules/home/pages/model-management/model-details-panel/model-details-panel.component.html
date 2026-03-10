@@ -19,20 +19,33 @@
     <mat-form-field appearance="fill" class="mat-block">
         <mat-label translate>model.name</mat-label>
         <input matInput formControlName="name" required placeholder="{{ 'model.name' | translate }}">
-        <mat-error *ngIf="entityForm.get('name').hasError('required')">
+        <mat-error *ngIf="entityForm.get('name').hasError('required') || entityForm.get('name').hasError('pattern')">
             {{ 'model.name-required' | translate }}
+        </mat-error>
+        <mat-error *ngIf="entityForm.get('name').hasError('maxlength')">
+            {{ 'model.name-max-length' | translate }}
         </mat-error>
     </mat-form-field>
 
     <mat-form-field appearance="fill" class="mat-block">
         <mat-label translate>feature.version-control</mat-label>
-        <input matInput formControlName="modelVersion" placeholder="{{ 'feature.version-control' | translate }}"
+        <input matInput formControlName="modelVersion" required
+            placeholder="{{ 'feature.version-control' | translate }}"
             [attr.aria-label]="'feature.version-control' | translate">
+        <mat-error *ngIf="entityForm.get('modelVersion').hasError('required') || entityForm.get('modelVersion').hasError('pattern')">
+            {{ 'model.version-required' | translate }}
+        </mat-error>
+        <mat-error *ngIf="entityForm.get('modelVersion').hasError('maxlength')">
+            {{ 'model.version-max-length' | translate }}
+        </mat-error>
     </mat-form-field>
 
     <mat-form-field appearance="fill" class="mat-block">
         <mat-label translate>model.description</mat-label>
         <textarea matInput formControlName="description" rows="4" placeholder="{{ 'model.description' | translate }}"
             [attr.aria-label]="'model.description' | translate"></textarea>
+        <mat-error *ngIf="entityForm.get('description').hasError('maxlength')">
+            {{ 'model.description-max-length' | translate }}
+        </mat-error>
     </mat-form-field>
 </div>

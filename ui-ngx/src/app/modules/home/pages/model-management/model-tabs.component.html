@@ -27,6 +27,8 @@
         <div class="flex-1 overflow-hidden details-container">
             <tb-model-node-details *ngIf="selectedNode" [node]="selectedNode" [isReadOnly]="!isEdit"
                 [isCountLocked]="topologyTree.isRootNode(selectedNode) || topologyTree.isSecondLevelNode(selectedNode)"
+                [isTypeLocked]="topologyTree.isRootNode(selectedNode) || topologyTree.isSecondLevelNode(selectedNode)"
+                [allSiblingNames]="topologyTree.getSiblingNames(selectedNode)"
                 (nodeChange)="onNodeDetailsChange($event)">
             </tb-model-node-details>
             <div *ngIf="!selectedNode" class="flex items-center justify-center size-full text-gray-500">

@@ -97,7 +97,7 @@
                     <mat-form-field class="mat-block">
                         <mat-label translate>model.name</mat-label>
                         <input matInput formControlName="name" required placeholder="{{ 'model.name' | translate }}">
-                        <mat-error *ngIf="modelWizardFormGroup.get('name').hasError('required')">
+                        <mat-error *ngIf="modelWizardFormGroup.get('name').hasError('required') || modelWizardFormGroup.get('name').hasError('pattern')">
                             {{ 'model.name-required' | translate }}
                         </mat-error>
                         <mat-error *ngIf="modelWizardFormGroup.get('name').hasError('maxlength')">
@@ -109,7 +109,7 @@
                         <mat-label translate>feature.version-control</mat-label>
                         <input matInput formControlName="version" required
                             placeholder="{{ 'feature.version-control' | translate }}">
-                        <mat-error *ngIf="modelWizardFormGroup.get('version').hasError('required')">
+                        <mat-error *ngIf="modelWizardFormGroup.get('version').hasError('required') || modelWizardFormGroup.get('version').hasError('pattern')">
                             {{ 'model.version-required' | translate }}
                         </mat-error>
                         <mat-error *ngIf="modelWizardFormGroup.get('version').hasError('maxlength')">
@@ -121,6 +121,9 @@
                         <mat-label translate>model.description</mat-label>
                         <textarea matInput formControlName="description" rows="3"
                             placeholder="{{ 'model.description' | translate }}"></textarea>
+                        <mat-error *ngIf="modelWizardFormGroup.get('description').hasError('maxlength')">
+                            {{ 'model.description-max-length' | translate }}
+                        </mat-error>
                     </mat-form-field>
                 </fieldset>
             </form>
@@ -139,6 +142,8 @@
                     <div class="details-wrapper">
                         <tb-model-node-details [node]="selectedNode"
                             [isCountLocked]="topologyTree.isRootNode(selectedNode) || topologyTree.isSecondLevelNode(selectedNode)"
+                            [isTypeLocked]="topologyTree.isRootNode(selectedNode) || topologyTree.isSecondLevelNode(selectedNode)"
+                            [allSiblingNames]="topologyTree.getSiblingNames(selectedNode)"
                             (nodeChange)="onNodeDetailsChange($event)">
                         </tb-model-node-details>
                     </div>

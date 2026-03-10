@@ -49,7 +49,7 @@
                                 <mat-icon>add_circle_outline</mat-icon>
                                 <span>{{ 'action.add-child' | translate }}</span>
                             </button>
-                            <button mat-menu-item (click)="deleteNode(node)" [disabled]="node === dataSource.data[0]">
+                            <button mat-menu-item (click)="deleteNode(node)" [disabled]="isRootNode(node) || isSecondLevelNode(node)">
                                 <mat-icon>delete</mat-icon>
                                 <span>{{ 'action.delete' | translate }}</span>
                             </button>
@@ -97,7 +97,7 @@
                                     <span>{{ 'action.add-child' | translate }}</span>
                                 </button>
                                 <button mat-menu-item (click)="deleteNode(node)"
-                                    [disabled]="node === dataSource.data[0]">
+                                    [disabled]="isRootNode(node) || isSecondLevelNode(node)">
                                     <mat-icon>delete</mat-icon>
                                     <span>{{ 'action.delete' | translate }}</span>
                                 </button>
