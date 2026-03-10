@@ -37,6 +37,12 @@
                 <mat-label>{{ 'model.wizard.node-name' | translate }}</mat-label>
                 <input matInput formControlName="entityTypeLabel" required
                     placeholder="{{ 'model.wizard.node-name' | translate }}">
+                <mat-error *ngIf="editForm.get('entityTypeLabel').hasError('maxlength')">
+                    {{ 'model.node.name-max-length' | translate }}
+                </mat-error>
+                <mat-error *ngIf="editForm.get('entityTypeLabel').hasError('duplicateName')">
+                    {{ 'model.node.name-duplicate' | translate }}
+                </mat-error>
             </mat-form-field>
         </div>
 
@@ -54,6 +60,12 @@
                 <mat-label>{{ 'model.profile.name' | translate }}</mat-label>
                 <input matInput formControlName="customProfileName" required
                     placeholder="{{ 'model.profile.name' | translate }}">
+                <mat-error *ngIf="editForm.get('customProfileName').hasError('maxlength')">
+                    {{ 'model.profile.name-max-length' | translate }}
+                </mat-error>
+                <mat-error *ngIf="editForm.get('customProfileName').hasError('required')">
+                    {{ 'model.wizard.config-required' | translate }}
+                </mat-error>
             </mat-form-field>
         </div>
 
@@ -72,16 +84,27 @@
                 <mat-label>{{ 'model.credentials.custom-pattern' | translate }}</mat-label>
                 <input matInput formControlName="customCredentialName" required
                     placeholder="{{ 'model.credentials.custom-pattern-hint' | translate }}">
+                <mat-error *ngIf="editForm.get('customCredentialName').hasError('maxlength')">
+                    {{ 'model.credentials.custom-name-max-length' | translate }}
+                </mat-error>
+                <mat-error *ngIf="editForm.get('customCredentialName').hasError('required')">
+                    {{ 'model.wizard.config-required' | translate }}
+                </mat-error>
             </mat-form-field>
         </div>
 
         <div class="form-row">
             <mat-form-field class="mat-block">
                 <mat-label>{{ 'model.wizard.name-pattern' | translate }}</mat-label>
-                <input matInput formControlName="namePattern"
+                <input matInput formControlName="namePattern" required
                     placeholder="{{ 'model.wizard.name-pattern' | translate }}">
-                <mat-icon matSuffix [matMenuTriggerFor]="varsHelpMenu"
-                    style="cursor: pointer; color: rgba(0,0,0,0.54);">
+                <mat-error *ngIf="editForm.get('namePattern').hasError('maxlength')">
+                    {{ 'model.wizard.name-pattern-max-length' | translate }}
+                </mat-error>
+                <mat-error *ngIf="editForm.get('namePattern').hasError('required')">
+                    {{ 'model.wizard.config-required' | translate }}
+                </mat-error>
+                <mat-icon matSuffix [matMenuTriggerFor]="varsHelpMenu" class="help-icon">
                     help_outline
                 </mat-icon>
             </mat-form-field>
@@ -90,8 +113,11 @@
         <div class="form-row">
             <mat-form-field appearance="outline" class="full-width">
                 <mat-label>{{ 'model.wizard.count' | translate }}</mat-label>
-                <input matInput type="number" formControlName="defaultCount" min="1"
+                <input matInput type="number" formControlName="defaultCount" min="1" step="1"
                     placeholder="{{ 'model.wizard.count' | translate }}">
+                <mat-error *ngIf="editForm.get('defaultCount').hasError('pattern')">
+                    {{ 'model.node.count-integer' | translate }}
+                </mat-error>
             </mat-form-field>
         </div>
 
@@ -176,8 +202,7 @@
                     <mat-form-field *ngIf="attr.get('valueType')?.value === 'EXPRESSION'" appearance="outline"
                         class="attr-value tb-inline-field" subscriptSizing="dynamic">
                         <input matInput formControlName="value" required placeholder="${Index}_Value">
-                        <mat-icon matSuffix [matMenuTriggerFor]="varsHelpMenu"
-                            style="cursor: pointer; color: rgba(0,0,0,0.54);">
+                        <mat-icon matSuffix [matMenuTriggerFor]="varsHelpMenu" class="help-icon">
                             help_outline
                         </mat-icon>
                     </mat-form-field>
@@ -202,7 +227,7 @@
 
 <!-- Shared Menus -->
 <mat-menu #varsHelpMenu="matMenu" xPosition="before">
-    <div class="tb-vars-help-menu" (click)="$event.stopPropagation()">
+    <div class="tb-vars-help-menu" tabindex="0" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()">
         {{ 'model.wizard.vars-help' | translate }}
     </div>
 </mat-menu>

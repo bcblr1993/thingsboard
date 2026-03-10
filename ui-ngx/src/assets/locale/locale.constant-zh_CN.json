@@ -7938,33 +7938,38 @@
             "type": "配置类型",
             "default": "默认配置",
             "custom": "自定义配置",
-            "name": "配置名称"
+            "name": "配置名称",
+            "name-max-length": "配置名称长度应该小于256字符"
         },
         "default": "默认",
         "name": "模板名称",
         "name-required": "模板名称必填",
+        "name-max-length": "模板名称长度应该小于256字符",
         "version-required": "版本必填",
+        "version-max-length": "版本长度应该小于256字符",
         "relation": {
             "additional-info": "关系附加信息"
         },
         "node-details": "节点详情",
         "description": "说明",
+        "description-max-length": "说明字符长度应该小于512字符",
         "credentials": {
             "strategy": "凭证生成策略",
             "strategy-name": "设备名称",
             "strategy-pinyin": "拼音首字母",
             "strategy-custom": "自定义模式",
             "custom-pattern": "自定义模式",
-            "custom-pattern-hint": "使用 ${DeviceName} 作为占位符"
+            "custom-pattern-hint": "请输入自定义名称规则",
+            "custom-name-max-length": "自定义长度应该小于256字符"
         },
         "created-time": "创建时间",
         "add-title": "添加配置模板",
         "add": "添加配置模板",
         "delete": "删除模板",
-        "delete-title": "确定要删除模板 '{{modelName}}' 吗？",
-        "delete-text": "删除后将无法恢复该模板定义。",
-        "delete-models-title": "确定要删除选中的 {{count}} 个模板吗？",
-        "delete-models-text": "删除后将无法恢复选中的模板定义。",
+        "delete-title": "确定要删除模板的'{{modelName}}'吗？",
+        "delete-text": "请注意: 确认后，模板及其所有的相关数据将不可恢复。",
+        "delete-models-title": "确定要删除 {{count}} 个模板吗？",
+        "delete-models-text": "请注意: 确认后，所有选定的模板将被删除，所有相关的数据将不可恢复。",
         "delete-default-title": "无法删除默认模板",
         "delete-default-message": "请在删除此模板之前将另一个模板设置为默认模板。",
         "details": "详情",
@@ -7991,8 +7996,11 @@
         "node": {
             "new-device": "新设备",
             "name": "节点名称",
+            "name-max-length": "节点名称长度应该小于256字符",
+            "name-duplicate": "同一层级下节点名称不能重复",
             "name-pattern": "名称模式",
             "count": "数量",
+            "count-integer": "节点数量必须为整数",
             "delete-confirmation": "确定要删除节点 {{name}} 吗？",
             "delete-confirmation-title": "删除节点"
         },
@@ -8002,6 +8010,7 @@
             "preview": "预览",
             "node-name": "节点名称",
             "name-pattern": "名称规则",
+            "name-pattern-max-length": "名称规则长度应该小于256字符",
             "vars-hint": "可用变量: ${ParentName}, ${Index}, ${Type}, ${StationSn}, ${HierarchicalIndex}",
             "vars-help": "可用变量与生成规则说明：\n\n${StationSn}：全局站点SN或首选项\n  ▶ 常作为统一前缀。 例: 'SN100-PCS' → 'SN100-PCS'\n\n${Type}：当前节点类型名称\n  ▶ 取自当前节点配置的名称。 例: '设备-${Type}' → '设备-BMS'\n\n${Index}：当前层级局部索引 (如 1, 2, 3...)\n  ▶ 由当前节点设定的\"数量\"决定，反映同级兄弟节点间的序号。\n\n${HierarchicalIndex}：全局树状结构坐标 (如 1-2-1)\n  ▶ 由父级坐标拼接当前Index而成。第1层为1且不遗传，第2层(如电站)重新从1开始并向下世代遗传，精准定位设备在整个拓扑树中的绝对位置。\n\n${ParentName}：父节点最终名称\n  ▶ 正在生成当前实体时，其父节点经过所有规则替换后生成的最终完整名称。",
             "var-help-trigger": "变量说明",
@@ -8010,7 +8019,7 @@
                 "ASSET": "资产",
                 "DEVICE": "设备"
             },
-            "select-node-hint": "请选择左侧节点进行编辑",
+            "select-node-hint": "点击左侧节点查看节点详细。",
             "attributes": {
                 "title": "服务端属性",
                 "add": "添加属性",
@@ -8018,6 +8027,7 @@
                 "no-attributes": "暂无属性"
             },
             "topology-invalid": "拓扑配置无效",
+            "unnamed-node": "未命名节点",
             "node-configuration-invalid": "节点 \"{{nodeLabel}}\" 配置不完整，请检查名称、属性或相关设置",
             "save-error-invalid-node": "保存失败：节点 \"{{nodeLabel}}\" 配置不完整",
             "preview-error-invalid-node": "预览失败：节点 \"{{nodeLabel}}\" 配置不全，请检查名称模式及属性",
@@ -8030,7 +8040,8 @@
             "source-from-template-desc": "选择一个已有模板作为起点，在其基础上进行修改",
             "available-count": "可用模板: {{count}} 个",
             "choose-template": "选择模板",
-            "select-template-required": "请先选择一个模板"
+            "select-template-required": "请先选择一个模板",
+            "config-required": "配置项不能为空"
         }
     },
     "project": {

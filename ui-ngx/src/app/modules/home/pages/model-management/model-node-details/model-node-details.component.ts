@@ -15,7 +15,7 @@
 ///
 
 import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
-import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { AbstractControl, FormArray, FormBuilder, FormGroup, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { AssetNodeConfig, AssetNodeType } from '@shared/models/topology.models';
 import { isObject } from '@core/utils';
 import { debounceTime } from 'rxjs/operators';
@@ -30,6 +30,8 @@ export class ModelNodeDetailsComponent implements OnInit, OnChanges {
     @Input() node: AssetNodeConfig;
     @Input() isReadOnly = false;
     @Input() isCountLocked = false; // 第二层节点数量锁定为1
+    @Input() isTypeLocked = false; // 根节点类型锁定为ASSET
+    @Input() allSiblingNames: string[] = [];
     @Output() nodeChange = new EventEmitter<AssetNodeConfig>();
 
     editForm: FormGroup;
@@ -48,9 +50,9 @@ export class ModelNodeDetailsComponent implements OnInit, OnChanges {
     constructor(private fb: FormBuilder) {
         this.editForm = this.fb.group({
             type: [AssetNodeType.DEVICE, Validators.required],
-            entityTypeLabel: ['', Validators.required],
-            namePattern: ['${StationSn}-${Type}${HierarchicalIndex}', Validators.required],
-            defaultCount: [1, [Validators.required, Validators.min(1)]],
+            entityTypeLabel: ['', [Validators.required, Validators.maxLength(255), this.duplicateNameValidator()]],
+            namePattern: ['${StationSn}-${Type}${HierarchicalIndex}', [Validators.required, Validators.maxLength(255)]],
+            defaultCount: [1, [Validators.required, Validators.min(1), Validators.pattern(/^[0-9]+$/)]],
             profileType: ['default'],
             customProfileName: [''],
             credentialStrategy: ['name'],
@@ -72,10 +74,20 @@ export class ModelNodeDetailsComponent implements OnInit, OnChanges {
         });
     }
 
+    private duplicateNameValidator(): ValidatorFn {
+        return (control: AbstractControl): ValidationErrors | null => {
+            const name = control.value?.trim();
+            if (name && this.allSiblingNames && this.allSiblingNames.includes(name)) {
+                return { duplicateName: true };
+            }
+            return null;
+        };
+    }
+
     private updateProfileValidators(type: string) {
         const customNameControl = this.editForm.get('customProfileName');
         if (type === 'custom') {
-            customNameControl.setValidators([Validators.required]);
+            customNameControl.setValidators([Validators.required, Validators.maxLength(255)]);
         } else {
             customNameControl.clearValidators();
         }
@@ -85,7 +97,7 @@ export class ModelNodeDetailsComponent implements OnInit, OnChanges {
     private updateCredentialValidators(strategy: string) {
         const customCredentialControl = this.editForm.get('customCredentialName');
         if (strategy === 'custom') {
-            customCredentialControl.setValidators([Validators.required]);
+            customCredentialControl.setValidators([Validators.required, Validators.maxLength(255)]);
         } else {
             customCredentialControl.clearValidators();
         }
@@ -93,7 +105,7 @@ export class ModelNodeDetailsComponent implements OnInit, OnChanges {
     }
 
     ngOnInit(): void {
-        this.editForm.valueChanges.pipe(debounceTime(300)).subscribe(() => {
+        this.editForm.valueChanges.subscribe(() => {
             if (!this.isPatching) {
                 this.updateNode();
             }
@@ -104,7 +116,10 @@ export class ModelNodeDetailsComponent implements OnInit, OnChanges {
         if (changes.node && this.node) {
             this.patchForm();
         }
-        if (changes.isReadOnly || (changes.node && this.node) || changes.isCountLocked) {
+        if (changes.allSiblingNames) {
+            this.editForm.get('entityTypeLabel').updateValueAndValidity({ emitEvent: false });
+        }
+        if (changes.isReadOnly || (changes.node && this.node) || changes.isCountLocked || changes.isTypeLocked) {
             this.updateFormState();
         }
     }
@@ -120,6 +135,9 @@ export class ModelNodeDetailsComponent implements OnInit, OnChanges {
                 if (this.isCountLocked) {
                     this.editForm.get('defaultCount').setValue(1, { emitEvent: false });
                     this.editForm.get('defaultCount').disable({ emitEvent: false });
+                }
+                if (this.isTypeLocked) {
+                    this.editForm.get('type').disable({ emitEvent: false });
                 }
             }
         } finally {
@@ -199,37 +217,36 @@ export class ModelNodeDetailsComponent implements OnInit, OnChanges {
     }
 
     updateNode() {
-        if (this.editForm.valid) {
-            // 使用 getRawValue 以包含由于 isCountLocked 而处于 disabled 状态的控件的值（如 defaultCount）
-            const formValue = this.editForm.getRawValue();
-            const attributes: Record<string, any> = {};
+        // Always try to get values, even if invalid, so the parent wizard dialog
+        // can accurately assess the current state (e.g. empty node name).
+        // 使用 getRawValue 以包含由于 isCountLocked 而处于 disabled 状态的控件的值（如 defaultCount）
+        const formValue = this.editForm.getRawValue();
+        const attributes: Record<string, any> = {};
 
-            formValue.attributes.forEach((attr: any) => {
-                if (attr.key && attr.value !== null && attr.value !== undefined && String(attr.value).trim() !== '') {
-                    if (attr.valueType === 'EXPRESSION') {
-                        attributes[attr.key] = 'EXP::' + attr.value;
-                    } else {
-                        attributes[attr.key] = attr.value;
-                    }
+        formValue.attributes.forEach((attr: any) => {
+            if (attr.key && attr.value !== null && attr.value !== undefined && String(attr.value).trim() !== '') {
+                if (attr.valueType === 'EXPRESSION') {
+                    attributes[attr.key] = 'EXP::' + attr.value;
+                } else {
+                    attributes[attr.key] = attr.value;
                 }
-            });
+            }
+        });
 
-            // Update the node object directly (by reference) so tree updates
-            // Also emit event if parent needs to react specifically
+        // Update the node object directly (by reference) so tree updates
+        // and validation passes can inspect true current state.
+        this.node.type = formValue.type;
+        this.node.entityTypeLabel = formValue.entityTypeLabel;
+        this.node.namePattern = formValue.namePattern;
+        this.node.defaultCount = formValue.defaultCount;
+        this.node.profileType = formValue.profileType;
+        this.node.customProfileName = formValue.customProfileName;
+        this.node.credentialStrategy = formValue.credentialStrategy;
+        this.node.customCredentialName = formValue.customCredentialName;
+        this.node.relationAdditionalInfo = formValue.relationAdditionalInfo;
+        this.node.attributes = attributes;
 
-            this.node.type = formValue.type;
-            this.node.entityTypeLabel = formValue.entityTypeLabel;
-            this.node.namePattern = formValue.namePattern;
-            this.node.defaultCount = formValue.defaultCount;
-            this.node.profileType = formValue.profileType;
-            this.node.customProfileName = formValue.customProfileName;
-            this.node.credentialStrategy = formValue.credentialStrategy;
-            this.node.customCredentialName = formValue.customCredentialName;
-            this.node.relationAdditionalInfo = formValue.relationAdditionalInfo;
-            this.node.attributes = attributes;
-
-            this.nodeChange.emit(this.node);
-        }
+        this.nodeChange.emit(this.node);
     }
 
     getSelectedIcon(valueType: string): string {

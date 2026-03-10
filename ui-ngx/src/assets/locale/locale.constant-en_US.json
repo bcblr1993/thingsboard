@@ -9541,28 +9541,32 @@
         "default": "Default",
         "name": "Model Name",
         "name-required": "Model name is required",
+        "name-max-length": "Model name length should be less than 256 characters",
         "version-required": "Version is required",
+        "version-max-length": "Version length should be less than 256 characters",
         "relation": {
             "additional-info": "Relation Additional Info"
         },
         "node-details": "Node Details",
         "description": "Description",
+        "description-max-length": "Description length should be less than 512 characters",
         "credentials": {
             "strategy": "Credential Strategy",
             "strategy-name": "Device Name",
             "strategy-pinyin": "Pinyin Initials",
             "strategy-custom": "Custom Pattern",
             "custom-pattern": "Custom Pattern",
-            "custom-pattern-hint": "Use ${DeviceName} as placeholder"
+            "custom-pattern-hint": "Please enter custom name rule",
+            "custom-name-max-length": "Custom pattern should be less than 256 characters"
         },
         "created-time": "Created Time",
         "add-title": "Add Configuration Template",
         "add": "Add Configuration Template",
         "delete": "Delete Model",
         "delete-title": "Are you sure you want to delete model '{{modelName}}'?",
-        "delete-text": "Once deleted, the model definition cannot be recovered.",
+        "delete-text": "Be careful, after the confirmation the model and all related data will become unrecoverable.",
         "delete-models-title": "Are you sure you want to delete {{count}} models?",
-        "delete-models-text": "Once deleted, the selected models cannot be recovered.",
+        "delete-models-text": "Be careful, after the confirmation all selected models and all related data will become unrecoverable.",
         "delete-default-title": "Cannot delete default model",
         "delete-default-message": "Please set another model as default before deleting this one.",
         "details": "Details",
@@ -9585,15 +9589,62 @@
             "add": "Add Attribute"
         },
         "node": {
+            "new-device": "New Device",
+            "name": "Node Name",
+            "name-max-length": "Node name length should be less than 256 characters",
+            "name-duplicate": "Duplicate node names are not allowed at the same level",
+            "name-pattern": "Name Pattern",
+            "count": "Count",
+            "count-integer": "Node count must be an integer",
             "delete-confirmation": "Are you sure you want to delete node {{name}}?",
             "delete-confirmation-title": "Delete Node"
+        },
+        "wizard": {
+            "model-details": "Model Details",
+            "customize-model": "Customize Model",
+            "preview": "Preview",
+            "node-name": "Node Name",
+            "name-pattern": "Name Rule",
+            "name-pattern-max-length": "Name rule length should be less than 256 characters",
+            "vars-hint": "Vars: ${ParentName}, ${Index}, ${Type}, ${StationSn}, ${HierarchicalIndex}",
+            "vars-help": "Available Variables & Generation Rules:\n\n${StationSn}: Global Station SN or Preference\n  ▶ Often used as common prefix. Ex: 'SN100-PCS' → 'SN100-PCS'\n\n${Type}: Current Node Type Name\n  ▶ Taken from the name of the current node configuration. Ex: 'Device-${Type}' → 'Device-BMS'\n\n${Index}: Local Index at Current Level (e.g., 1, 2, 3...)\n  ▶ Determined by the \"Count\" of current node, reflecting sibling order.\n\n${HierarchicalIndex}: Global Tree Coordinate (e.g., 1-2-1)\n  ▶ Concatenation of parent HierarchicalIndex and current Index. Level 1 starts at 1 and is not inherited. Level 2 (e.g., station) starts from 1 and is inherited downwards, precisely locating entities in the topology.\n\n${ParentName}: Final Parent Node Name\n  ▶ The final generated name of the parent node after all rule applications.",
+            "var-help-trigger": "Variable Description",
+            "count": "Count",
+            "node-type": {
+                "ASSET": "Asset",
+                "DEVICE": "Device"
+            },
+            "select-node-hint": "Click a node on the left to view details.",
+            "attributes": {
+                "title": "Server Side Attributes",
+                "add": "Add Attribute",
+                "key": "Key",
+                "no-attributes": "No Attributes"
+            },
+            "topology-invalid": "Topology configuration invalid",
+            "unnamed-node": "Unnamed Node",
+            "node-configuration-invalid": "Node \"{{nodeLabel}}\" configuration incomplete, please check name, attributes or settings",
+            "save-error-invalid-node": "Save failed: Node \"{{nodeLabel}}\" configuration incomplete",
+            "preview-error-invalid-node": "Preview failed: Node \"{{nodeLabel}}\" configuration incomplete, please check name pattern and attributes",
+            "deploy-error-invalid-node": "Deploy failed: Node \"{{nodeLabel}}\" configuration incomplete",
+            "select-source": "Select Source",
+            "select-source-hint": "Please select how to create the model",
+            "source-empty": "Empty Model",
+            "source-empty-desc": "Define a new topology from scratch",
+            "source-from-template": "Based on Existing Template",
+            "source-from-template-desc": "Select an existing template as a starting point and modify it",
+            "available-count": "Available Templates: {{count}}",
+            "choose-template": "Choose Template",
+            "select-template-required": "Please select a template first",
+            "config-required": "Configuration cannot be empty"
         },
         "type": "Type",
         "profile": {
             "type": "Profile Type",
             "default": "Default Profile",
             "custom": "Custom Profile",
-            "name": "Profile Name"
+            "name": "Profile Name",
+            "name-max-length": "Profile name length should be less than 256 characters"
         }
     },
     "project": {

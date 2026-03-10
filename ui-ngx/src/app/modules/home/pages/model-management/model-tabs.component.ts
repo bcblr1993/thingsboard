@@ -68,6 +68,7 @@ export class ModelTabsComponent extends EntityTabsComponent<TopologyTemplate> im
             this.detailsForm.patchValue({
                 configuration: this.entity.configuration
             });
+            this.detailsForm.get('configuration').updateValueAndValidity();
             this.detailsForm.markAsDirty();
         }
     }

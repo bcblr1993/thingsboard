@@ -183,7 +183,12 @@
     white-space: pre-wrap;
     max-width: 480px;
     cursor: text;
-    user-select: text;
     -webkit-user-select: text;
+    user-select: text;
     background: transparent;
+}
+
+.help-icon {
+    cursor: pointer;
+    color: rgba(0, 0, 0, 0.54);
 }

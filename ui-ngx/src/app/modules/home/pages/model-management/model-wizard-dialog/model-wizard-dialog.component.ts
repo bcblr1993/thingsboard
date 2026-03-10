@@ -24,7 +24,7 @@ import { Router } from '@angular/router';
 import { Observable, Subscription, of } from 'rxjs';
 import { ActionNotificationShow } from '@core/notification/notification.actions';
 import { TranslateService } from '@ngx-translate/core';
-import { map, startWith } from 'rxjs/operators';
+import { map, startWith, tap } from 'rxjs/operators';
 import { TopologyTemplateService } from '@core/http/topology-template.service';
 import { AssetNodeConfig, AssetNodeType, TopologyTemplate } from '@shared/models/topology.models';
 import { NULL_UUID } from '@shared/models/id/has-uuid';
@@ -94,9 +94,9 @@ export class ModelWizardDialogComponent extends DialogComponent<ModelWizardDialo
             .pipe(map(({ matches }) => matches ? 'end' : 'bottom'));
 
         this.modelWizardFormGroup = this.fb.group({
-            name: ['', [Validators.required, Validators.maxLength(255)]],
-            version: ['', [Validators.required, Validators.maxLength(255)]],
-            description: ['']
+            name: ['', [Validators.required, Validators.maxLength(255), Validators.pattern(/.*\S.*/)]],
+            version: ['', [Validators.required, Validators.maxLength(255), Validators.pattern(/.*\S.*/)]],
+            description: ['', [Validators.maxLength(512)]]
         });
 
         this.customizeFormGroup = this.fb.group({
@@ -160,7 +160,13 @@ export class ModelWizardDialogComponent extends DialogComponent<ModelWizardDialo
 
                 this.filteredTemplates$ = this.templateControl.valueChanges.pipe(
                     startWith(''),
-                    map(value => {
+                    tap((value: any) => {
+                        // 如果值变成了字符串（用户手改了输入框或清空了），说明不再处于刚选中某个对象的精确状态
+                        if (typeof value === 'string') {
+                            this.selectedTemplateId = null;
+                        }
+                    }),
+                    map((value: any) => {
                         const search = typeof value === 'string' ? value : (value ? value.name : '');
                         if (!search) {
                             return this.availableTemplates;
@@ -188,6 +194,7 @@ export class ModelWizardDialogComponent extends DialogComponent<ModelWizardDialo
         this.templateSource = source;
         if (source === TemplateSource.EMPTY) {
             this.selectedTemplateId = null;
+            this.templateControl.setValue('');
             this.applyEmptyTopology();
         }
     }
@@ -225,7 +232,7 @@ export class ModelWizardDialogComponent extends DialogComponent<ModelWizardDialo
             if (this.templateSource === TemplateSource.FROM_TEMPLATE && !this.selectedTemplateId) {
                 this.store.dispatch(new ActionNotificationShow({
                     message: this.translate.instant('model.wizard.select-template-required'),
-                    type: 'warn'
+                    type: 'error'
                 }));
                 return;
             }
@@ -233,12 +240,14 @@ export class ModelWizardDialogComponent extends DialogComponent<ModelWizardDialo
 
         // 检查"自定义模型"步骤（Step 2）
         if (this.selectedIndex === 2) {
+            this.customizeFormGroup.get('configuration').updateValueAndValidity();
             const config = this.customizeFormGroup.get('configuration').value;
             const invalidNode = this.findInvalidNode(config);
             if (invalidNode) {
                 this.selectedNode = invalidNode;
+                const nodeLabel = invalidNode.entityTypeLabel?.trim() ? invalidNode.entityTypeLabel : this.translate.instant('model.wizard.unnamed-node');
                 this.store.dispatch(new ActionNotificationShow({
-                    message: this.translate.instant('model.wizard.node-configuration-invalid', { nodeLabel: invalidNode.entityTypeLabel }),
+                    message: this.translate.instant('model.wizard.node-configuration-invalid', { nodeLabel }),
                     type: 'error'
                 }));
                 return;
@@ -284,20 +293,19 @@ export class ModelWizardDialogComponent extends DialogComponent<ModelWizardDialo
     public findInvalidNode(node: AssetNodeConfig): AssetNodeConfig | null {
         if (!node) return null;
 
-        // 1. 验证必填字段：节点名称和节点数量
-        if (!node.entityTypeLabel?.trim() ||
-            node.defaultCount === null || node.defaultCount === undefined || isNaN(node.defaultCount) || node.defaultCount < 1) {
-            console.warn('[ModelWizard] Validation Failed on Fields (Label/Count):', node);
+        if (!node.entityTypeLabel || node.entityTypeLabel.trim() === '' || node.entityTypeLabel.length > 255 ||
+            !node.namePattern || node.namePattern.trim() === '' || node.namePattern.length > 255 ||
+            node.defaultCount === null || node.defaultCount === undefined || isNaN(node.defaultCount) ||
+            node.defaultCount < 1 || !Number.isInteger(node.defaultCount)) {
+            console.warn('[ModelWizard] Validation Failed on Fields (Label/Count/Pattern):', node);
             return node;
         }
 
-        // 2. 验证设备/资产档案设置：仅当明确选择了 'custom' 时，才强制需要填写自定义名称
-        if (node.profileType === 'custom' && (!node.customProfileName || !node.customProfileName.trim())) {
+        if (node.profileType === 'custom' && (!node.customProfileName || !node.customProfileName.trim() || node.customProfileName.length > 255)) {
             return node;
         }
 
-        // 3. 验证设备凭证设置：仅当（若是设备类型）且明确选择了 'custom' 时，才强制需要填写自定义凭证前缀
-        if (node.type === AssetNodeType.DEVICE && node.credentialStrategy === 'custom' && (!node.customCredentialName || !node.customCredentialName.trim())) {
+        if (node.type === AssetNodeType.DEVICE && node.credentialStrategy === 'custom' && (!node.customCredentialName || !node.customCredentialName.trim() || node.customCredentialName.length > 255)) {
             return node;
         }
 
@@ -318,7 +326,17 @@ export class ModelWizardDialogComponent extends DialogComponent<ModelWizardDialo
 
         // 5. 递归验证子节点
         if (node.subNodes && node.subNodes.length > 0) {
+            const names = new Set<string>();
             for (const subNode of node.subNodes) {
+                const name = subNode.entityTypeLabel?.trim();
+                if (name) {
+                    if (names.has(name)) {
+                        console.warn('[ModelWizard] Validation Failed on Duplicate Name:', name, 'in node:', node.entityTypeLabel);
+                        return subNode; // 返回发现重复的节点
+                    }
+                    names.add(name);
+                }
+
                 const invalidSubNode = this.findInvalidNode(subNode);
                 if (invalidSubNode) {
                     return invalidSubNode;
@@ -335,12 +353,14 @@ export class ModelWizardDialogComponent extends DialogComponent<ModelWizardDialo
 
     add(): void {
         if (this.allValid()) {
+            this.customizeFormGroup.get('configuration').updateValueAndValidity();
             const config = this.customizeFormGroup.get('configuration').value;
             const invalidNode = this.findInvalidNode(config);
             if (invalidNode) {
                 this.selectedNode = invalidNode;
+                const nodeLabel = invalidNode.entityTypeLabel?.trim() ? invalidNode.entityTypeLabel : this.translate.instant('model.wizard.unnamed-node');
                 this.store.dispatch(new ActionNotificationShow({
-                    message: this.translate.instant('model.wizard.save-error-invalid-node', { nodeLabel: invalidNode.entityTypeLabel }),
+                    message: this.translate.instant('model.wizard.save-error-invalid-node', { nodeLabel }),
                     type: 'error'
                 }));
                 return;
@@ -364,14 +384,27 @@ export class ModelWizardDialogComponent extends DialogComponent<ModelWizardDialo
     }
 
     allValid(): boolean {
+        // 如果第一步选择了"基于现有的模板"，但还没选好模板，则拦截并切回第0步
+        if (this.templateSource === TemplateSource.FROM_TEMPLATE && !this.selectedTemplateId) {
+            this.store.dispatch(new ActionNotificationShow({
+                message: this.translate.instant('model.wizard.select-template-required'),
+                type: 'error'
+            }));
+            this.addModelWizardStepper.selectedIndex = 0;
+            this.templateControl.markAsTouched();
+            return false;
+        }
+
         return !this.addModelWizardStepper.steps.find((item, index) => {
-            if (item.stepControl && item.stepControl.invalid) {
-                item.interacted = true;
-                this.addModelWizardStepper.selectedIndex = index;
-                return true;
-            } else {
-                return false;
+            if (item.stepControl) {
+                item.stepControl.updateValueAndValidity();
+                if (item.stepControl.invalid) {
+                    item.interacted = true;
+                    this.addModelWizardStepper.selectedIndex = index;
+                    return true;
+                }
             }
+            return false;
         });
     }
 
