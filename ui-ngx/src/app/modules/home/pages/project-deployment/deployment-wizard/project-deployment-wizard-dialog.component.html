@@ -39,8 +39,9 @@
                 'action.back' | translate }}</button>
             <span class="flex-1"></span>
             <button mat-stroked-button color="primary" type="button" *ngIf="showNext"
-                [disabled]="(isLoading$ | async) || nextDisabled" (click)="nextStep()">{{ 'action.next' | translate
-                }}</button>
+                [disabled]="(isLoading$ | async) || nextDisabled" (click)="nextStep()">
+                <span>{{ 'action.next' | translate }}: {{ nextStepLabel | translate }}</span>
+            </button>
         </div>
         <mat-divider class="full-width"></mat-divider>
         <div class="dialog-actions-row justify-end">

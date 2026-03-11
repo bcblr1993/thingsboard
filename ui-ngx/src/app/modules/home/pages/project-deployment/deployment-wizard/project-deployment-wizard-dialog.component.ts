@@ -85,6 +85,18 @@ export class ProjectDeploymentWizardDialogComponent extends DialogComponent<Proj
         return false;
     }
 
+    get nextStepLabel(): string {
+        const nextIndex = this.selectedIndex + 1;
+        if (nextIndex === 1) {
+            return 'project.deployment-wizard.global-config';
+        } else if (nextIndex === 2) {
+            return 'project.deployment-wizard.topology-preview';
+        } else if (nextIndex === 3) {
+            return 'project.deployment-wizard.resolved-preview';
+        }
+        return 'action.next';
+    }
+
     previousStep(): void {
         this.wizard.previousStep();
     }
