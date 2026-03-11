@@ -18,6 +18,7 @@ import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChange
 import { AbstractControl, FormArray, FormBuilder, FormGroup, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { AssetNodeConfig, AssetNodeType } from '@shared/models/topology.models';
 import { isObject } from '@core/utils';
+import { merge } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
 
 @Component({
@@ -105,7 +106,7 @@ export class ModelNodeDetailsComponent implements OnInit, OnChanges {
     }
 
     ngOnInit(): void {
-        this.editForm.valueChanges.subscribe(() => {
+        merge(this.editForm.valueChanges, this.editForm.statusChanges).subscribe(() => {
             if (!this.isPatching) {
                 this.updateNode();
             }
@@ -188,11 +189,7 @@ export class ModelNodeDetailsComponent implements OnInit, OnChanges {
                         valueType = 'EXPRESSION';
                         value = value.substring(5);
                     }
-                    this.attributesFormArray.push(this.fb.group({
-                        key: [key, Validators.required],
-                        valueType: [valueType],
-                        value: [value, Validators.required]
-                    }), { emitEvent: false });
+                    this.attributesFormArray.push(this.createAttributeGroup(key, valueType, value), { emitEvent: false });
                 });
             }
         } finally {
@@ -203,11 +200,8 @@ export class ModelNodeDetailsComponent implements OnInit, OnChanges {
         }
     }
     addAttribute() {
-        this.attributesFormArray.push(this.fb.group({
-            key: ['', Validators.required],
-            valueType: ['STRING'],
-            value: ['', Validators.required]
-        }));
+        this.attributesFormArray.push(this.createAttributeGroup());
+        this.editForm.markAsDirty();
     }
 
     removeAttribute(index: number) {
@@ -223,13 +217,16 @@ export class ModelNodeDetailsComponent implements OnInit, OnChanges {
         const formValue = this.editForm.getRawValue();
         const attributes: Record<string, any> = {};
 
-        formValue.attributes.forEach((attr: any) => {
-            if (attr.key && attr.value !== null && attr.value !== undefined && String(attr.value).trim() !== '') {
-                if (attr.valueType === 'EXPRESSION') {
-                    attributes[attr.key] = 'EXP::' + attr.value;
-                } else {
-                    attributes[attr.key] = attr.value;
-                }
+        formValue.attributes.forEach((attr: any, index: number) => {
+            let key = attr.key ? attr.key.trim() : '';
+            if (!key) {
+                key = `__empty_key_${index}`;
+            }
+            const value = attr.value;
+            if (attr.valueType === 'EXPRESSION') {
+                attributes[key] = (value !== null && value !== undefined) ? 'EXP::' + value : 'EXP::';
+            } else {
+                attributes[key] = value;
             }
         });
 
@@ -245,6 +242,7 @@ export class ModelNodeDetailsComponent implements OnInit, OnChanges {
         this.node.customCredentialName = formValue.customCredentialName;
         this.node.relationAdditionalInfo = formValue.relationAdditionalInfo;
         this.node.attributes = attributes;
+        this.node._isInvalid = this.editForm.invalid;
 
         this.nodeChange.emit(this.node);
     }
@@ -257,5 +255,48 @@ export class ModelNodeDetailsComponent implements OnInit, OnChanges {
     getSelectedName(valueType: string): string {
         const vt = this.attributeValueTypes.find(t => t.value === valueType);
         return vt ? vt.name : 'value.string';
+    }
+
+    private createAttributeGroup(key?: string, valueType?: string, value?: any): FormGroup {
+        const type = valueType || 'STRING';
+        const group = this.fb.group({
+            key: [key || '', Validators.required],
+            valueType: [type],
+            value: [value !== undefined ? value : '', this.getValidatorsForType(type)]
+        });
+
+        group.get('valueType').valueChanges.subscribe(newType => {
+            if (this.isPatching) return;
+            const valCtrl = group.get('value');
+            valCtrl.setValidators(this.getValidatorsForType(newType));
+
+            if (newType === 'BOOLEAN' && typeof valCtrl.value !== 'boolean') {
+                valCtrl.setValue(false, { emitEvent: false });
+            }
+
+            valCtrl.updateValueAndValidity({ emitEvent: false });
+            this.editForm.markAsDirty();
+            this.updateNode();
+        });
+
+        return group;
+    }
+
+    private getValidatorsForType(type: string): ValidatorFn[] {
+        const validators = [Validators.required];
+        if (type === 'INTEGER') {
+            validators.push((control: AbstractControl): ValidationErrors | null => {
+                const val = control.value;
+                if (val === null || val === undefined || val === '') {
+                    return null;
+                }
+                const num = Number(val);
+                if (isNaN(num) || !Number.isInteger(num)) {
+                    return { pattern: true };
+                }
+                return null;
+            });
+        }
+        return validators;
     }
 }

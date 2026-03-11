@@ -293,6 +293,10 @@ export class ModelWizardDialogComponent extends DialogComponent<ModelWizardDialo
     public findInvalidNode(node: AssetNodeConfig): AssetNodeConfig | null {
         if (!node) return null;
 
+        if (node._isInvalid) {
+            return node;
+        }
+
         if (!node.entityTypeLabel || node.entityTypeLabel.trim() === '' || node.entityTypeLabel.length > 255 ||
             !node.namePattern || node.namePattern.trim() === '' || node.namePattern.length > 255 ||
             node.defaultCount === null || node.defaultCount === undefined || isNaN(node.defaultCount) ||
@@ -321,6 +325,9 @@ export class ModelWizardDialogComponent extends DialogComponent<ModelWizardDialo
                 if (value === null || value === undefined || (typeof value === 'string' && !value.trim())) {
                     return node;
                 }
+                // 显式检查：如果是数值且包含小数点，但在某些场景下（如从 integer 转换而来）可能非法
+                // 这里的校验逻辑在 ModelNodeDetailsComponent 中已经处理并同步到 _isInvalid，
+                // 但为了保险起见，如果 _isInvalid 为真，我们在上面已经拦截了。
             }
         }
 

@@ -77,6 +77,10 @@ export class ModelDetailsPanelComponent extends EntityComponent<TopologyTemplate
     private findInvalidNode(node: AssetNodeConfig): AssetNodeConfig | null {
         if (!node) return null;
 
+        if (node._isInvalid) {
+            return node;
+        }
+
         if (!node.entityTypeLabel || node.entityTypeLabel.trim() === '' || node.entityTypeLabel.length > 255 ||
             !node.namePattern || node.namePattern.trim() === '' || node.namePattern.length > 255 ||
             node.defaultCount === null || node.defaultCount === undefined || isNaN(node.defaultCount) ||

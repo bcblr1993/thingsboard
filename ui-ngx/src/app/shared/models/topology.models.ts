@@ -33,6 +33,7 @@ export interface AssetNodeConfig {
     credentialStrategy?: 'name' | 'pinyin' | 'custom';
     customCredentialName?: string;
     relationAdditionalInfo?: any;
+    _isInvalid?: boolean;
 }
 
 import { EntityId } from '@shared/models/id/entity-id';
