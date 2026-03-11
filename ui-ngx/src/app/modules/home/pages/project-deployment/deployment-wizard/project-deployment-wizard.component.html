@@ -42,7 +42,7 @@
                                 <span class="template-version" *ngIf="tpl.modelVersion"> ({{ tpl.modelVersion }})</span>
                             </mat-option>
                         </mat-autocomplete>
-                        <mat-error *ngIf="selectTemplateForm.get('templateId').hasError('required')">
+                        <mat-error *ngIf="selectTemplateForm.get('templateId').hasError('required') || selectTemplateForm.get('templateId').hasError('invalidTemplate')">
                             {{ 'project.deployment-wizard.template-required' | translate }}
                         </mat-error>
                     </mat-form-field>

@@ -89,7 +89,13 @@ export class ProjectDeploymentWizardComponent extends PageComponent implements O
         private cd: ChangeDetectorRef) {
         super(store);
         this.selectTemplateForm = this.fb.group({
-            templateId: [null, Validators.required]
+            templateId: [null, [Validators.required, (control) => {
+                const value = control.value;
+                if (!value || typeof value === 'string' || !value.id || !value.id.id) {
+                    return { invalidTemplate: true };
+                }
+                return null;
+            }]]
         });
         this.basicInfoForm = this.fb.group({
             companyName: ['', Validators.required],
