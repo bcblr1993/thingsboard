@@ -9591,6 +9591,7 @@
         "node": {
             "new-device": "New Device",
             "name": "Node Name",
+            "name-required": "Node name is required",
             "name-max-length": "Node name length should be less than 256 characters",
             "name-duplicate": "Duplicate node names are not allowed at the same level",
             "name-pattern": "Name Pattern",
@@ -9682,7 +9683,13 @@
             "update-node": "Update Node",
             "select-node-help": "Select a node to edit",
             "select-node-hint": "Select a node to configure",
-            "resolved-preview": "Resolved Preview"
+            "resolved-preview": "Resolved Preview",
+            "company-name-required": "Company name is required",
+            "station-name-required": "Station name is required",
+            "station-sn-required": "Station SN is required",
+            "company-name-max-length": "Company name should be less than 256 characters",
+            "station-name-max-length": "Station name should be less than 256 characters",
+            "station-sn-max-length": "Station SN should be less than 256 characters"
         },
         "deployment-history": {
             "title": "Deployment History",

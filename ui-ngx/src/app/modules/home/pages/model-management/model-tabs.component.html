@@ -28,6 +28,7 @@
             <tb-model-node-details *ngIf="selectedNode" [node]="selectedNode" [isReadOnly]="!isEdit"
                 [isCountLocked]="topologyTree.isRootNode(selectedNode) || topologyTree.isSecondLevelNode(selectedNode)"
                 [isTypeLocked]="topologyTree.isRootNode(selectedNode) || topologyTree.isSecondLevelNode(selectedNode)"
+                [isNamePatternHidden]="topologyTree.isRootNode(selectedNode) || topologyTree.isSecondLevelNode(selectedNode)"
                 [allSiblingNames]="topologyTree.getSiblingNames(selectedNode)"
                 (nodeChange)="onNodeDetailsChange($event)">
             </tb-model-node-details>

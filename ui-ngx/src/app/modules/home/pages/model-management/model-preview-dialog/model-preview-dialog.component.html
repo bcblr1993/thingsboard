@@ -34,6 +34,7 @@
                 <tb-model-node-details [node]="selectedNode" [isReadOnly]="true"
                     [isCountLocked]="topologyTree.isRootNode(selectedNode) || topologyTree.isSecondLevelNode(selectedNode)"
                     [isTypeLocked]="topologyTree.isRootNode(selectedNode) || topologyTree.isSecondLevelNode(selectedNode)"
+                    [isNamePatternHidden]="topologyTree.isRootNode(selectedNode) || topologyTree.isSecondLevelNode(selectedNode)"
                     [allSiblingNames]="topologyTree.getSiblingNames(selectedNode)">
                 </tb-model-node-details>
             </div>

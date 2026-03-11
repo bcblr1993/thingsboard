@@ -38,8 +38,8 @@
                                     {{ isSystemTemplate(tpl) ? ('model.scope-public' | translate) :
                                     ('model.scope-tenant' | translate) }}
                                 </span>
-                                <span>{{ tpl.name }}</span>
-                                <span class="template-version" *ngIf="tpl.modelVersion"> ({{ tpl.modelVersion }})</span>
+                                <span class="template-option-name template-text-truncate" [matTooltip]="tpl.name">{{ tpl.name }}</span>
+                                <span class="template-version template-text-truncate" *ngIf="tpl.modelVersion" [matTooltip]="tpl.modelVersion"> ({{ tpl.modelVersion }})</span>
                             </mat-option>
                         </mat-autocomplete>
                         <mat-error *ngIf="selectTemplateForm.get('templateId').hasError('required') || selectTemplateForm.get('templateId').hasError('invalidTemplate')">
@@ -72,16 +72,34 @@
                         <mat-label>{{ 'project.deployment-wizard.company-name' | translate }}</mat-label>
                         <input matInput formControlName="companyName" required
                             placeholder="{{ 'project.deployment-wizard.company-name' | translate }}">
+                        <mat-error *ngIf="basicInfoForm.get('companyName').hasError('required')">
+                            {{ 'project.deployment-wizard.company-name-required' | translate }}
+                        </mat-error>
+                        <mat-error *ngIf="basicInfoForm.get('companyName').hasError('maxlength')">
+                            {{ 'project.deployment-wizard.company-name-max-length' | translate }}
+                        </mat-error>
                     </mat-form-field>
                     <mat-form-field appearance="fill" class="mat-block">
                         <mat-label>{{ 'project.deployment-wizard.station-name' | translate }}</mat-label>
                         <input matInput formControlName="stationName" required
                             placeholder="{{ 'project.deployment-wizard.station-name' | translate }}">
+                        <mat-error *ngIf="basicInfoForm.get('stationName').hasError('required')">
+                            {{ 'project.deployment-wizard.station-name-required' | translate }}
+                        </mat-error>
+                        <mat-error *ngIf="basicInfoForm.get('stationName').hasError('maxlength')">
+                            {{ 'project.deployment-wizard.station-name-max-length' | translate }}
+                        </mat-error>
                     </mat-form-field>
                     <mat-form-field appearance="fill" class="mat-block">
                         <mat-label>{{ 'project.deployment-wizard.station-sn' | translate }}</mat-label>
                         <input matInput formControlName="stationSn" required
                             placeholder="{{ 'project.deployment-wizard.station-sn' | translate }}">
+                        <mat-error *ngIf="basicInfoForm.get('stationSn').hasError('required')">
+                            {{ 'project.deployment-wizard.station-sn-required' | translate }}
+                        </mat-error>
+                        <mat-error *ngIf="basicInfoForm.get('stationSn').hasError('maxlength')">
+                            {{ 'project.deployment-wizard.station-sn-max-length' | translate }}
+                        </mat-error>
                     </mat-form-field>
                     <div class="mat-block checkbox-block mb-4">
                         <mat-checkbox formControlName="useStationNameAsPrefix">
@@ -94,7 +112,7 @@
         </mat-step>
 
         <!-- Step 3: Topology Preview & Edit -->
-        <mat-step>
+        <mat-step [stepControl]="topologyStepControl">
             <ng-template matStepLabel>{{ 'project.deployment-wizard.topology-preview' | translate }}</ng-template>
             <ng-template matStepContent>
             <div class="step-content">
@@ -108,6 +126,10 @@
                     <div class="details-wrapper">
                         <tb-model-node-details *ngIf="selectedNode" [node]="selectedNode" [isReadOnly]="false"
                             [isCountLocked]="topologyTree.isRootNode(selectedNode) || topologyTree.isSecondLevelNode(selectedNode)"
+                            [isTypeLocked]="topologyTree.isRootNode(selectedNode) || topologyTree.isSecondLevelNode(selectedNode)"
+                            [isNameLocked]="topologyTree.isRootNode(selectedNode) || topologyTree.isSecondLevelNode(selectedNode)"
+                            [isNamePatternHidden]="topologyTree.isRootNode(selectedNode) || topologyTree.isSecondLevelNode(selectedNode)"
+                            [allSiblingNames]="getSiblingNames(selectedNode)"
                             (nodeChange)="onNodeDetailsChange($event)">
                         </tb-model-node-details>
                         <div *ngIf="!selectedNode" class="no-selection">
@@ -121,7 +143,7 @@
         </mat-step>
 
         <!-- Step 4: Resolved Preview -->
-        <mat-step>
+        <mat-step [stepControl]="previewStepControl">
             <ng-template matStepLabel>{{ 'project.deployment-wizard.resolved-preview' | translate }}</ng-template>
             <ng-template matStepContent>
             <div class="step-content">
@@ -151,7 +173,7 @@
                                     (change)="toggleExclusion(node, $event.checked)" (click)="$event.stopPropagation()">
                                 </mat-checkbox>
                                 <mat-icon class="node-icon" [class.device-icon]="node.type === 'DEVICE'"
-                                    [class.asset-icon]="node.type !== 'DEVICE'">{{ node.type === 'DEVICE' ? 'devices' :
+                                    [class.asset-icon]="node.type !== 'DEVICE'">{{ node.type === 'DEVICE' ? 'developer_board' :
                                     'domain' }}</mat-icon>
                                 <span class="node-name" [class.excluded-node]="!node.included"><strong>{{
                                         node.name }}</strong></span>
@@ -186,7 +208,7 @@
                             <span class="stat-label">{{ 'project.deployment-wizard.total-assets' | translate }}</span>
                         </div>
                         <div class="stat-card device-card">
-                            <mat-icon>devices</mat-icon>
+                            <mat-icon>developer_board</mat-icon>
                             <span class="stat-value">{{ createdDevicesCount }}</span>
                             <span class="stat-label">{{ 'project.deployment-wizard.total-devices' | translate }}</span>
                         </div>

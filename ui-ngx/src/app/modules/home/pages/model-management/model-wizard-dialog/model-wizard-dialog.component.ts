@@ -70,6 +70,7 @@ export class ModelWizardDialogComponent extends DialogComponent<ModelWizardDialo
     selectedTemplateId: string | null = null;
     templatesLoading = false;
 
+    sourceStepControl: FormGroup;
     modelWizardFormGroup: FormGroup;
     customizeFormGroup: FormGroup;
 
@@ -92,6 +93,20 @@ export class ModelWizardDialogComponent extends DialogComponent<ModelWizardDialo
 
         this.stepperLabelPosition = this.breakpointObserver.observe(MediaBreakpoints['gt-sm'])
             .pipe(map(({ matches }) => matches ? 'end' : 'bottom'));
+
+        this.sourceStepControl = this.fb.group({
+            templateSource: [TemplateSource.EMPTY],
+            template: [null]
+        }, {
+            validators: (group: FormGroup) => {
+                const source = group.get('templateSource').value;
+                const template = group.get('template').value;
+                if (source === TemplateSource.FROM_TEMPLATE) {
+                    return (template && typeof template === 'object' && template.id) ? null : { templateRequired: true };
+                }
+                return null;
+            }
+        });
 
         this.modelWizardFormGroup = this.fb.group({
             name: ['', [Validators.required, Validators.maxLength(255), Validators.pattern(/.*\S.*/)]],
@@ -158,7 +173,7 @@ export class ModelWizardDialogComponent extends DialogComponent<ModelWizardDialo
                 this.availableTemplates = pageData.data;
                 this.templatesLoading = false;
 
-                this.filteredTemplates$ = this.templateControl.valueChanges.pipe(
+                this.filteredTemplates$ = this.sourceStepControl.get('template').valueChanges.pipe(
                     startWith(''),
                     tap((value: any) => {
                         // 如果值变成了字符串（用户手改了输入框或清空了），说明不再处于刚选中某个对象的精确状态
@@ -192,11 +207,13 @@ export class ModelWizardDialogComponent extends DialogComponent<ModelWizardDialo
      */
     onTemplateSourceChange(source: TemplateSource): void {
         this.templateSource = source;
+        this.sourceStepControl.get('templateSource').setValue(source);
         if (source === TemplateSource.EMPTY) {
             this.selectedTemplateId = null;
-            this.templateControl.setValue('');
+            this.sourceStepControl.get('template').setValue(null);
             this.applyEmptyTopology();
         }
+        this.sourceStepControl.updateValueAndValidity();
     }
 
     /**
@@ -204,11 +221,13 @@ export class ModelWizardDialogComponent extends DialogComponent<ModelWizardDialo
      */
     onTemplateSelected(template: TopologyTemplate): void {
         this.selectedTemplateId = template?.id?.id;
+        this.sourceStepControl.get('template').setValue(template);
         if (template && template.configuration) {
             // 深拷贝以避免修改原始模板
             this.defaultTopology = JSON.parse(JSON.stringify(template.configuration));
             this.customizeFormGroup.get('configuration').setValue(this.defaultTopology);
         }
+        this.sourceStepControl.updateValueAndValidity();
     }
 
     /**
@@ -229,11 +248,21 @@ export class ModelWizardDialogComponent extends DialogComponent<ModelWizardDialo
     nextStep(): void {
         // 检查"选择来源"步骤（Step 0）
         if (this.selectedIndex === 0) {
-            if (this.templateSource === TemplateSource.FROM_TEMPLATE && !this.selectedTemplateId) {
+            this.sourceStepControl.updateValueAndValidity();
+            if (this.sourceStepControl.invalid) {
+                this.sourceStepControl.get('template').markAsTouched();
                 this.store.dispatch(new ActionNotificationShow({
                     message: this.translate.instant('model.wizard.select-template-required'),
                     type: 'error'
                 }));
+                return;
+            }
+        }
+
+        // 检查"模型详情"步骤（Step 1）
+        if (this.selectedIndex === 1) {
+            this.modelWizardFormGroup.updateValueAndValidity();
+            if (this.modelWizardFormGroup.invalid) {
                 return;
             }
         }
@@ -391,14 +420,15 @@ export class ModelWizardDialogComponent extends DialogComponent<ModelWizardDialo
     }
 
     allValid(): boolean {
-        // 如果第一步选择了"基于现有的模板"，但还没选好模板，则拦截并切回第0步
-        if (this.templateSource === TemplateSource.FROM_TEMPLATE && !this.selectedTemplateId) {
+        // 如果第一步校验失败
+        this.sourceStepControl.updateValueAndValidity();
+        if (this.sourceStepControl.invalid) {
             this.store.dispatch(new ActionNotificationShow({
                 message: this.translate.instant('model.wizard.select-template-required'),
                 type: 'error'
             }));
             this.addModelWizardStepper.selectedIndex = 0;
-            this.templateControl.markAsTouched();
+            this.sourceStepControl.get('template').markAsTouched();
             return false;
         }
 

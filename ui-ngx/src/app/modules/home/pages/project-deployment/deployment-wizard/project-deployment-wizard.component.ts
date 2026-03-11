@@ -21,7 +21,7 @@ import { AppState } from '@core/core.state';
 import { ActionNotificationShow } from '@core/notification/notification.actions';
 import { DialogService } from '@core/services/dialog.service';
 import { TranslateService } from '@ngx-translate/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { TopologyTemplateService } from '@core/http/topology-template.service';
 import { AssetNodeConfig, DeploymentRequest, TopologyTemplate, PreviewNode } from '@shared/models/topology.models';
 import { NULL_UUID } from '@shared/models/id/has-uuid';
@@ -33,6 +33,7 @@ import { Input } from '@angular/core';
 import { StepperSelectionEvent } from '@angular/cdk/stepper';
 // @ts-ignore
 import Pinyin from 'tiny-pinyin';
+import { TopologyTreeComponent } from '@home/components/topology-tree/topology-tree.component';
 
 @Component({
     selector: 'tb-project-deployment-wizard',
@@ -62,6 +63,8 @@ export class ProjectDeploymentWizardComponent extends PageComponent implements O
     // Forms
     selectTemplateForm: FormGroup;
     basicInfoForm: FormGroup;
+    topologyStepControl: FormControl;
+    previewStepControl: FormControl;
 
     isDeploying = false;
     deployResult: PreviewNode | null = null;
@@ -80,6 +83,7 @@ export class ProjectDeploymentWizardComponent extends PageComponent implements O
     createdDevicesCount = 0;
 
     @ViewChild('stepper', { static: false }) stepper: MatStepper;
+    @ViewChild('topologyTree') topologyTree: TopologyTreeComponent;
 
     constructor(protected store: Store<AppState>,
         private fb: FormBuilder,
@@ -98,11 +102,13 @@ export class ProjectDeploymentWizardComponent extends PageComponent implements O
             }]]
         });
         this.basicInfoForm = this.fb.group({
-            companyName: ['', Validators.required],
-            stationName: ['', Validators.required],
-            stationSn: ['', Validators.required],
+            companyName: ['', [Validators.required, Validators.maxLength(255), Validators.pattern(/.*\S.*/)]],
+            stationName: ['', [Validators.required, Validators.maxLength(255), Validators.pattern(/.*\S.*/)]],
+            stationSn: ['', [Validators.required, Validators.maxLength(255), Validators.pattern(/.*\S.*/)]],
             useStationNameAsPrefix: [false]
         });
+        this.topologyStepControl = this.fb.control(null, [Validators.required]);
+        this.previewStepControl = this.fb.control(null, [Validators.required]);
     }
 
     ngOnInit() {
@@ -182,6 +188,7 @@ export class ProjectDeploymentWizardComponent extends PageComponent implements O
                 this.finalTopology = template.configuration;
                 this.hydrateTopology(this.finalTopology);
                 this.selectedNode = this.finalTopology;
+                this.updateTopologyControlStatus();
                 this.cd.markForCheck();
             }
         }, 0);
@@ -253,6 +260,14 @@ export class ProjectDeploymentWizardComponent extends PageComponent implements O
     }
 
     changeStep($event: StepperSelectionEvent): void {
+        if ($event.selectedIndex === 3 && !this.previewNode && !this.isPreviewing) {
+            // Revert temporarily to prevent showing empty step while loading
+            this.stepper.selectedIndex = $event.previouslySelectedIndex;
+            this.preview();
+        } else if ($event.selectedIndex === 4 && !this.deployResult) {
+            // Prevent manual jumping to the final step without deployment
+            this.stepper.selectedIndex = $event.previouslySelectedIndex;
+        }
         this.selectionChange.emit($event);
     }
 
@@ -287,10 +302,12 @@ export class ProjectDeploymentWizardComponent extends PageComponent implements O
             (node) => {
                 this.isPreviewing = false;
                 this.previewNode = node;
-                this.initPreviewNodeStates(this.previewNode, 0);
+                this.initPreviewNodeStates(this.previewNode, 0, 0, '');
                 this.updateVisibleNodes();
                 console.log('Preview loaded:', this.previewNode);
-                this.stepper.next();
+                this.topologyStepControl.setValue(true);
+                this.stepper.selectedIndex = 3;
+                this.cd.markForCheck();
             },
             err => {
                 this.isPreviewing = false;
@@ -305,32 +322,54 @@ export class ProjectDeploymentWizardComponent extends PageComponent implements O
     toggleExclusion(node: PreviewNode, checked: boolean) {
         if (!node.path) return;
 
-        if (node.disabled) {
-            if (!checked) { // Attempting to exclude
-                this.store.dispatch(new ActionNotificationShow({
-                    message: this.translate.instant('project.deployment-wizard.cropping-level-restricted'),
-                    type: 'warn'
-                }));
-                return;
-            }
+        // The `disabled` property indicates that a node cannot be excluded (e.g., root nodes or nodes below a certain level).
+        // If `checked` is false, it means we are attempting to exclude the node.
+        if (node.disabled && !checked) {
+            this.store.dispatch(new ActionNotificationShow({
+                message: this.translate.instant('project.deployment-wizard.cropping-level-restricted'),
+                type: 'warn'
+            }));
+            return;
         }
 
         if (checked) {
             this.excludedPaths.delete(node.path);
+            // Synchronize ancestors: if a child is included, all its ancestors must be included too.
+            let parentPath = node.path.substring(0, node.path.lastIndexOf('-'));
+            while (parentPath) {
+                this.excludedPaths.delete(parentPath);
+                parentPath = parentPath.substring(0, parentPath.lastIndexOf('-'));
+            }
         } else {
-            this.excludedPaths.add(node.path);
+            // Recursive exclusion: when a parent is excluded, explicitly exclude all its children too.
+            // This ensures that even if the parent is later "revived" by another child,
+            // these siblings stay excluded.
+            this.excludeRecursively(node);
         }
 
         this.calculateIncludedStates(this.previewNode);
     }
 
+    private excludeRecursively(node: PreviewNode) {
+        if (!node.path) return;
+        this.excludedPaths.add(node.path);
+        if (node.children?.length > 0) {
+            node.children.forEach(child => this.excludeRecursively(child));
+        }
+    }
+
     public isLevelRestricted(node: any): boolean {
-        if (!node || !node.path) {
+        if (!node) {
             return false;
         }
-        // Path format examples: "0", "0-1", "0-2-1"
-        // Root is "" or index, so segments <= 1 are first two levels
-        return node.path.split('-').length < 2;
+        if (node.level !== undefined) {
+            return node.level < 2;
+        }
+        if (!node.path) {
+            return false;
+        }
+        // Fallback for path-based check
+        return node.path.split('-').length <= 2;
     }
 
     isNodeIncluded(node: any): boolean {
@@ -427,6 +466,7 @@ export class ProjectDeploymentWizardComponent extends PageComponent implements O
                 this.createdDevicesCount = 0;
                 this.countStats(this.deployResult);
 
+                this.previewStepControl.setValue(true);
                 this.stepper.next();
             },
             err => {
@@ -447,11 +487,27 @@ export class ProjectDeploymentWizardComponent extends PageComponent implements O
     onNodeDetailsChange(node: AssetNodeConfig) {
         // Since objects are passed by reference, finalTopology is updated
         // We just need to ensure the UI/Stepper state re-evaluates
+        this.updateTopologyControlStatus();
         this.cd.markForCheck();
+    }
+
+    private updateTopologyControlStatus() {
+        if (this.isTopologyValid(this.finalTopology)) {
+            this.topologyStepControl.setValue(true);
+            this.topologyStepControl.markAsUntouched();
+        } else {
+            this.topologyStepControl.setValue(null);
+            this.previewNode = null;
+            this.previewStepControl.setValue(null);
+        }
     }
 
     public findInvalidNode(node: AssetNodeConfig): AssetNodeConfig | null {
         if (!node) return null;
+
+        if (node._isInvalid) {
+            return node;
+        }
 
         // Required fields
         // namePattern is kept optional here because hydrateTopology ensures it exists or it can be empty for root
@@ -481,7 +537,16 @@ export class ProjectDeploymentWizardComponent extends PageComponent implements O
         }
 
         if (node.subNodes && node.subNodes.length > 0) {
+            const names = new Set<string>();
             for (const subNode of node.subNodes) {
+                const name = subNode.entityTypeLabel?.trim();
+                if (name) {
+                    if (names.has(name)) {
+                        console.warn('[ProjectDeploymentWizard] Validation Failed on Duplicate Name:', name, 'in node:', node.entityTypeLabel);
+                        return subNode;
+                    }
+                    names.add(name);
+                }
                 const invalidSubNode = this.findInvalidNode(subNode);
                 if (invalidSubNode) {
                     return invalidSubNode;
@@ -566,14 +631,16 @@ export class ProjectDeploymentWizardComponent extends PageComponent implements O
         }
     }
 
-    private initPreviewNodeStates(node: PreviewNode, level: number = 0) {
+    private initPreviewNodeStates(node: PreviewNode, level: number = 0, index: number = 0, parentPath: string = '') {
         if (!node) return;
         node.expanded = true;
+        node.level = level;
+        // Generate a unique path based on index and parent path to ensure isolation
+        node.path = parentPath === '' ? `${index}` : `${parentPath}-${index}`;
         node.disabled = this.isLevelRestricted(node);
         node.included = true;
-        node.level = level;
         if (node.children?.length > 0) {
-            node.children.forEach(child => this.initPreviewNodeStates(child, level + 1));
+            node.children.forEach((child, i) => this.initPreviewNodeStates(child, level + 1, i, node.path));
         }
     }
 
@@ -629,14 +696,19 @@ export class ProjectDeploymentWizardComponent extends PageComponent implements O
         this.searchSubject.next(query);
     }
 
-    private calculateIncludedStates(node: PreviewNode, parentExcluded: boolean = false) {
+    private calculateIncludedStates(node: PreviewNode) {
         if (!node) return;
-        const explicitlyExcluded = this.excludedPaths.has(node.path);
-        const isExcluded = parentExcluded || explicitlyExcluded;
-        node.included = !isExcluded;
+        // Level 1 and Level 2 (level 0 and level 1) are PROTECTED and can NEVER be excluded
+        if (node.level < 2) {
+            node.included = true;
+        } else {
+            // Sibling isolation: inclusion now depends ONLY on whether the path itself is excluded.
+            // We NO LONGER inherit from parentExcluded.
+            node.included = !this.excludedPaths.has(node.path);
+        }
 
         if (node.children?.length > 0) {
-            node.children.forEach(child => this.calculateIncludedStates(child, isExcluded));
+            node.children.forEach(child => this.calculateIncludedStates(child));
         }
     }
 
@@ -650,5 +722,12 @@ export class ProjectDeploymentWizardComponent extends PageComponent implements O
         }
         node.expanded = !node.expanded;
         this.updateVisibleNodes();
+    }
+
+    getSiblingNames(node: AssetNodeConfig): string[] {
+        if (this.topologyTree && node) {
+            return this.topologyTree.getSiblingNames(node);
+        }
+        return [];
     }
 }

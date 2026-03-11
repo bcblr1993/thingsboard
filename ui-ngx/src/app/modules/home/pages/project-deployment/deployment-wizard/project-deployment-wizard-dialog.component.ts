@@ -81,6 +81,8 @@ export class ProjectDeploymentWizardDialogComponent extends DialogComponent<Proj
             return this.wizard?.selectTemplateForm?.invalid ?? true;
         } else if (this.selectedIndex === 1) {
             return this.wizard?.basicInfoForm?.invalid ?? true;
+        } else if (this.selectedIndex === 2) {
+            return !this.wizard?.isTopologyValid(this.wizard?.finalTopology);
         }
         return false;
     }

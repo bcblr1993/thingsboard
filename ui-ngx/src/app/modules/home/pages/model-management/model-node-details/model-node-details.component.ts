@@ -32,6 +32,8 @@ export class ModelNodeDetailsComponent implements OnInit, OnChanges {
     @Input() isReadOnly = false;
     @Input() isCountLocked = false; // 第二层节点数量锁定为1
     @Input() isTypeLocked = false; // 根节点类型锁定为ASSET
+    @Input() isNameLocked = false; // 锁定节点名称
+    @Input() isNamePatternHidden = false; // 隐藏名称规则
     @Input() allSiblingNames: string[] = [];
     @Output() nodeChange = new EventEmitter<AssetNodeConfig>();
 
@@ -51,8 +53,8 @@ export class ModelNodeDetailsComponent implements OnInit, OnChanges {
     constructor(private fb: FormBuilder) {
         this.editForm = this.fb.group({
             type: [AssetNodeType.DEVICE, Validators.required],
-            entityTypeLabel: ['', [Validators.required, Validators.maxLength(255), this.duplicateNameValidator()]],
-            namePattern: ['${StationSn}-${Type}${HierarchicalIndex}', [Validators.required, Validators.maxLength(255)]],
+            entityTypeLabel: ['', [Validators.required, Validators.maxLength(255), Validators.pattern(/.*\S.*/), this.duplicateNameValidator()]],
+            namePattern: ['${StationSn}-${Type}${HierarchicalIndex}', [Validators.required, Validators.maxLength(255), Validators.pattern(/.*\S.*/)]],
             defaultCount: [1, [Validators.required, Validators.min(1), Validators.pattern(/^[0-9]+$/)]],
             profileType: ['default'],
             customProfileName: [''],
@@ -88,7 +90,7 @@ export class ModelNodeDetailsComponent implements OnInit, OnChanges {
     private updateProfileValidators(type: string) {
         const customNameControl = this.editForm.get('customProfileName');
         if (type === 'custom') {
-            customNameControl.setValidators([Validators.required, Validators.maxLength(255)]);
+            customNameControl.setValidators([Validators.required, Validators.maxLength(255), Validators.pattern(/.*\S.*/)]);
         } else {
             customNameControl.clearValidators();
         }
@@ -98,7 +100,7 @@ export class ModelNodeDetailsComponent implements OnInit, OnChanges {
     private updateCredentialValidators(strategy: string) {
         const customCredentialControl = this.editForm.get('customCredentialName');
         if (strategy === 'custom') {
-            customCredentialControl.setValidators([Validators.required, Validators.maxLength(255)]);
+            customCredentialControl.setValidators([Validators.required, Validators.maxLength(255), Validators.pattern(/.*\S.*/)]);
         } else {
             customCredentialControl.clearValidators();
         }
@@ -139,6 +141,9 @@ export class ModelNodeDetailsComponent implements OnInit, OnChanges {
                 }
                 if (this.isTypeLocked) {
                     this.editForm.get('type').disable({ emitEvent: false });
+                }
+                if (this.isNameLocked) {
+                    this.editForm.get('entityTypeLabel').disable({ emitEvent: false });
                 }
             }
         } finally {
@@ -270,8 +275,12 @@ export class ModelNodeDetailsComponent implements OnInit, OnChanges {
             const valCtrl = group.get('value');
             valCtrl.setValidators(this.getValidatorsForType(newType));
 
-            if (newType === 'BOOLEAN' && typeof valCtrl.value !== 'boolean') {
+            if (newType === 'BOOLEAN') {
                 valCtrl.setValue(false, { emitEvent: false });
+            } else if (newType === 'JSON') {
+                valCtrl.setValue({}, { emitEvent: false });
+            } else {
+                valCtrl.setValue(null, { emitEvent: false });
             }
 
             valCtrl.updateValueAndValidity({ emitEvent: false });

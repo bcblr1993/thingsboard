@@ -7996,6 +7996,7 @@
         "node": {
             "new-device": "新设备",
             "name": "节点名称",
+            "name-required": "节点名称不能为空",
             "name-max-length": "节点名称长度应该小于256字符",
             "name-duplicate": "同一层级下节点名称不能重复",
             "name-pattern": "名称模式",
@@ -8077,7 +8078,13 @@
             "update-node": "更新节点",
             "select-node-help": "选择一个节点进行编辑",
             "select-node-hint": "选择一个节点进行配置",
-            "resolved-preview": "解析结果预览"
+            "resolved-preview": "解析结果预览",
+            "company-name-required": "公司名称不能为空",
+            "station-name-required": "站点名称不能为空",
+            "station-sn-required": "站点SN不能为空",
+            "company-name-max-length": "公司名称长度应该小于256个字符",
+            "station-name-max-length": "站点名称长度应该小于256个字符",
+            "station-sn-max-length": "站点SN长度应该小于256个字符"
         },
         "deployment-history": {
             "title": "部署历史",

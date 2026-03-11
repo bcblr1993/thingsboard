@@ -263,5 +263,14 @@
             font-weight: 500;
             vertical-align: middle;
         }
+
+        .template-text-truncate {
+            display: inline-block;
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            vertical-align: middle;
+        }
     }
 }

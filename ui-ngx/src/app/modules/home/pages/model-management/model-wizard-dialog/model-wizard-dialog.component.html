@@ -32,7 +32,7 @@
         </ng-template>
 
         <!-- Step 0: 选择模板来源 -->
-        <mat-step>
+        <mat-step [stepControl]="sourceStepControl">
             <ng-template matStepLabel>{{ 'model.wizard.select-source' | translate }}</ng-template>
             <div class="source-selection-step">
                 <h3 class="source-title">{{ 'model.wizard.select-source-hint' | translate }}</h3>
@@ -70,7 +70,7 @@
                     <mat-form-field appearance="outline" class="mat-block">
                         <mat-label>{{ 'model.wizard.choose-template' | translate }}</mat-label>
                         <input matInput type="text" placeholder="{{ 'model.wizard.choose-template' | translate }}"
-                            [formControl]="templateControl" [matAutocomplete]="templateAuto" required>
+                            [formControl]="$any(sourceStepControl.get('template'))" [matAutocomplete]="templateAuto" required>
                         <mat-autocomplete #templateAuto="matAutocomplete" panelClass="template-autocomplete-panel"
                             [displayWith]="displayTemplateFn"
                             (optionSelected)="onTemplateSelected($event.option.value)">
@@ -80,8 +80,8 @@
                                     {{ isSystemTemplate(tpl) ? ('model.scope-public' | translate) :
                                     ('model.scope-tenant' | translate) }}
                                 </span>
-                                <span class="template-option-name">{{ tpl.name }}</span>
-                                <span class="template-version" *ngIf="tpl.modelVersion"> ({{ tpl.modelVersion }})</span>
+                                <span class="template-option-name template-text-truncate" [matTooltip]="tpl.name">{{ tpl.name }}</span>
+                                <span class="template-version template-text-truncate" *ngIf="tpl.modelVersion" [matTooltip]="tpl.modelVersion"> ({{ tpl.modelVersion }})</span>
                             </mat-option>
                         </mat-autocomplete>
                     </mat-form-field>
@@ -143,6 +143,7 @@
                         <tb-model-node-details [node]="selectedNode"
                             [isCountLocked]="topologyTree.isRootNode(selectedNode) || topologyTree.isSecondLevelNode(selectedNode)"
                             [isTypeLocked]="topologyTree.isRootNode(selectedNode) || topologyTree.isSecondLevelNode(selectedNode)"
+                            [isNamePatternHidden]="topologyTree.isRootNode(selectedNode) || topologyTree.isSecondLevelNode(selectedNode)"
                             [allSiblingNames]="topologyTree.getSiblingNames(selectedNode)"
                             (nodeChange)="onNodeDetailsChange($event)">
                         </tb-model-node-details>
