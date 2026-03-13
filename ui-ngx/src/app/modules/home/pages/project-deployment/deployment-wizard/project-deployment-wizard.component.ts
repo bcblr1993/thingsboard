@@ -260,6 +260,10 @@ export class ProjectDeploymentWizardComponent extends PageComponent implements O
     }
 
     changeStep($event: StepperSelectionEvent): void {
+        if ($event.previouslySelectedIndex === 4 && this.deployResult) {
+            this.stepper.selectedIndex = 4;
+            return;
+        }
         if ($event.selectedIndex === 3 && !this.previewNode && !this.isPreviewing) {
             // Revert temporarily to prevent showing empty step while loading
             this.stepper.selectedIndex = $event.previouslySelectedIndex;

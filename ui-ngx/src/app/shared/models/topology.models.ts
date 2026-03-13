@@ -27,6 +27,7 @@ export interface AssetNodeConfig {
     defaultCount: number;    // 默认数量
     subNodes?: AssetNodeConfig[]; // 子节点定义
     attributes?: Record<string, any>; // 默认属性
+    attributeTypes?: Record<string, string>; // 属性类型映射
     isRemovable: boolean;    // 是否允许用户删除
     profileType?: 'default' | 'custom'; // 配置类型
     customProfileName?: string; // 自定义配置名称

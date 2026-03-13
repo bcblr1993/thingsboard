@@ -180,21 +180,30 @@ export class ModelNodeDetailsComponent implements OnInit, OnChanges {
             if (this.node.attributes) {
                 Object.keys(this.node.attributes).forEach(key => {
                     let value = this.node.attributes[key];
-                    let valueType = 'STRING';
+                    let valueType = (this.node.attributeTypes && this.node.attributeTypes[key]) ? this.node.attributeTypes[key] : 'STRING';
 
-                    if (typeof value === 'boolean') {
-                        valueType = 'BOOLEAN';
-                    } else if (typeof value === 'number') {
-                        valueType = value.toString().indexOf('.') === -1 ? 'INTEGER' : 'DOUBLE';
-                    } else if (isObject(value)) {
-                        valueType = 'JSON';
+                    // 如果键名是临时占位符（__empty_key_X），在 UI 上保持空白
+                    const displayKey = key.startsWith('__empty_key_') ? '' : key;
+
+                    // 如果没有显式记录类型，则进行推断（兼容旧数据）
+                    if (!this.node.attributeTypes || !this.node.attributeTypes[key]) {
+                        if (typeof value === 'boolean') {
+                            valueType = 'BOOLEAN';
+                        } else if (typeof value === 'number') {
+                            valueType = value.toString().indexOf('.') === -1 ? 'INTEGER' : 'DOUBLE';
+                        } else if (isObject(value)) {
+                            valueType = 'JSON';
+                        }
+
+                        if (typeof value === 'string' && value.startsWith('EXP::')) {
+                            valueType = 'EXPRESSION';
+                        }
                     }
 
-                    if (typeof value === 'string' && value.startsWith('EXP::')) {
-                        valueType = 'EXPRESSION';
+                    if (valueType === 'EXPRESSION' && typeof value === 'string' && value.startsWith('EXP::')) {
                         value = value.substring(5);
                     }
-                    this.attributesFormArray.push(this.createAttributeGroup(key, valueType, value), { emitEvent: false });
+                    this.attributesFormArray.push(this.createAttributeGroup(displayKey, valueType, value), { emitEvent: false });
                 });
             }
         } finally {
@@ -221,6 +230,7 @@ export class ModelNodeDetailsComponent implements OnInit, OnChanges {
         // 使用 getRawValue 以包含由于 isCountLocked 而处于 disabled 状态的控件的值（如 defaultCount）
         const formValue = this.editForm.getRawValue();
         const attributes: Record<string, any> = {};
+        const attributeTypes: Record<string, string> = {};
 
         formValue.attributes.forEach((attr: any, index: number) => {
             let key = attr.key ? attr.key.trim() : '';
@@ -228,7 +238,10 @@ export class ModelNodeDetailsComponent implements OnInit, OnChanges {
                 key = `__empty_key_${index}`;
             }
             const value = attr.value;
-            if (attr.valueType === 'EXPRESSION') {
+            const valueType = attr.valueType;
+            attributeTypes[key] = valueType;
+
+            if (valueType === 'EXPRESSION') {
                 attributes[key] = (value !== null && value !== undefined) ? 'EXP::' + value : 'EXP::';
             } else {
                 attributes[key] = value;
@@ -247,6 +260,7 @@ export class ModelNodeDetailsComponent implements OnInit, OnChanges {
         this.node.customCredentialName = formValue.customCredentialName;
         this.node.relationAdditionalInfo = formValue.relationAdditionalInfo;
         this.node.attributes = attributes;
+        this.node.attributeTypes = attributeTypes;
         this.node._isInvalid = this.editForm.invalid;
 
         this.nodeChange.emit(this.node);

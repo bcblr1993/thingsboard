@@ -211,6 +211,7 @@ export class ModelWizardDialogComponent extends DialogComponent<ModelWizardDialo
         if (source === TemplateSource.EMPTY) {
             this.selectedTemplateId = null;
             this.sourceStepControl.get('template').setValue(null);
+            this.sourceStepControl.get('template').setErrors(null);
             this.applyEmptyTopology();
         }
         this.sourceStepControl.updateValueAndValidity();
@@ -274,6 +275,9 @@ export class ModelWizardDialogComponent extends DialogComponent<ModelWizardDialo
             const invalidNode = this.findInvalidNode(config);
             if (invalidNode) {
                 this.selectedNode = invalidNode;
+                if (this.topologyTree) {
+                    this.topologyTree.revealNode(invalidNode);
+                }
                 const nodeLabel = invalidNode.entityTypeLabel?.trim() ? invalidNode.entityTypeLabel : this.translate.instant('model.wizard.unnamed-node');
                 this.store.dispatch(new ActionNotificationShow({
                     message: this.translate.instant('model.wizard.node-configuration-invalid', { nodeLabel }),
@@ -394,6 +398,9 @@ export class ModelWizardDialogComponent extends DialogComponent<ModelWizardDialo
             const invalidNode = this.findInvalidNode(config);
             if (invalidNode) {
                 this.selectedNode = invalidNode;
+                if (this.topologyTree) {
+                    this.topologyTree.revealNode(invalidNode);
+                }
                 const nodeLabel = invalidNode.entityTypeLabel?.trim() ? invalidNode.entityTypeLabel : this.translate.instant('model.wizard.unnamed-node');
                 this.store.dispatch(new ActionNotificationShow({
                     message: this.translate.instant('model.wizard.save-error-invalid-node', { nodeLabel }),

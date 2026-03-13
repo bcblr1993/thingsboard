@@ -130,7 +130,7 @@ export class ProjectDeploymentTableConfigResolver implements Resolve<EntityTable
         if (rows.length <= 1) {
             this.store.dispatch(new ActionNotificationShow({
                 message: this.translate.instant('project.deployment-wizard.no-devices-found'),
-                type: 'warn'
+                type: 'error'
             }));
             return;
         }

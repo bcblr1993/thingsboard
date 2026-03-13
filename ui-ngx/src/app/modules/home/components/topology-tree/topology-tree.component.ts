@@ -259,6 +259,44 @@ export class TopologyTreeComponent implements OnChanges, AfterViewInit {
         }
     }
 
+    /**
+     * 在树中揭示并选中指定节点。
+     * 会自动展开该节点的所有父节点。
+     */
+    public revealNode(targetNode: AssetNodeConfig) {
+        if (!targetNode || !this.topology) return;
+
+        // 查找从根节点到目标节点的路径
+        const path: AssetNodeConfig[] = [];
+        if (this.findPath(this.topology, targetNode, path)) {
+            // 展开路径上的所有节点（除了最后一个目标节点）
+            for (let i = 0; i < path.length - 1; i++) {
+                this.treeControl.expand(path[i]);
+            }
+            // 选中目标节点并发出事件
+            this.selectNode(targetNode);
+
+            // 触发变更检查以确保 UI 更新（高亮选中）
+            this.cd.markForCheck();
+        }
+    }
+
+    private findPath(current: AssetNodeConfig, target: AssetNodeConfig, path: AssetNodeConfig[]): boolean {
+        path.push(current);
+        if (current === target || (!!current.id && !!target.id && current.id === target.id)) {
+            return true;
+        }
+        if (current.subNodes) {
+            for (const child of current.subNodes) {
+                if (this.findPath(child, target, path)) {
+                    return true;
+                }
+            }
+        }
+        path.pop();
+        return false;
+    }
+
     public collapseAll() {
         this.treeControl.collapseAll();
     }

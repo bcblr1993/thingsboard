@@ -19,7 +19,7 @@
     <mat-horizontal-stepper linear #stepper class="wizard-stepper" [labelPosition]="(stepperLabelPosition | async)"
         [orientation]="(stepperOrientation | async)" (selectionChange)="changeStep($event)">
         <!-- Step 1: Select Template -->
-        <mat-step [stepControl]="selectTemplateForm">
+        <mat-step [stepControl]="selectTemplateForm" [editable]="!deployResult">
             <ng-template matStepLabel>{{ 'project.deployment-wizard.select-template' | translate }}</ng-template>
             <ng-template matStepContent>
             <div class="step-content">
@@ -63,7 +63,7 @@
         </mat-step>
 
         <!-- Step 2: Global Configuration -->
-        <mat-step [stepControl]="basicInfoForm">
+        <mat-step [stepControl]="basicInfoForm" [editable]="!deployResult">
             <ng-template matStepLabel>{{ 'project.deployment-wizard.global-config' | translate }}</ng-template>
             <ng-template matStepContent>
             <div class="step-content">
@@ -112,7 +112,7 @@
         </mat-step>
 
         <!-- Step 3: Topology Preview & Edit -->
-        <mat-step [stepControl]="topologyStepControl">
+        <mat-step [stepControl]="topologyStepControl" [editable]="!deployResult">
             <ng-template matStepLabel>{{ 'project.deployment-wizard.topology-preview' | translate }}</ng-template>
             <ng-template matStepContent>
             <div class="step-content">
@@ -143,7 +143,7 @@
         </mat-step>
 
         <!-- Step 4: Resolved Preview -->
-        <mat-step [stepControl]="previewStepControl">
+        <mat-step [stepControl]="previewStepControl" [editable]="!deployResult">
             <ng-template matStepLabel>{{ 'project.deployment-wizard.resolved-preview' | translate }}</ng-template>
             <ng-template matStepContent>
             <div class="step-content">

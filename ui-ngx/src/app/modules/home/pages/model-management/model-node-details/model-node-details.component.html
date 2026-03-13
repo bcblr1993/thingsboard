@@ -20,7 +20,7 @@
         <h3 class="title">{{ 'model.node-details' | translate }}</h3>
     </div>
 
-    <form [formGroup]="editForm" class="details-form">
+    <form [formGroup]="editForm" class="details-form" (keydown.enter)="$event.preventDefault()">
         <div class="form-row">
             <mat-form-field appearance="outline" class="full-width">
                 <mat-label>{{ 'model.type' | translate }}</mat-label>
