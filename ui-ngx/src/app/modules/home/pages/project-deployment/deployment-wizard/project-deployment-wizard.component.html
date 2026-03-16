@@ -38,8 +38,8 @@
                                     {{ isSystemTemplate(tpl) ? ('model.scope-public' | translate) :
                                     ('model.scope-tenant' | translate) }}
                                 </span>
-                                <span class="template-option-name template-text-truncate" [matTooltip]="tpl.name">{{ tpl.name }}</span>
-                                <span class="template-version template-text-truncate" *ngIf="tpl.modelVersion" [matTooltip]="tpl.modelVersion"> ({{ tpl.modelVersion }})</span>
+                                <span class="template-option-name template-text-truncate" [matTooltip]="tpl.name" matTooltipClass="tb-multiline-tooltip">{{ tpl.name | truncate:false:20:'...' }}</span>
+                                <span class="template-version template-text-truncate" *ngIf="tpl.modelVersion" [matTooltip]="tpl.modelVersion" matTooltipClass="tb-multiline-tooltip"> ({{ tpl.modelVersion | truncate:false:20:'...' }})</span>
                             </mat-option>
                         </mat-autocomplete>
                         <mat-error *ngIf="selectTemplateForm.get('templateId').hasError('required') || selectTemplateForm.get('templateId').hasError('invalidTemplate')">

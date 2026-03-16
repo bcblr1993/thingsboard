@@ -266,11 +266,16 @@
 
         .template-text-truncate {
             display: inline-block;
-            max-width: 180px;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
             vertical-align: middle;
         }
     }
+}
+
+::ng-deep .tb-multiline-tooltip {
+    max-width: 400px !important;
+    word-break: break-all !important;
+    white-space: pre-wrap !important;
 }
