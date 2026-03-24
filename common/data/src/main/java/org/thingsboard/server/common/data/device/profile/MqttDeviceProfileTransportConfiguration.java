@@ -32,6 +32,10 @@ public class MqttDeviceProfileTransportConfiguration implements DeviceProfileTra
     private String deviceAttributesTopic = MqttTopics.DEVICE_ATTRIBUTES_TOPIC;
     @NoXss
     private String deviceAttributesSubscribeTopic = MqttTopics.DEVICE_ATTRIBUTES_TOPIC;
+    @NoXss
+    private String deviceRpcRequestTopic = MqttTopics.DEVICE_RPC_REQUESTS_TOPIC;
+    @NoXss
+    private String deviceRpcResponseTopic = MqttTopics.DEVICE_RPC_RESPONSE_TOPIC;
 
     private TransportPayloadTypeConfiguration transportPayloadTypeConfiguration;
     private boolean sparkplug;
@@ -57,6 +61,14 @@ public class MqttDeviceProfileTransportConfiguration implements DeviceProfileTra
 
     public String getDeviceAttributesSubscribeTopic() {
         return StringUtils.notBlankOrDefault(deviceAttributesSubscribeTopic, MqttTopics.DEVICE_ATTRIBUTES_TOPIC);
+    }
+
+    public String getDeviceRpcRequestTopic() {
+        return StringUtils.notBlankOrDefault(deviceRpcRequestTopic, MqttTopics.DEVICE_RPC_REQUESTS_TOPIC);
+    }
+
+    public String getDeviceRpcResponseTopic() {
+        return StringUtils.notBlankOrDefault(deviceRpcResponseTopic, MqttTopics.DEVICE_RPC_RESPONSE_TOPIC);
     }
 
 }

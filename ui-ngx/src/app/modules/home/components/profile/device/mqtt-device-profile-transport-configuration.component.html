@@ -85,6 +85,38 @@
       <mat-error *ngIf="mqttDeviceProfileTransportConfigurationFormGroup.hasError('unique')">
         {{ 'device-profile.mqtt-device-topic-filters-unique' | translate }}
       </mat-error>
+      <div class="flex flex-row gap-2 xs:flex-col">
+        <mat-form-field class="flex-1">
+          <mat-label translate>device-profile.rpc-request-topic</mat-label>
+          <input matInput required
+                 formControlName="deviceRpcRequestTopic"
+                 type="text">
+          <mat-error *ngIf="mqttDeviceProfileTransportConfigurationFormGroup.get('deviceRpcRequestTopic').hasError('required')">
+            {{ 'device-profile.rpc-request-topic-required' | translate }}
+          </mat-error>
+          <mat-error *ngIf="mqttDeviceProfileTransportConfigurationFormGroup.get('deviceRpcRequestTopic').hasError('invalidRpcTopicWildcard')">
+            {{ 'device-profile.rpc-topic-no-wildcard' | translate }}
+          </mat-error>
+          <mat-error *ngIf="mqttDeviceProfileTransportConfigurationFormGroup.get('deviceRpcRequestTopic').hasError('invalidRpcTopicTrailingSlash')">
+            {{ 'device-profile.rpc-topic-trailing-slash' | translate }}
+          </mat-error>
+        </mat-form-field>
+        <mat-form-field class="flex-1">
+          <mat-label translate>device-profile.rpc-response-topic</mat-label>
+          <input matInput required
+                 formControlName="deviceRpcResponseTopic"
+                 type="text">
+          <mat-error *ngIf="mqttDeviceProfileTransportConfigurationFormGroup.get('deviceRpcResponseTopic').hasError('required')">
+            {{ 'device-profile.rpc-response-topic-required' | translate }}
+          </mat-error>
+          <mat-error *ngIf="mqttDeviceProfileTransportConfigurationFormGroup.get('deviceRpcResponseTopic').hasError('invalidRpcTopicWildcard')">
+            {{ 'device-profile.rpc-topic-no-wildcard' | translate }}
+          </mat-error>
+          <mat-error *ngIf="mqttDeviceProfileTransportConfigurationFormGroup.get('deviceRpcResponseTopic').hasError('invalidRpcTopicTrailingSlash')">
+            {{ 'device-profile.rpc-topic-trailing-slash' | translate }}
+          </mat-error>
+        </mat-form-field>
+      </div>
       <div class="tb-hint" innerHTML="{{ 'device-profile.support-level-wildcards' | translate }}"></div>
       <div class="tb-hint" innerHTML="{{ 'device-profile.single-level-wildcards-hint' | translate }}"></div>
       <div class="tb-hint" innerHTML="{{ 'device-profile.multi-level-wildcards-hint' | translate }}"></div>

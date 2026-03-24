@@ -160,6 +160,7 @@ public class MqttTransportHandler extends ChannelInboundHandlerAdapter implement
     private TopicType rpcSubTopicType;
     private TopicType attrReqTopicType;
     private TopicType toServerRpcSubTopicType;
+    private volatile String subscribedRpcRequestTopicBase = null;
 
     MqttTransportHandler(MqttTransportContext context, SslHandler sslHandler) {
         this.sessionId = UUID.randomUUID();
@@ -500,6 +501,12 @@ public class MqttTransportHandler extends ChannelInboundHandlerAdapter implement
                 TransportProtos.GetAttributeRequestMsg getAttributeMsg = payloadAdaptor.convertToGetAttributes(deviceSessionCtx, mqttMsg, MqttTopics.DEVICE_ATTRIBUTES_REQUEST_TOPIC_PREFIX);
                 transportService.process(deviceSessionCtx.getSessionInfo(), getAttributeMsg, getPubAckCallback(ctx, msgId, getAttributeMsg));
                 attrReqTopicType = TopicType.V1;
+            } else if (deviceSessionCtx.isDeviceProfileMqttTransportType()
+                    && deviceSessionCtx.isCustomRpcResponseTopic(topicName)
+                    && !topicName.startsWith(MqttTopics.DEVICE_RPC_RESPONSE_TOPIC)) {
+                TransportProtos.ToDeviceRpcResponseMsg rpcResponseMsg = payloadAdaptor.convertToDeviceRpcResponse(
+                        deviceSessionCtx, mqttMsg, deviceSessionCtx.getRpcResponseTopicBase());
+                transportService.process(deviceSessionCtx.getSessionInfo(), rpcResponseMsg, getPubAckCallback(ctx, msgId, rpcResponseMsg));
             } else if (topicName.startsWith(MqttTopics.DEVICE_RPC_RESPONSE_TOPIC)) {
                 TransportProtos.ToDeviceRpcResponseMsg rpcResponseMsg = payloadAdaptor.convertToDeviceRpcResponse(deviceSessionCtx, mqttMsg, MqttTopics.DEVICE_RPC_RESPONSE_TOPIC);
                 transportService.process(deviceSessionCtx.getSessionInfo(), rpcResponseMsg, getPubAckCallback(ctx, msgId, rpcResponseMsg));
@@ -781,6 +788,16 @@ public class MqttTransportHandler extends ChannelInboundHandlerAdapter implement
             }
             if (deviceSessionCtx.isDeviceSubscriptionAttributesTopic(topic)) {
                 processAttributesSubscribe(grantedQoSList, topic, reqQoS, TopicType.V1);
+                activityReported = true;
+                continue;
+            }
+            if (deviceSessionCtx.isDeviceProfileMqttTransportType()
+                    && deviceSessionCtx.isCustomRpcRequestSubscribeTopic(topic)) {
+                transportService.process(deviceSessionCtx.getSessionInfo(),
+                        TransportProtos.SubscribeToRPCMsg.newBuilder().build(), null);
+                rpcSubTopicType = TopicType.V1;
+                subscribedRpcRequestTopicBase = deviceSessionCtx.getRpcRequestTopicBase();
+                registerSubQoS(topic, grantedQoSList, reqQoS);
                 activityReported = true;
                 continue;
             }
@@ -1346,7 +1363,9 @@ public class MqttTransportHandler extends ChannelInboundHandlerAdapter implement
             if (sparkplugSessionHandler != null) {
                 handleToSparkplugDeviceRpcRequest(rpcRequest);
             } else {
-                String baseTopic = rpcSubTopicType.getRpcRequestTopicBase();
+                String baseTopic = (subscribedRpcRequestTopicBase != null)
+                        ? subscribedRpcRequestTopicBase
+                        : rpcSubTopicType.getRpcRequestTopicBase();
                 MqttTransportAdaptor adaptor = deviceSessionCtx.getAdaptor(rpcSubTopicType);
                 adaptor.convertToPublish(deviceSessionCtx, rpcRequest, baseTopic)
                         .ifPresent(payload -> sendToDeviceRpcRequest(payload, rpcRequest, deviceSessionCtx.getSessionInfo()));

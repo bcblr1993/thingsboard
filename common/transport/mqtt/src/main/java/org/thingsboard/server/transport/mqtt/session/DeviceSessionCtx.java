@@ -29,6 +29,7 @@ import org.thingsboard.server.common.data.DeviceTransportType;
 import org.thingsboard.server.common.data.TransportPayloadType;
 import org.thingsboard.server.common.data.device.profile.DeviceProfileTransportConfiguration;
 import org.thingsboard.server.common.data.device.profile.MqttDeviceProfileTransportConfiguration;
+import org.thingsboard.server.common.data.device.profile.MqttTopics;
 import org.thingsboard.server.common.data.device.profile.ProtoTransportPayloadConfiguration;
 import org.thingsboard.server.common.data.device.profile.TransportPayloadTypeConfiguration;
 import org.thingsboard.server.gen.transport.TransportProtos;
@@ -82,6 +83,8 @@ public class DeviceSessionCtx extends MqttDeviceAwareSessionContext {
     private volatile MqttTopicFilter telemetryTopicFilter = MqttTopicFilterFactory.getDefaultTelemetryFilter();
     private volatile MqttTopicFilter attributesPublishTopicFilter = MqttTopicFilterFactory.getDefaultAttributesFilter();
     private volatile MqttTopicFilter attributesSubscribeTopicFilter = MqttTopicFilterFactory.getDefaultAttributesFilter();
+    private volatile String rpcRequestTopicBase = MqttTopics.DEVICE_RPC_REQUESTS_TOPIC;
+    private volatile String rpcResponseTopicBase = MqttTopics.DEVICE_RPC_RESPONSE_TOPIC;
     @Getter
     private volatile TransportPayloadType payloadType = TransportPayloadType.JSON;
     private volatile Descriptors.Descriptor attributesDynamicMessageDescriptor;
@@ -121,6 +124,22 @@ public class DeviceSessionCtx extends MqttDeviceAwareSessionContext {
 
     public boolean isDeviceSubscriptionAttributesTopic(String topicName) {
         return attributesSubscribeTopicFilter.filter(topicName);
+    }
+
+    public boolean isCustomRpcRequestSubscribeTopic(String topicName) {
+        return (rpcRequestTopicBase + "+").equals(topicName);
+    }
+
+    public boolean isCustomRpcResponseTopic(String topicName) {
+        return topicName.startsWith(rpcResponseTopicBase);
+    }
+
+    public String getRpcRequestTopicBase() {
+        return rpcRequestTopicBase;
+    }
+
+    public String getRpcResponseTopicBase() {
+        return rpcResponseTopicBase;
     }
 
     public MqttTransportAdaptor getPayloadAdaptor() {
@@ -174,6 +193,8 @@ public class DeviceSessionCtx extends MqttDeviceAwareSessionContext {
             telemetryTopicFilter = MqttTopicFilterFactory.toFilter(mqttConfig.getDeviceTelemetryTopic());
             attributesPublishTopicFilter = MqttTopicFilterFactory.toFilter(mqttConfig.getDeviceAttributesTopic());
             attributesSubscribeTopicFilter = MqttTopicFilterFactory.toFilter(mqttConfig.getDeviceAttributesSubscribeTopic());
+            rpcRequestTopicBase = mqttConfig.getDeviceRpcRequestTopic();
+            rpcResponseTopicBase = mqttConfig.getDeviceRpcResponseTopic();
             sendAckOnValidationException = mqttConfig.isSendAckOnValidationException();
             if (TransportPayloadType.PROTOBUF.equals(payloadType)) {
                 ProtoTransportPayloadConfiguration protoTransportPayloadConfig = (ProtoTransportPayloadConfiguration) transportPayloadTypeConfiguration;
@@ -184,6 +205,8 @@ public class DeviceSessionCtx extends MqttDeviceAwareSessionContext {
         } else {
             telemetryTopicFilter = MqttTopicFilterFactory.getDefaultTelemetryFilter();
             attributesPublishTopicFilter = MqttTopicFilterFactory.getDefaultAttributesFilter();
+            rpcRequestTopicBase = MqttTopics.DEVICE_RPC_REQUESTS_TOPIC;
+            rpcResponseTopicBase = MqttTopics.DEVICE_RPC_RESPONSE_TOPIC;
             payloadType = TransportPayloadType.JSON;
             deviceProfileMqttTransportType = false;
             sendAckOnValidationException = false;

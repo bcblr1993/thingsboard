@@ -91,6 +91,8 @@ export class MqttDeviceProfileTransportConfigurationComponent implements Control
         deviceAttributesTopic: [null, [Validators.required, this.validationMQTTTopic()]],
         deviceAttributesSubscribeTopic: [null, [Validators.required, this.validationMQTTTopic()]],
         deviceTelemetryTopic: [null, [Validators.required, this.validationMQTTTopic()]],
+        deviceRpcRequestTopic: [null, [Validators.required, this.validationMQTTRpcBaseTopic()]],
+        deviceRpcResponseTopic: [null, [Validators.required, this.validationMQTTRpcBaseTopic()]],
         sparkplug: [false],
         sparkplugAttributesMetricNames: [null],
         sendAckOnValidationException: [false, Validators.required],
@@ -237,6 +239,22 @@ export class MqttDeviceProfileTransportConfigurationComponent implements Control
           };
         }
         findSymbol = wildcardSymbols.exec(newTopic);
+      }
+      return null;
+    };
+  }
+
+  private validationMQTTRpcBaseTopic(): ValidatorFn {
+    return (c: UntypedFormControl) => {
+      const topic = c.value as string;
+      if (!topic) {
+        return null;
+      }
+      if (/[#+]/.test(topic)) {
+        return { invalidRpcTopicWildcard: { valid: false } };
+      }
+      if (!topic.endsWith('/')) {
+        return { invalidRpcTopicTrailingSlash: { valid: false } };
       }
       return null;
     };
