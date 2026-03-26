@@ -255,6 +255,8 @@
             "client-details": "OAuth2.0客户端详情",
             "client": "OAuth2.0客户端",
             "clients": "OAuth2.0客户端",
+            "client-ids": "客户端ID",
+            "copy-client-ids": "复制客户端ID",
             "no-oauth2-clients": "未找到OAuth2.0客户端",
             "search-oauth2-clients": "搜索OAuth2.0客户端",
             "delete-client-title": "您确定要删除OAuth2.0客户端'{{clientName}}'？",

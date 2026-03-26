@@ -17,6 +17,7 @@
 import { Injectable } from '@angular/core';
 import { ActivatedRouteSnapshot } from '@angular/router';
 import {
+  CellActionDescriptorType,
   DateEntityTableColumn,
   EntityActionTableColumn,
   EntityChipsEntityTableColumn,
@@ -57,6 +58,25 @@ export class DomainTableConfigResolver  {
       new DateEntityTableColumn<DomainInfo>('createdTime', 'common.created-time', this.datePipe, '170px'),
       new EntityTableColumn<DomainInfo>('name', 'admin.oauth2.domain-name', '170px'),
       new EntityChipsEntityTableColumn<DomainInfo>('oauth2ClientInfos', 'admin.oauth2.clients', '40%'),
+      new EntityTableColumn<DomainInfo>('oauth2ClientIds', 'admin.oauth2.client-ids', '20%',
+        (domain) => {
+          if (!domain.oauth2ClientInfos || !domain.oauth2ClientInfos.length) {
+            return '';
+          }
+          return domain.oauth2ClientInfos.map(info => info.id ? info.id.id : info).join(', ');
+        }, () => ({}), true, () => ({}), () => undefined, false,
+        {
+          name: this.translate.instant('admin.oauth2.copy-client-ids'),
+          icon: 'content_paste',
+          style: {
+            padding: '4px',
+            'font-size': '16px',
+            color: 'rgba(0,0,0,.87)'
+          },
+          isEnabled: (domain) => !!domain.oauth2ClientInfos && domain.oauth2ClientInfos.length > 0,
+          onAction: (_$event, domain) => domain.oauth2ClientInfos.map(info => info.id ? info.id.id : info).join(', '),
+          type: CellActionDescriptorType.COPY_BUTTON
+        }),
       new EntityActionTableColumn('oauth2Enabled', 'admin.oauth2.enable',
         {
           name: '',

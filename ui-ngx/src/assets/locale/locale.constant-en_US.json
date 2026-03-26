@@ -256,6 +256,8 @@
             "client-details": "OAuth 2.0 client details",
             "client": "OAuth 2.0 client",
             "clients": "OAuth 2.0 clients",
+            "client-ids": "Client IDs",
+            "copy-client-ids": "Copy client IDs",
             "no-oauth2-clients": "No OAuth 2.0 clients found",
             "search-oauth2-clients": "Search OAuth 2.0 clients",
             "delete-client-title": "Are you sure you want to delete the OAuth 2.0 client '{{clientName}}'?",
