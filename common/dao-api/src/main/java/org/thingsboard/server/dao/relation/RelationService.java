@@ -83,6 +83,8 @@ public interface RelationService {
 
     List<EntityRelation> findRuleNodeToRuleChainRelations(TenantId tenantId, RuleChainType ruleChainType, int limit);
 
+    List<EntityRelation> findAllByTenantId(TenantId tenantId);
+
 //    TODO: This method may be useful for some validations in the future
 //    ListenableFuture<Boolean> checkRecursiveRelation(EntityId from, EntityId to);
 

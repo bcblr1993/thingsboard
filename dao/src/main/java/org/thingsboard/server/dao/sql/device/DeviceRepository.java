@@ -227,4 +227,7 @@ public interface DeviceRepository extends JpaRepository<DeviceEntity, UUID>, Exp
     @Query("SELECT d.label FROM DeviceEntity d WHERE d.tenantId = :tenantId AND d.label IS NOT NULL AND d.label != '' AND (:searchText IS NULL OR ilike(d.label, CONCAT('%', :searchText, '%')) = true) GROUP BY d.label ORDER BY count(d.label) DESC")
     List<String> findTenantDeviceLabels(@Param("tenantId") UUID tenantId, @Param("searchText") String searchText, Pageable pageable);
 
+    @Query(value = "SELECT d.id, d.name FROM device d WHERE d.tenant_id = :tenantId", nativeQuery = true)
+    List<Object[]> findTopologyNodesByTenantId(@Param("tenantId") UUID tenantId);
+
 }

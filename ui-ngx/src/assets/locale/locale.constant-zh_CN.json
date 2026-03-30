@@ -94,7 +94,10 @@
         "set": "设置",
         "quick-edit": "快速编辑",
         "enable-quick-edit": "启用快速编辑",
-        "disable-quick-edit": "禁用快速编辑"
+        "disable-quick-edit": "禁用快速编辑",
+        "view-list": "列表",
+        "zoom-in": "放大",
+        "zoom-out": "缩小"
     },
     "aggregation": {
         "aggregation": "聚合",
@@ -2553,7 +2556,8 @@
         "list-of-mobile-apps": "{ count, plural, =1 {一个移动应用} other {# 个移动应用列表} }",
         "type-mobile-app-bundle": "移动应用包",
         "type-mobile-app-bundles": "移动应用包",
-        "list-of-mobile-app-bundles": "{ count, plural, =1 {一个移动应用包} other {# 个移动应用包列表} }"
+        "list-of-mobile-app-bundles": "{ count, plural, =1 {一个移动应用包} other {# 个移动应用包列表} }",
+        "hierarchy": "实体拓扑"
     },
     "entity-field": {
         "created-time": "创建时间",

@@ -245,4 +245,7 @@ public interface AssetRepository extends JpaRepository<AssetEntity, UUID>, Expor
             "a.name, a.version, a.type, a.label, a.assetProfileId, a.additionalInfo) FROM AssetEntity a WHERE a.id > :id ORDER BY a.id")
     List<AssetFields> findAllFields(@Param("id") UUID id, Limit limit);
 
+    @Query(value = "SELECT a.id, a.name FROM asset a WHERE a.tenant_id = :tenantId", nativeQuery = true)
+    List<Object[]> findTopologyNodesByTenantId(@Param("tenantId") UUID tenantId);
+
 }

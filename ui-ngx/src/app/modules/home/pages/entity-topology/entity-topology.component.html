@@ -1,0 +1,186 @@
+<!--
+
+    Copyright © 2016-2025 The Thingsboard Authors
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+
+-->
+<mat-drawer-container hasBackdrop="false" class="tb-absolute-fill">
+  <mat-drawer class="tb-details-drawer mat-elevation-z4" #drawer mode="over" position="end" [opened]="isDetailsOpen">
+    <tb-entity-details-panel *ngIf="isDetailsOpen && currentConfig" #entityDetailsPanel
+      [entitiesTableConfig]="currentConfig"
+      [entityId]="currentEntityId"
+      (closeEntityDetails)="isDetailsOpen = false"
+      (entityUpdated)="onEntityUpdated($event)">
+    </tb-entity-details-panel>
+  </mat-drawer>
+  <mat-drawer-content>
+    <div class="mat-padding tb-entity-table tb-absolute-fill">
+      <div class="tb-entity-table-content tb-outlined-border flex flex-col">
+
+        <!-- Normal Mode Toolbar -->
+        <mat-toolbar class="mat-mdc-table-toolbar" [class.!hidden]="textSearchMode">
+          <div class="mat-toolbar-tools">
+            <span class="tb-entity-table-title">{{ 'entity.hierarchy' | translate }}</span>
+            <span class="flex-1"></span>
+
+            <button mat-icon-button (click)="togglePreviewMode()"
+                    matTooltip="{{ (previewMode ? 'action.view-list' : 'action.preview') | translate }}" matTooltipPosition="above">
+              <mat-icon>{{ previewMode ? 'list' : 'account_tree' }}</mat-icon>
+            </button>
+            <ng-container>
+              <button mat-icon-button (click)="expandAll()"
+                      matTooltip="{{ 'action.expand-all' | translate }}" matTooltipPosition="above">
+                <mat-icon>unfold_more</mat-icon>
+              </button>
+              <button mat-icon-button (click)="collapseAll()"
+                      matTooltip="{{ 'action.collapse-all' | translate }}" matTooltipPosition="above">
+                <mat-icon>unfold_less</mat-icon>
+              </button>
+            </ng-container>
+            <button mat-icon-button (click)="loadHierarchy()"
+                    matTooltip="{{ 'action.refresh' | translate }}" matTooltipPosition="above">
+              <mat-icon>refresh</mat-icon>
+            </button>
+            <button mat-icon-button (click)="enterSearchMode()"
+                    matTooltip="{{ 'action.search' | translate }}" matTooltipPosition="above">
+              <mat-icon>search</mat-icon>
+            </button>
+          </div>
+        </mat-toolbar>
+
+        <!-- Search Mode Toolbar -->
+        <mat-toolbar class="mat-mdc-table-toolbar" [class.!hidden]="!textSearchMode">
+          <div class="mat-toolbar-tools">
+            <button mat-icon-button matTooltip="{{ 'action.search' | translate }}" matTooltipPosition="above">
+              <mat-icon>search</mat-icon>
+            </button>
+            <mat-form-field class="flex-1">
+              <mat-label>&nbsp;</mat-label>
+              <input #searchInput matInput [(ngModel)]="searchQuery"
+                     (ngModelChange)="onSearchChange()"
+                     placeholder="{{ 'action.search' | translate }}"
+                     (keydown.escape)="exitSearchMode()">
+            </mat-form-field>
+            <button mat-icon-button (click)="exitSearchMode()"
+                    matTooltip="{{ 'action.close' | translate }}" matTooltipPosition="above">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+        </mat-toolbar>
+
+        <!-- Content -->
+        <div class="table-container flex-1" #scrollContainer
+             (mousedown)="previewMode ? startDrag($event) : null"
+             (mouseleave)="previewMode ? stopDrag() : null"
+             (mouseup)="previewMode ? stopDrag() : null"
+             (mousemove)="previewMode ? onDrag($event) : null"
+             [class.dragging]="isDragging"
+             *ngIf="!loading; else loadingTemplate">
+
+          <!-- Standard Tree Mode -->
+          <div class="tree-scroll-container" *ngIf="!previewMode && dataSource.data.length > 0">
+            <mat-tree [dataSource]="dataSource" [treeControl]="treeControl" class="entities-tree">
+              <!-- Leaf node -->
+              <mat-tree-node *matTreeNodeDef="let node" matTreeNodeToggle>
+                <div class="node-row clickable" [class.mat-selected]="currentEntityId?.id === node.id" (click)="openDetails(node)">
+                  <button mat-icon-button (click)="$event.stopPropagation()" disabled></button>
+                  <mat-icon color="primary" class="node-icon">{{node.icon}}</mat-icon>
+                  <span class="node-title" #nodeTitle1
+                        [matTooltip]="nodeTitle1.offsetWidth < nodeTitle1.scrollWidth ? node.name : ''"
+                        matTooltipPosition="above">{{node.name}}</span>
+                </div>
+              </mat-tree-node>
+
+              <!-- Parent node -->
+              <mat-nested-tree-node *matTreeNodeDef="let node; when: hasChild">
+                <div class="node-row clickable" [class.mat-selected]="currentEntityId?.id === node.id" (click)="openDetails(node)">
+                  <button mat-icon-button matTreeNodeToggle (click)="$event.stopPropagation()">
+                    <mat-icon class="mat-icon-rtl-mirror">
+                      {{treeControl.isExpanded(node) ? 'expand_more' : 'chevron_right'}}
+                    </mat-icon>
+                  </button>
+                  <mat-icon color="primary" class="node-icon">{{node.icon}}</mat-icon>
+                  <span class="node-title" #nodeTitle2
+                        [matTooltip]="nodeTitle2.offsetWidth < nodeTitle2.scrollWidth ? node.name : ''"
+                        matTooltipPosition="above">{{node.name}}</span>
+                </div>
+                <div [class.hidden]="!treeControl.isExpanded(node)" role="group" class="tree-node-children">
+                  <ng-container matTreeNodeOutlet></ng-container>
+                </div>
+              </mat-nested-tree-node>
+            </mat-tree>
+          </div>
+
+          <!-- Org Chart Preview Mode -->
+          <div class="org-chart-container" *ngIf="previewMode && dataSource.data.length > 0">
+            <div class="org-tree-wrapper" [style.zoom]="zoom" [style.transform]="'scale(' + zoom + ')'">
+              <div class="org-tree">
+                <ng-container *ngTemplateOutlet="orgNodeTemplate; context:{nodes: dataSource.data, isRoot: true}"></ng-container>
+              </div>
+            </div>
+          </div>
+
+          <div class="no-data-found flex items-center justify-center" *ngIf="dataSource.data.length === 0">
+            {{ 'common.no-data' | translate }}
+          </div>
+        </div>
+
+        <!-- Zoom Controls -->
+        <div class="zoom-controls" *ngIf="previewMode && dataSource.data.length > 0">
+          <button mat-icon-button (click)="zoomIn()" matTooltip="{{ 'action.zoom-in' | translate }}">
+            <mat-icon>add</mat-icon>
+          </button>
+          <button mat-icon-button (click)="zoomOut()" matTooltip="{{ 'action.zoom-out' | translate }}">
+            <mat-icon>remove</mat-icon>
+          </button>
+          <button mat-icon-button (click)="resetZoom()" matTooltip="{{ 'action.restore' | translate }}">
+            <mat-icon>restart_alt</mat-icon>
+          </button>
+        </div>
+
+        <ng-template #orgNodeTemplate let-nodes="nodes" let-isRoot="isRoot">
+          <ul>
+            <li *ngFor="let node of nodes">
+              <div class="edge-label" *ngIf="!isRoot && getEdgeLabelText(node)" [matTooltip]="getEdgeLabelText(node)">
+                {{ getEdgeLabelText(node) }}
+              </div>
+              <div class="node-box" [ngClass]="{'root-node': isRoot}">
+                <mat-icon class="node-icon" [color]="isRoot ? '' : 'primary'">{{node.icon}}</mat-icon>
+                <div class="node-name" #nodeName
+                     [matTooltip]="nodeName.offsetWidth < nodeName.scrollWidth ? node.name : ''"
+                     matTooltipPosition="above">{{node.name}}</div>
+                <button mat-icon-button *ngIf="node.children && node.children.length > 0"
+                        class="org-toggle-btn"
+                        (mousedown)="$event.stopPropagation()"
+                        (click)="treeControl.toggle(node); $event.stopPropagation()">
+                  <mat-icon>{{ treeControl.isExpanded(node) ? 'remove' : 'add' }}</mat-icon>
+                </button>
+              </div>
+              <ng-container *ngIf="node.children && node.children.length > 0 && treeControl.isExpanded(node)">
+                <ng-container *ngTemplateOutlet="orgNodeTemplate; context:{nodes: node.children, isRoot: false}"></ng-container>
+              </ng-container>
+            </li>
+          </ul>
+        </ng-template>
+
+        <ng-template #loadingTemplate>
+          <div class="flex-1 flex flex-col items-center justify-center mat-padding">
+            <mat-spinner diameter="40"></mat-spinner>
+          </div>
+        </ng-template>
+
+      </div>
+    </div>
+  </mat-drawer-content>
+</mat-drawer-container>

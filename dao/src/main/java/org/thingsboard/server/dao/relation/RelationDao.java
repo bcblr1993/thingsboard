@@ -71,4 +71,6 @@ public interface RelationDao {
 
     List<EntityRelation> findRuleNodeToRuleChainRelations(RuleChainType ruleChainType, int limit);
 
+    List<EntityRelation> findAllByTenantId(TenantId tenantId);
+
 }

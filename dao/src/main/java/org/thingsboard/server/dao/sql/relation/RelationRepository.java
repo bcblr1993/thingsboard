@@ -96,4 +96,15 @@ public interface RelationRepository
                                        @Param("toId") UUID toId,
                                        @Param("toType") String toType,
                                        @Param("batchSize") int batchSize);
+
+    @Query(value = "SELECT r.from_id, r.from_type, r.to_id, r.to_type, r.relation_type_group, r.relation_type, r.additional_info, r.version " +
+            "FROM relation r " +
+            "INNER JOIN asset a ON r.from_id = a.id " +
+            "WHERE a.tenant_id = :tenantId AND r.relation_type_group = 'COMMON' AND r.from_type = 'ASSET' " +
+            "UNION ALL " +
+            "SELECT r.from_id, r.from_type, r.to_id, r.to_type, r.relation_type_group, r.relation_type, r.additional_info, r.version " +
+            "FROM relation r " +
+            "INNER JOIN device d ON r.from_id = d.id " +
+            "WHERE d.tenant_id = :tenantId AND r.relation_type_group = 'COMMON' AND r.from_type = 'DEVICE'", nativeQuery = true)
+    List<RelationEntity> findAllByTenantId(@Param("tenantId") UUID tenantId);
 }

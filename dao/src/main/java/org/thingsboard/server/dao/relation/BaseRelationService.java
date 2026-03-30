@@ -495,6 +495,13 @@ public class BaseRelationService implements RelationService {
         return relationDao.findRuleNodeToRuleChainRelations(ruleChainType, limit);
     }
 
+    @Override
+    public List<EntityRelation> findAllByTenantId(TenantId tenantId) {
+        log.trace("Executing findAllByTenantId, tenantId [{}]", tenantId);
+        validateId(tenantId, id -> "Invalid tenant id: " + id);
+        return relationDao.findAllByTenantId(tenantId);
+    }
+
     protected void validate(EntityRelation relation) {
         if (relation == null) {
             throw new DataValidationException("Relation type should be specified!");

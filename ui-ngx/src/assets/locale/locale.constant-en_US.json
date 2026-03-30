@@ -95,7 +95,10 @@
         "set": "Set",
         "quick-edit": "Quick edit",
         "enable-quick-edit": "Enable Quick Edit",
-        "disable-quick-edit": "Disable Quick Edit"
+        "disable-quick-edit": "Disable Quick Edit",
+        "view-list": "List View",
+        "zoom-in": "Zoom in",
+        "zoom-out": "Zoom out"
     },
     "aggregation": {
         "aggregation": "Aggregation",
@@ -2676,7 +2679,8 @@
         "list-of-mobile-apps": "{ count, plural, =1 {One Mobile application} other {List of # Mobile applications} }",
         "type-mobile-app-bundle": "Mobile bundle",
         "type-mobile-app-bundles": "Mobile bundles",
-        "list-of-mobile-app-bundles": "{ count, plural, =1 {One mobile bundle} other {List of # mobile bundles} }"
+        "list-of-mobile-app-bundles": "{ count, plural, =1 {One mobile bundle} other {List of # mobile bundles} }",
+        "hierarchy": "Entity Topology"
     },
     "entity-field": {
         "created-time": "Created time",

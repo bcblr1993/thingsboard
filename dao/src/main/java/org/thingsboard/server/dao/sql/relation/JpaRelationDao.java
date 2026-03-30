@@ -293,4 +293,9 @@ public class JpaRelationDao extends JpaAbstractDaoListeningExecutorService imple
     public List<EntityRelation> findRuleNodeToRuleChainRelations(RuleChainType ruleChainType, int limit) {
         return DaoUtil.convertDataList(relationRepository.findRuleNodeToRuleChainRelations(ruleChainType, PageRequest.of(0, limit)));
     }
+
+    @Override
+    public List<EntityRelation> findAllByTenantId(TenantId tenantId) {
+        return DaoUtil.convertDataList(relationRepository.findAllByTenantId(tenantId.getId()));
+    }
 }

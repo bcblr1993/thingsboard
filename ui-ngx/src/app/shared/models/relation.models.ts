@@ -92,3 +92,13 @@ export interface EntityRelationInfo extends EntityRelation {
   fromEntityTypeName?: string;
   entityURL?: string;
 }
+
+export interface HierarchyNode {
+  id: string;
+  entityType: EntityType;
+  name: string;
+  relationType?: string;
+  additionalInfo?: any;
+  icon?: string;
+  children: Array<HierarchyNode>;
+}

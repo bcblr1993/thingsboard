@@ -110,4 +110,10 @@ export class EntityRelationService {
       defaultHttpOptionsFromConfig(config));
   }
 
+  public getEntityTopology(config?: RequestConfig): Observable<import('@shared/models/relation.models').HierarchyNode> {
+    return this.http.get<import('@shared/models/relation.models').HierarchyNode>(
+      '/api/topology',
+      defaultHttpOptionsFromConfig(config));
+  }
+
 }
