@@ -80,6 +80,7 @@ message ConnectRequestMsg {
   string edgeSecret = 2;
   EdgeVersion edgeVersion = 3;
   optional int32 maxInboundMessageSize = 4;
+  optional string instanceId = 5;
 }
 
 enum ConnectResponseCode {

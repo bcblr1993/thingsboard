@@ -139,6 +139,7 @@ public abstract class EdgeGrpcSession implements Closeable {
     private volatile boolean syncInProgress;
 
     private EdgeVersion edgeVersion;
+    private String instanceId;
     private int maxInboundMessageSize;
     private int clientMaxInboundMessageSize;
     private int maxHighPriorityQueueSizePerSession;
@@ -352,6 +353,11 @@ public abstract class EdgeGrpcSession implements Closeable {
                     sessionOpenListener.accept(edge.getId(), this);
                     edgeVersion = request.getEdgeVersion();
                     processSaveEdgeVersionAsAttribute(request.getEdgeVersion().name());
+                    // 解析并保存实例 ID
+                    if (request.hasInstanceId()) {
+                        instanceId = request.getInstanceId();
+                        log.info("[{}][{}] Edge instance ID: {}", tenantId, sessionId, instanceId);
+                    }
                     return ConnectResponseMsg.newBuilder()
                             .setResponseCode(ConnectResponseCode.ACCEPTED)
                             .setErrorMsg("")
@@ -946,6 +952,19 @@ public abstract class EdgeGrpcSession implements Closeable {
             outputStream.onCompleted();
         } catch (Exception e) {
             log.debug("[{}][{}] Failed to close output stream: {}", tenantId, sessionId, e.getMessage());
+        }
+    }
+
+    /**
+     * 关闭会话并指定原因
+     */
+    public void closeWithReason(String reason) {
+        log.info("[{}][{}] Closing session with reason: {}", tenantId, sessionId, reason);
+        connected = false;
+        try {
+            outputStream.onError(new RuntimeException(reason));
+        } catch (Exception e) {
+            log.trace("[{}][{}] Failed to send error response: {}", tenantId, sessionId, e.getMessage());
         }
     }
 
