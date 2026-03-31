@@ -503,7 +503,7 @@ public class MqttTransportHandler extends ChannelInboundHandlerAdapter implement
                 attrReqTopicType = TopicType.V1;
             } else if (deviceSessionCtx.isDeviceProfileMqttTransportType()
                     && deviceSessionCtx.isCustomRpcResponseTopic(topicName)
-                    && !topicName.startsWith(MqttTopics.DEVICE_RPC_RESPONSE_TOPIC)) {
+                    && !MqttTopics.DEVICE_RPC_RESPONSE_TOPIC.equals(deviceSessionCtx.getRpcResponseTopicBase())) {
                 TransportProtos.ToDeviceRpcResponseMsg rpcResponseMsg = payloadAdaptor.convertToDeviceRpcResponse(
                         deviceSessionCtx, mqttMsg, deviceSessionCtx.getRpcResponseTopicBase());
                 transportService.process(deviceSessionCtx.getSessionInfo(), rpcResponseMsg, getPubAckCallback(ctx, msgId, rpcResponseMsg));
