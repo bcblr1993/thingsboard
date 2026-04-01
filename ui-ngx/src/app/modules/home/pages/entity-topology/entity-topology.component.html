@@ -90,14 +90,15 @@
 
           <!-- Standard Tree Mode -->
           <div class="tree-scroll-container" *ngIf="!previewMode && dataSource.data.length > 0">
-            <mat-tree [dataSource]="dataSource" [treeControl]="treeControl" class="entities-tree">
+            <mat-tree [dataSource]="dataSource" [treeControl]="treeControl" [trackBy]="trackByFn" class="entities-tree">
               <!-- Leaf node -->
               <mat-tree-node *matTreeNodeDef="let node" matTreeNodeToggle>
                 <div class="node-row clickable" [class.mat-selected]="currentEntityId?.id === node.id" (click)="openDetails(node)">
                   <button mat-icon-button (click)="$event.stopPropagation()" disabled></button>
                   <mat-icon color="primary" class="node-icon">{{node.icon}}</mat-icon>
                   <span class="node-title" #nodeTitle1
-                        [matTooltip]="nodeTitle1.offsetWidth < nodeTitle1.scrollWidth ? node.name : ''"
+                        (mouseenter)="$any(node).tooltipText = nodeTitle1.offsetWidth < nodeTitle1.scrollWidth ? node.name : ''"
+                        [matTooltip]="$any(node).tooltipText"
                         matTooltipPosition="above">{{node.name}}</span>
                 </div>
               </mat-tree-node>
@@ -112,7 +113,8 @@
                   </button>
                   <mat-icon color="primary" class="node-icon">{{node.icon}}</mat-icon>
                   <span class="node-title" #nodeTitle2
-                        [matTooltip]="nodeTitle2.offsetWidth < nodeTitle2.scrollWidth ? node.name : ''"
+                        (mouseenter)="$any(node).tooltipText = nodeTitle2.offsetWidth < nodeTitle2.scrollWidth ? node.name : ''"
+                        [matTooltip]="$any(node).tooltipText"
                         matTooltipPosition="above">{{node.name}}</span>
                 </div>
                 <div [class.hidden]="!treeControl.isExpanded(node)" role="group" class="tree-node-children">
@@ -152,13 +154,14 @@
         <ng-template #orgNodeTemplate let-nodes="nodes" let-isRoot="isRoot">
           <ul>
             <li *ngFor="let node of nodes">
-              <div class="edge-label" *ngIf="!isRoot && getEdgeLabelText(node)" [matTooltip]="getEdgeLabelText(node)">
-                {{ getEdgeLabelText(node) }}
+              <div class="edge-label" *ngIf="!isRoot && $any(node).edgeLabel" [matTooltip]="$any(node).edgeLabel" matTooltipPosition="above">
+                {{ $any(node).edgeLabel }}
               </div>
               <div class="node-box" [ngClass]="{'root-node': isRoot}">
                 <mat-icon class="node-icon" [color]="isRoot ? '' : 'primary'">{{node.icon}}</mat-icon>
                 <div class="node-name" #nodeName
-                     [matTooltip]="nodeName.offsetWidth < nodeName.scrollWidth ? node.name : ''"
+                     (mouseenter)="$any(node).tooltipText = nodeName.offsetWidth < nodeName.scrollWidth ? node.name : ''"
+                     [matTooltip]="$any(node).tooltipText"
                      matTooltipPosition="above">{{node.name}}</div>
                 <button mat-icon-button *ngIf="node.children && node.children.length > 0"
                         class="org-toggle-btn"

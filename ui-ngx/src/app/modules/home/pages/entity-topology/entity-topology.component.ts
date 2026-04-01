@@ -97,6 +97,7 @@ export class EntityTopologyComponent extends PageComponent implements OnInit {
   private assetConfig: EntityTableConfig<AssetInfo>;
 
   hasChild = (_: number, node: HierarchyNode) => !!node.children && node.children.length > 0;
+  trackByFn = (_: number, node: HierarchyNode) => node.id;
 
   constructor(
     protected store: Store<AppState>,
@@ -131,7 +132,7 @@ export class EntityTopologyComponent extends PageComponent implements OnInit {
             icon = 'domain';
             break;
         }
-        return {
+        const result: any = {
           id: node.id,
           entityType: node.entityType as EntityType,
           name: node.name,
@@ -140,6 +141,8 @@ export class EntityTopologyComponent extends PageComponent implements OnInit {
           icon: icon,
           children: (node.children || []).map(c => transformNode(c))
         };
+        result.edgeLabel = this.getEdgeLabelText(result);
+        return result as HierarchyNode;
       };
 
       const rootNode = transformNode(backendTree);
@@ -211,9 +214,10 @@ export class EntityTopologyComponent extends PageComponent implements OnInit {
   }
 
   expandAll() {
+    const nodesToExpand: HierarchyNode[] = [];
     const expandRecursive = (nodes: HierarchyNode[]) => {
       nodes.forEach(node => {
-        this.treeControl.expand(node);
+        nodesToExpand.push(node);
         if (node.children) {
           expandRecursive(node.children);
         }
@@ -221,6 +225,8 @@ export class EntityTopologyComponent extends PageComponent implements OnInit {
     };
     if (this.dataSource.data) {
       expandRecursive(this.dataSource.data);
+      // Batch select to avoid O(N) change events cascading in CDK Tree when expanding large trees
+      this.treeControl.expansionModel.select(...nodesToExpand);
     }
   }
 
