@@ -375,7 +375,6 @@ export class EntityTopologyComponent extends PageComponent implements OnInit {
     ).subscribe((res) => {
       if (res) {
         this.deviceService.makeDevicePublic(device.id.id).subscribe(() => {
-          this.loadHierarchy();
           if (this.isDetailsOpen && this.entityDetailsPanel) {
             this.entityDetailsPanel.reloadEntity();
           }
@@ -395,7 +394,6 @@ export class EntityTopologyComponent extends PageComponent implements OnInit {
       }
     }).afterClosed().subscribe((res) => {
       if (res) {
-        this.loadHierarchy();
         if (this.isDetailsOpen && this.entityDetailsPanel) {
           this.entityDetailsPanel.reloadEntity();
         }
@@ -413,7 +411,6 @@ export class EntityTopologyComponent extends PageComponent implements OnInit {
     this.dialogService.confirm(title, content, this.translate.instant('action.no'), this.translate.instant('action.yes'), true).subscribe((res) => {
       if (res) {
         this.deviceService.unassignDeviceFromCustomer(device.id.id).subscribe(() => {
-          this.loadHierarchy();
           if (this.isDetailsOpen && this.entityDetailsPanel) {
             this.entityDetailsPanel.reloadEntity();
           }
@@ -510,7 +507,6 @@ export class EntityTopologyComponent extends PageComponent implements OnInit {
     ).subscribe((res) => {
       if (res) {
         this.assetService.makeAssetPublic(asset.id.id).subscribe(() => {
-          this.loadHierarchy();
           if (this.isDetailsOpen && this.entityDetailsPanel) {
             this.entityDetailsPanel.reloadEntity();
           }
@@ -530,7 +526,6 @@ export class EntityTopologyComponent extends PageComponent implements OnInit {
       }
     }).afterClosed().subscribe((res) => {
       if (res) {
-        this.loadHierarchy();
         if (this.isDetailsOpen && this.entityDetailsPanel) {
           this.entityDetailsPanel.reloadEntity();
         }
@@ -548,7 +543,6 @@ export class EntityTopologyComponent extends PageComponent implements OnInit {
     this.dialogService.confirm(title, content, this.translate.instant('action.no'), this.translate.instant('action.yes'), true).subscribe((res) => {
       if (res) {
         this.assetService.unassignAssetFromCustomer(asset.id.id).subscribe(() => {
-          this.loadHierarchy();
           if (this.isDetailsOpen && this.entityDetailsPanel) {
             this.entityDetailsPanel.reloadEntity();
           }
