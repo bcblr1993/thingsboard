@@ -79,6 +79,7 @@ export class EntityTopologyComponent extends PageComponent implements OnInit {
   previewMode = false;
   loading = false;
   private allNodes: HierarchyNode[] = [];
+  private dataGeneration = 0;
 
   // Drag variables
   isDragging = false;
@@ -97,7 +98,7 @@ export class EntityTopologyComponent extends PageComponent implements OnInit {
   private assetConfig: EntityTableConfig<AssetInfo>;
 
   hasChild = (_: number, node: HierarchyNode) => !!node.children && node.children.length > 0;
-  trackByFn = (_: number, node: HierarchyNode) => node.id;
+  trackByFn = (_: number, node: HierarchyNode) => `${node.id}_${this.dataGeneration}`;
 
   constructor(
     protected store: Store<AppState>,
@@ -192,8 +193,14 @@ export class EntityTopologyComponent extends PageComponent implements OnInit {
   }
 
   onSearchChange() {
+    // Increment generation to invalidate trackBy cache and force CDK Tree to re-render
+    this.dataGeneration++;
     if (!this.searchQuery) {
       this.dataSource.data = this.allNodes;
+      // Re-expand root
+      if (this.allNodes.length > 0) {
+        this.treeControl.expand(this.allNodes[0]);
+      }
       return;
     }
     const query = this.searchQuery.toLowerCase();
