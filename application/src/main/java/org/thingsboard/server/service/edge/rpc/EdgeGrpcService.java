@@ -344,8 +344,10 @@ public class EdgeGrpcService extends EdgeRpcServiceGrpc.EdgeRpcServiceImplBase i
             EdgeGrpcSession oldSession = sessions.get(edgeId);
             String oldInstanceId = oldSession.getInstanceId();
 
-            // 判断是否为挤兑：instanceId 不同
-            if (oldInstanceId != null && !oldInstanceId.equals(newInstanceId)) {
+            // 判断是否为挤兑：instanceId 不同（含一方为 null 的情况）
+            boolean sameInstance = (oldInstanceId != null && oldInstanceId.equals(newInstanceId))
+                    || (oldInstanceId == null && newInstanceId == null);
+            if (!sameInstance) {
                 // 检查旧会话是否还活着
                 if (oldSession.isConnected()) {
                     // 旧会话健康，拒绝新连接，保护旧会话
