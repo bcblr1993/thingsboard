@@ -350,7 +350,6 @@ public abstract class EdgeGrpcSession implements Closeable {
             tenantId = edge.getTenantId();
             try {
                 if (edge.getSecret().equals(request.getEdgeSecret())) {
-                    sessionOpenListener.accept(edge.getId(), this);
                     edgeVersion = request.getEdgeVersion();
                     processSaveEdgeVersionAsAttribute(request.getEdgeVersion().name());
                     // 解析并保存实例 ID
@@ -358,6 +357,7 @@ public abstract class EdgeGrpcSession implements Closeable {
                         instanceId = request.getInstanceId();
                         log.info("[{}][{}] Edge instance ID: {}", tenantId, sessionId, instanceId);
                     }
+                    sessionOpenListener.accept(edge.getId(), this);
                     return ConnectResponseMsg.newBuilder()
                             .setResponseCode(ConnectResponseCode.ACCEPTED)
                             .setErrorMsg("")
@@ -964,7 +964,7 @@ public abstract class EdgeGrpcSession implements Closeable {
         try {
             outputStream.onError(new RuntimeException(reason));
         } catch (Exception e) {
-            log.trace("[{}][{}] Failed to send error response: {}", tenantId, sessionId, e.getMessage());
+            log.error("[{}][{}] Failed to send error response: {}", tenantId, sessionId, e.getMessage());
         }
     }
 
