@@ -95,6 +95,9 @@ public class EdgeGrpcService extends EdgeRpcServiceGrpc.EdgeRpcServiceImplBase i
     private final ConcurrentMap<EdgeId, Boolean> edgeEventsMigrationProcessed = new ConcurrentHashMap<>();
     private final Queue<EdgeGrpcSession> zombieSessions = new ConcurrentLinkedQueue<>();
 
+    // 记录每个边缘端首次连接时的 instanceId，用于后续校验
+    private final ConcurrentMap<EdgeId, String> registeredInstanceIds = new ConcurrentHashMap<>();
+
     @Value("${edges.rpc.port}")
     private int rpcPort;
     @Value("${edges.rpc.ssl.enabled}")
@@ -362,6 +365,10 @@ public class EdgeGrpcService extends EdgeRpcServiceGrpc.EdgeRpcServiceImplBase i
         }
 
         sessions.put(edgeId, edgeGrpcSession);
+        // 连接被接受后才保存 instanceId 属性，避免被拒绝的连接覆盖已有值
+        if (newInstanceId != null) {
+            edgeGrpcSession.saveInstanceIdAsAttribute();
+        }
         final Lock newEventLock = sessionNewEventsLocks.computeIfAbsent(edgeId, id -> new ReentrantLock());
         newEventLock.lock();
         try {

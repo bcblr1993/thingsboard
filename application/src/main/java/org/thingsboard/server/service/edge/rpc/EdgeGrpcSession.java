@@ -352,11 +352,10 @@ public abstract class EdgeGrpcSession implements Closeable {
                 if (edge.getSecret().equals(request.getEdgeSecret())) {
                     edgeVersion = request.getEdgeVersion();
                     processSaveEdgeVersionAsAttribute(request.getEdgeVersion().name());
-                    // 解析并保存实例 ID
+                    // 解析实例 ID（保存属性移到 onEdgeConnect 中，确保连接被接受后才持久化）
                     if (request.hasInstanceId()) {
                         instanceId = request.getInstanceId();
                         log.info("[{}][{}] Edge instance ID: {}", tenantId, sessionId, instanceId);
-                        processSaveEdgeInstanceIdAsAttribute(instanceId);
                     }
                     sessionOpenListener.accept(edge.getId(), this);
                     return ConnectResponseMsg.newBuilder()
@@ -396,7 +395,7 @@ public abstract class EdgeGrpcSession implements Closeable {
         ctx.getAttributesService().save(tenantId, edge.getId(), AttributeScope.SERVER_SCOPE, attributeKvEntry);
     }
 
-    private void processSaveEdgeInstanceIdAsAttribute(String instanceId) {
+    public void saveInstanceIdAsAttribute() {
         AttributeKvEntry attributeKvEntry = new BaseAttributeKvEntry(new StringDataEntry(DataConstants.EDGE_INSTANCE_ID_ATTR_KEY, instanceId), System.currentTimeMillis());
         ctx.getAttributesService().save(tenantId, edge.getId(), AttributeScope.SERVER_SCOPE, attributeKvEntry);
     }
