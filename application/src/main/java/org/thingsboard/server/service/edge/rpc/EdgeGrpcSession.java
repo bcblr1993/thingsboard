@@ -16,6 +16,7 @@
 package org.thingsboard.server.service.edge.rpc;
 
 import com.datastax.oss.driver.api.core.uuid.Uuids;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -42,6 +43,8 @@ import org.thingsboard.server.common.data.kv.BaseAttributeKvEntry;
 import org.thingsboard.server.common.data.kv.LongDataEntry;
 import org.thingsboard.server.common.data.kv.StringDataEntry;
 import org.thingsboard.server.common.data.limit.LimitedApi;
+import org.thingsboard.server.common.data.alarm.AlarmCreateOrUpdateActiveRequest;
+import org.thingsboard.server.common.data.alarm.AlarmSeverity;
 import org.thingsboard.server.common.data.notification.rule.trigger.EdgeCommunicationFailureTrigger;
 import org.thingsboard.server.common.data.page.PageData;
 import org.thingsboard.server.common.data.page.PageLink;
@@ -103,6 +106,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 
 @Slf4j
 @Data
@@ -119,6 +123,7 @@ public abstract class EdgeGrpcSession implements Closeable {
     protected UUID sessionId;
     private BiConsumer<EdgeId, EdgeGrpcSession> sessionOpenListener;
     private BiConsumer<Edge, UUID> sessionCloseListener;
+    private BiFunction<EdgeId, String, String> instanceIdValidator;
 
     private final EdgeSessionState sessionState = new EdgeSessionState();
     private final ReentrantLock downlinkMsgLock = new ReentrantLock();
@@ -139,6 +144,8 @@ public abstract class EdgeGrpcSession implements Closeable {
     private volatile boolean syncInProgress;
 
     private EdgeVersion edgeVersion;
+    private String instanceId;
+    private String customVersion;
     private int maxInboundMessageSize;
     private int clientMaxInboundMessageSize;
     private int maxHighPriorityQueueSizePerSession;
@@ -149,12 +156,14 @@ public abstract class EdgeGrpcSession implements Closeable {
                            BiConsumer<EdgeId, EdgeGrpcSession> sessionOpenListener,
                            BiConsumer<Edge, UUID> sessionCloseListener,
                            ScheduledExecutorService sendDownlinkExecutorService,
-                           int maxInboundMessageSize, int maxHighPriorityQueueSizePerSession) {
+                           int maxInboundMessageSize, int maxHighPriorityQueueSizePerSession,
+                           BiFunction<EdgeId, String, String> instanceIdValidator) {
         this.sessionId = UUID.randomUUID();
         this.ctx = ctx;
         this.outputStream = outputStream;
         this.sessionOpenListener = sessionOpenListener;
         this.sessionCloseListener = sessionCloseListener;
+        this.instanceIdValidator = instanceIdValidator;
         this.sendDownlinkExecutorService = sendDownlinkExecutorService;
         this.maxInboundMessageSize = maxInboundMessageSize;
         this.maxHighPriorityQueueSizePerSession = maxHighPriorityQueueSizePerSession;
@@ -349,9 +358,32 @@ public abstract class EdgeGrpcSession implements Closeable {
             tenantId = edge.getTenantId();
             try {
                 if (edge.getSecret().equals(request.getEdgeSecret())) {
-                    sessionOpenListener.accept(edge.getId(), this);
                     edgeVersion = request.getEdgeVersion();
                     processSaveEdgeVersionAsAttribute(request.getEdgeVersion().name());
+                    // 解析实例 ID
+                    if (request.hasInstanceId()) {
+                        instanceId = request.getInstanceId();
+                        log.info("[{}][{}] Edge instance ID: {}", tenantId, sessionId, instanceId);
+                    }
+                    // 解析自定义版本
+                    if (request.hasCustomVersion()) {
+                        customVersion = request.getCustomVersion();
+                        log.info("[{}][{}] Edge custom version: {}", tenantId, sessionId, customVersion);
+                    }
+                    // instanceId 校验：在 sessionOpenListener 之前判断，避免先 ACCEPTED 再拒绝导致流异常
+                    if (instanceId != null && instanceIdValidator != null) {
+                        String rejectionReason = instanceIdValidator.apply(edge.getId(), instanceId);
+                        if (rejectionReason != null) {
+                            log.warn("[{}][{}] Edge [{}] rejected: {}", tenantId, sessionId, edge.getName(), rejectionReason);
+                            pushEdgeConnectionConflictAlert(rejectionReason);
+                            return ConnectResponseMsg.newBuilder()
+                                    .setResponseCode(ConnectResponseCode.CONNECTION_REJECTED)
+                                    .setErrorMsg(rejectionReason)
+                                    .setConfiguration(EdgeConfiguration.getDefaultInstance())
+                                    .build();
+                        }
+                    }
+                    sessionOpenListener.accept(edge.getId(), this);
                     return ConnectResponseMsg.newBuilder()
                             .setResponseCode(ConnectResponseCode.ACCEPTED)
                             .setErrorMsg("")
@@ -387,6 +419,44 @@ public abstract class EdgeGrpcSession implements Closeable {
     private void processSaveEdgeVersionAsAttribute(String edgeVersion) {
         AttributeKvEntry attributeKvEntry = new BaseAttributeKvEntry(new StringDataEntry(DataConstants.EDGE_VERSION_ATTR_KEY, edgeVersion), System.currentTimeMillis());
         ctx.getAttributesService().save(tenantId, edge.getId(), AttributeScope.SERVER_SCOPE, attributeKvEntry);
+    }
+
+    public void saveInstanceIdAsAttribute() {
+        AttributeKvEntry attributeKvEntry = new BaseAttributeKvEntry(new StringDataEntry(DataConstants.EDGE_INSTANCE_ID_ATTR_KEY, instanceId), System.currentTimeMillis());
+        ctx.getAttributesService().save(tenantId, edge.getId(), AttributeScope.SERVER_SCOPE, attributeKvEntry);
+    }
+
+    public void saveCustomVersionAsAttribute() {
+        AttributeKvEntry attributeKvEntry = new BaseAttributeKvEntry(new StringDataEntry(DataConstants.EDGE_CUSTOM_VERSION_ATTR_KEY, customVersion), System.currentTimeMillis());
+        ctx.getAttributesService().save(tenantId, edge.getId(), AttributeScope.SERVER_SCOPE, attributeKvEntry);
+    }
+
+    private void pushEdgeConnectionConflictAlert(String rejectionReason) {
+        try {
+            ObjectNode details = JacksonUtil.newObjectNode();
+            details.put("alertType", "EDGE_CONNECTION_CONFLICT");
+            details.put("edgeId", edge.getId().toString());
+            details.put("edgeName", edge.getName());
+            details.put("newInstanceId", instanceId != null ? instanceId : "unknown");
+            details.put("rejectionReason", rejectionReason);
+            details.put("timestamp", System.currentTimeMillis());
+
+            long now = System.currentTimeMillis();
+            AlarmCreateOrUpdateActiveRequest request = AlarmCreateOrUpdateActiveRequest.builder()
+                    .tenantId(tenantId)
+                    .customerId(edge.getCustomerId())
+                    .type("EdgeConnectionConflict")
+                    .originator(edge.getId())
+                    .severity(AlarmSeverity.CRITICAL)
+                    .startTs(now)
+                    .endTs(now)
+                    .details(details)
+                    .build();
+            ctx.getAlarmService().createAlarm(request);
+            log.info("[{}][{}] Edge connection conflict alarm created", tenantId, edge.getId());
+        } catch (Exception e) {
+            log.warn("[{}][{}] Failed to create edge connection conflict alarm", tenantId, edge.getId(), e);
+        }
     }
 
     private void interruptGeneralProcessingOnSync() {
@@ -946,6 +1016,25 @@ public abstract class EdgeGrpcSession implements Closeable {
             outputStream.onCompleted();
         } catch (Exception e) {
             log.debug("[{}][{}] Failed to close output stream: {}", tenantId, sessionId, e.getMessage());
+        }
+    }
+
+    /**
+     * 关闭会话并指定原因：发送 CONNECTION_REJECTED 响应后正常关闭流
+     */
+    public void closeWithReason(String reason) {
+        log.info("[{}][{}] Closing session with reason: {}", tenantId, sessionId, reason);
+        connected = false;
+        try {
+            outputStream.onNext(ResponseMsg.newBuilder()
+                    .setConnectResponseMsg(ConnectResponseMsg.newBuilder()
+                            .setResponseCode(ConnectResponseCode.CONNECTION_REJECTED)
+                            .setErrorMsg(reason)
+                            .build())
+                    .build());
+            outputStream.onCompleted();
+        } catch (Exception e) {
+            log.error("[{}][{}] Failed to send rejection response: {}", tenantId, sessionId, e.getMessage());
         }
     }
 

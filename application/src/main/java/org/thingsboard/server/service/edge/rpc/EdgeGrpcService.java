@@ -86,7 +86,7 @@ import static org.thingsboard.server.service.state.DefaultDeviceStateService.LAS
 public class EdgeGrpcService extends EdgeRpcServiceGrpc.EdgeRpcServiceImplBase implements EdgeRpcService {
 
     private static final int DESTROY_SESSION_MAX_ATTEMPTS = 10;
-
+    //记录活跃的会话
     private final ConcurrentMap<EdgeId, EdgeGrpcSession> sessions = new ConcurrentHashMap<>();
     private final ConcurrentMap<EdgeId, Lock> sessionNewEventsLocks = new ConcurrentHashMap<>();
     private final Map<EdgeId, Boolean> sessionNewEvents = new HashMap<>();
@@ -94,6 +94,9 @@ public class EdgeGrpcService extends EdgeRpcServiceGrpc.EdgeRpcServiceImplBase i
     private final ConcurrentMap<UUID, Consumer<FromEdgeSyncResponse>> localSyncEdgeRequests = new ConcurrentHashMap<>();
     private final ConcurrentMap<EdgeId, Boolean> edgeEventsMigrationProcessed = new ConcurrentHashMap<>();
     private final Queue<EdgeGrpcSession> zombieSessions = new ConcurrentLinkedQueue<>();
+
+    // 记录每个边缘端首次连接时的 instanceId，用于后续校验
+    private final ConcurrentMap<EdgeId, String> registeredInstanceIds = new ConcurrentHashMap<>();
 
     @Value("${edges.rpc.port}")
     private int rpcPort;
@@ -233,9 +236,9 @@ public class EdgeGrpcService extends EdgeRpcServiceGrpc.EdgeRpcServiceImplBase i
     private EdgeGrpcSession createEdgeGrpcSession(StreamObserver<ResponseMsg> outputStream) {
         return kafkaSettings.isPresent() && kafkaTopicConfigs.isPresent()
                 ? new KafkaEdgeGrpcSession(ctx, topicService, tbCoreQueueFactory, kafkaSettings.get(), kafkaTopicConfigs.get(), outputStream, this::onEdgeConnect, this::onEdgeDisconnect,
-                sendDownlinkExecutorService, maxInboundMessageSize, maxHighPriorityQueueSizePerSession)
+                sendDownlinkExecutorService, maxInboundMessageSize, maxHighPriorityQueueSizePerSession, this::validateInstanceId)
                 : new PostgresEdgeGrpcSession(ctx, outputStream, this::onEdgeConnect, this::onEdgeDisconnect,
-                sendDownlinkExecutorService, maxInboundMessageSize, maxHighPriorityQueueSizePerSession);
+                sendDownlinkExecutorService, maxInboundMessageSize, maxHighPriorityQueueSizePerSession, this::validateInstanceId);
     }
 
     @Override
@@ -298,6 +301,16 @@ public class EdgeGrpcService extends EdgeRpcServiceGrpc.EdgeRpcServiceImplBase i
         }
     }
 
+    @Override
+    public void clearRegisteredInstanceId(TenantId tenantId, EdgeId edgeId) {
+        String removed = registeredInstanceIds.remove(edgeId);
+        if (removed != null) {
+            log.info("[{}][{}] Cleared registered instanceId [{}] for edge", tenantId, edgeId, removed);
+        } else {
+            log.debug("[{}][{}] No registered instanceId found for edge", tenantId, edgeId);
+        }
+    }
+
     private void onEdgeEventUpdate(TenantId tenantId, EdgeId edgeId) {
         EdgeGrpcSession session = sessions.get(edgeId);
         if (session != null && session.isConnected()) {
@@ -331,14 +344,38 @@ public class EdgeGrpcService extends EdgeRpcServiceGrpc.EdgeRpcServiceImplBase i
         }
     }
 
+    private String validateInstanceId(EdgeId edgeId, String newInstanceId) {
+        String registered = registeredInstanceIds.get(edgeId);
+        if (registered == null) {
+            // 首次连接，注册 instanceId
+            registeredInstanceIds.putIfAbsent(edgeId, newInstanceId);
+            log.info("Edge [{}] instanceId registered: [{}]", edgeId, newInstanceId);
+            return null; // 通过校验
+        } else if (!registered.equals(newInstanceId)) {
+            // instanceId 不匹配，返回拒绝原因
+            return "instanceId mismatch, registered=" + registered;
+        }
+        return null; // 通过校验
+    }
+
     private void onEdgeConnect(EdgeId edgeId, EdgeGrpcSession edgeGrpcSession) {
         Edge edge = edgeGrpcSession.getEdge();
         TenantId tenantId = edge.getTenantId();
-        log.info("[{}][{}] edge [{}] connected successfully.", tenantId, edgeGrpcSession.getSessionId(), edgeId);
-        if (sessions.containsKey(edgeId)) {
-            destroySession(sessions.get(edgeId));
-        }
+        String newInstanceId = edgeGrpcSession.getInstanceId();
+
+        log.info("[{}][{}] edge [{}] connected, instanceId: [{}].", tenantId, edgeGrpcSession.getSessionId(), edgeId,
+                newInstanceId != null ? newInstanceId : "unknown");
+
         sessions.put(edgeId, edgeGrpcSession);
+        // 连接被接受后保存 instanceId 属性
+        if (newInstanceId != null) {
+            edgeGrpcSession.saveInstanceIdAsAttribute();
+        }
+        // 连接被接受后保存 customVersion 属性
+        String newCustomVersion = edgeGrpcSession.getCustomVersion();
+        if (newCustomVersion != null) {
+            edgeGrpcSession.saveCustomVersionAsAttribute();
+        }
         final Lock newEventLock = sessionNewEventsLocks.computeIfAbsent(edgeId, id -> new ReentrantLock());
         newEventLock.lock();
         try {
