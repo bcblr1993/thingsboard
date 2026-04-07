@@ -34,4 +34,6 @@ public interface EdgeRpcService {
 
     void processSyncRequest(TenantId tenantId, EdgeId edgeId, Consumer<FromEdgeSyncResponse> responseConsumer);
 
+    void clearRegisteredInstanceId(TenantId tenantId, EdgeId edgeId);
+
 }

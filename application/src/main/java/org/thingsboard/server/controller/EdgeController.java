@@ -180,6 +180,20 @@ public class EdgeController extends BaseController {
         tbEdgeService.delete(edge, getCurrentUser());
     }
 
+    @ApiOperation(value = "Clear edge registered instance ID (clearRegisteredInstanceId)",
+            notes = "Clears the registered instance ID for the specified edge. This allows a reinstalled edge instance to connect with a new instance ID." + TENANT_AUTHORITY_PARAGRAPH)
+    @PreAuthorize("hasAuthority('TENANT_ADMIN')")
+    @DeleteMapping(value = "/edge/{edgeId}/instanceId")
+    public void clearRegisteredInstanceId(@Parameter(description = EDGE_ID_PARAM_DESCRIPTION, required = true)
+                                          @PathVariable(EDGE_ID) String strEdgeId) throws ThingsboardException {
+        checkParameter(EDGE_ID, strEdgeId);
+        EdgeId edgeId = new EdgeId(toUUID(strEdgeId));
+        checkEdgeId(edgeId, Operation.WRITE);
+        if (edgeRpcServiceOpt.isPresent()) {
+            edgeRpcServiceOpt.get().clearRegisteredInstanceId(getTenantId(), edgeId);
+        }
+    }
+
     @ApiOperation(value = "Get Tenant Edges (getEdges)",
             notes = "Returns a page of edges owned by tenant. " +
                     PAGE_DATA_PARAMETERS + TENANT_AUTHORITY_PARAGRAPH)

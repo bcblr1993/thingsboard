@@ -86,7 +86,7 @@ import static org.thingsboard.server.service.state.DefaultDeviceStateService.LAS
 public class EdgeGrpcService extends EdgeRpcServiceGrpc.EdgeRpcServiceImplBase implements EdgeRpcService {
 
     private static final int DESTROY_SESSION_MAX_ATTEMPTS = 10;
-
+    //记录活跃的会话
     private final ConcurrentMap<EdgeId, EdgeGrpcSession> sessions = new ConcurrentHashMap<>();
     private final ConcurrentMap<EdgeId, Lock> sessionNewEventsLocks = new ConcurrentHashMap<>();
     private final Map<EdgeId, Boolean> sessionNewEvents = new HashMap<>();
@@ -301,6 +301,16 @@ public class EdgeGrpcService extends EdgeRpcServiceGrpc.EdgeRpcServiceImplBase i
         }
     }
 
+    @Override
+    public void clearRegisteredInstanceId(TenantId tenantId, EdgeId edgeId) {
+        String removed = registeredInstanceIds.remove(edgeId);
+        if (removed != null) {
+            log.info("[{}][{}] Cleared registered instanceId [{}] for edge", tenantId, edgeId, removed);
+        } else {
+            log.debug("[{}][{}] No registered instanceId found for edge", tenantId, edgeId);
+        }
+    }
+
     private void onEdgeEventUpdate(TenantId tenantId, EdgeId edgeId) {
         EdgeGrpcSession session = sessions.get(edgeId);
         if (session != null && session.isConnected()) {
@@ -342,24 +352,19 @@ public class EdgeGrpcService extends EdgeRpcServiceGrpc.EdgeRpcServiceImplBase i
         log.info("[{}][{}] edge [{}] connected, instanceId: [{}].", tenantId, edgeGrpcSession.getSessionId(), edgeId,
                 newInstanceId != null ? newInstanceId : "unknown");
 
-        if (sessions.containsKey(edgeId)) {
-            EdgeGrpcSession oldSession = sessions.get(edgeId);
-            String oldInstanceId = oldSession.getInstanceId();
-
-            boolean sameInstance = (oldInstanceId != null && oldInstanceId.equals(newInstanceId))
-                    || (oldInstanceId == null && newInstanceId == null);
-            if (sameInstance) {
-                // 同一实例重连，关闭旧会话，接受新连接
-                log.info("[{}][{}] Edge [{}] reconnected (same instance), old session closed.", tenantId, edgeId, edge.getName());
-                destroySession(oldSession);
-            } else {
-                // 抢占场景：instanceId 不同，维持旧会话，拒绝新连接
-                log.warn("[{}][{}] Edge [{}] reject new connection to protect existing session! Old instanceId: [{}], New instanceId: [{}]",
-                        tenantId, edgeId, edge.getName(),
-                        oldInstanceId != null ? oldInstanceId : "unknown",
-                        newInstanceId != null ? newInstanceId : "unknown");
-                pushEdgeKickoutAlert(tenantId, edge, oldInstanceId, newInstanceId);
-                edgeGrpcSession.closeWithReason("Connection rejected: another instance is already connected");
+        // instanceId 注册校验：与首次连接时的 instanceId 比对
+        if (newInstanceId != null) {
+            String registered = registeredInstanceIds.get(edgeId);
+            if (registered == null) {
+                // 首次连接，注册 instanceId
+                registeredInstanceIds.putIfAbsent(edgeId, newInstanceId);
+                log.info("[{}][{}] Edge [{}] instanceId registered: [{}]", tenantId, edgeId, edge.getName(), newInstanceId);
+            } else if (!registered.equals(newInstanceId)) {
+                // instanceId 不匹配，拒绝连接
+                log.warn("[{}][{}] Edge [{}] rejected: instanceId mismatch! Registered: [{}], Incoming: [{}]",
+                        tenantId, edgeId, edge.getName(), registered, newInstanceId);
+                pushEdgeKickoutAlert(tenantId, edge, registered, newInstanceId);
+                edgeGrpcSession.closeWithReason("Connection rejected: instanceId mismatch, registered=" + registered);
                 return;
             }
         }
