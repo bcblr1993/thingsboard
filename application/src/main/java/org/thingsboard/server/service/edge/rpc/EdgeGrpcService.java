@@ -371,6 +371,11 @@ public class EdgeGrpcService extends EdgeRpcServiceGrpc.EdgeRpcServiceImplBase i
         if (newInstanceId != null) {
             edgeGrpcSession.saveInstanceIdAsAttribute();
         }
+        // 连接被接受后保存 customVersion 属性
+        String newCustomVersion = edgeGrpcSession.getCustomVersion();
+        if (newCustomVersion != null) {
+            edgeGrpcSession.saveCustomVersionAsAttribute();
+        }
         final Lock newEventLock = sessionNewEventsLocks.computeIfAbsent(edgeId, id -> new ReentrantLock());
         newEventLock.lock();
         try {

@@ -145,6 +145,7 @@ public abstract class EdgeGrpcSession implements Closeable {
 
     private EdgeVersion edgeVersion;
     private String instanceId;
+    private String customVersion;
     private int maxInboundMessageSize;
     private int clientMaxInboundMessageSize;
     private int maxHighPriorityQueueSizePerSession;
@@ -364,6 +365,11 @@ public abstract class EdgeGrpcSession implements Closeable {
                         instanceId = request.getInstanceId();
                         log.info("[{}][{}] Edge instance ID: {}", tenantId, sessionId, instanceId);
                     }
+                    // 解析自定义版本
+                    if (request.hasCustomVersion()) {
+                        customVersion = request.getCustomVersion();
+                        log.info("[{}][{}] Edge custom version: {}", tenantId, sessionId, customVersion);
+                    }
                     // instanceId 校验：在 sessionOpenListener 之前判断，避免先 ACCEPTED 再拒绝导致流异常
                     if (instanceId != null && instanceIdValidator != null) {
                         String rejectionReason = instanceIdValidator.apply(edge.getId(), instanceId);
@@ -417,6 +423,11 @@ public abstract class EdgeGrpcSession implements Closeable {
 
     public void saveInstanceIdAsAttribute() {
         AttributeKvEntry attributeKvEntry = new BaseAttributeKvEntry(new StringDataEntry(DataConstants.EDGE_INSTANCE_ID_ATTR_KEY, instanceId), System.currentTimeMillis());
+        ctx.getAttributesService().save(tenantId, edge.getId(), AttributeScope.SERVER_SCOPE, attributeKvEntry);
+    }
+
+    public void saveCustomVersionAsAttribute() {
+        AttributeKvEntry attributeKvEntry = new BaseAttributeKvEntry(new StringDataEntry(DataConstants.EDGE_CUSTOM_VERSION_ATTR_KEY, customVersion), System.currentTimeMillis());
         ctx.getAttributesService().save(tenantId, edge.getId(), AttributeScope.SERVER_SCOPE, attributeKvEntry);
     }
 
