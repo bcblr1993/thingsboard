@@ -236,9 +236,9 @@ public class EdgeGrpcService extends EdgeRpcServiceGrpc.EdgeRpcServiceImplBase i
     private EdgeGrpcSession createEdgeGrpcSession(StreamObserver<ResponseMsg> outputStream) {
         return kafkaSettings.isPresent() && kafkaTopicConfigs.isPresent()
                 ? new KafkaEdgeGrpcSession(ctx, topicService, tbCoreQueueFactory, kafkaSettings.get(), kafkaTopicConfigs.get(), outputStream, this::onEdgeConnect, this::onEdgeDisconnect,
-                sendDownlinkExecutorService, maxInboundMessageSize, maxHighPriorityQueueSizePerSession)
+                sendDownlinkExecutorService, maxInboundMessageSize, maxHighPriorityQueueSizePerSession, this::validateInstanceId)
                 : new PostgresEdgeGrpcSession(ctx, outputStream, this::onEdgeConnect, this::onEdgeDisconnect,
-                sendDownlinkExecutorService, maxInboundMessageSize, maxHighPriorityQueueSizePerSession);
+                sendDownlinkExecutorService, maxInboundMessageSize, maxHighPriorityQueueSizePerSession, this::validateInstanceId);
     }
 
     @Override
@@ -344,6 +344,20 @@ public class EdgeGrpcService extends EdgeRpcServiceGrpc.EdgeRpcServiceImplBase i
         }
     }
 
+    private String validateInstanceId(EdgeId edgeId, String newInstanceId) {
+        String registered = registeredInstanceIds.get(edgeId);
+        if (registered == null) {
+            // 首次连接，注册 instanceId
+            registeredInstanceIds.putIfAbsent(edgeId, newInstanceId);
+            log.info("Edge [{}] instanceId registered: [{}]", edgeId, newInstanceId);
+            return null; // 通过校验
+        } else if (!registered.equals(newInstanceId)) {
+            // instanceId 不匹配，返回拒绝原因
+            return "instanceId mismatch, registered=" + registered;
+        }
+        return null; // 通过校验
+    }
+
     private void onEdgeConnect(EdgeId edgeId, EdgeGrpcSession edgeGrpcSession) {
         Edge edge = edgeGrpcSession.getEdge();
         TenantId tenantId = edge.getTenantId();
@@ -352,25 +366,8 @@ public class EdgeGrpcService extends EdgeRpcServiceGrpc.EdgeRpcServiceImplBase i
         log.info("[{}][{}] edge [{}] connected, instanceId: [{}].", tenantId, edgeGrpcSession.getSessionId(), edgeId,
                 newInstanceId != null ? newInstanceId : "unknown");
 
-        // instanceId 注册校验：与首次连接时的 instanceId 比对
-        if (newInstanceId != null) {
-            String registered = registeredInstanceIds.get(edgeId);
-            if (registered == null) {
-                // 首次连接，注册 instanceId
-                registeredInstanceIds.putIfAbsent(edgeId, newInstanceId);
-                log.info("[{}][{}] Edge [{}] instanceId registered: [{}]", tenantId, edgeId, edge.getName(), newInstanceId);
-            } else if (!registered.equals(newInstanceId)) {
-                // instanceId 不匹配，拒绝连接
-                log.warn("[{}][{}] Edge [{}] rejected: instanceId mismatch! Registered: [{}], Incoming: [{}]",
-                        tenantId, edgeId, edge.getName(), registered, newInstanceId);
-                pushEdgeKickoutAlert(tenantId, edge, registered, newInstanceId);
-                edgeGrpcSession.closeWithReason("Connection rejected: instanceId mismatch, registered=" + registered);
-                return;
-            }
-        }
-
         sessions.put(edgeId, edgeGrpcSession);
-        // 连接被接受后才保存 instanceId 属性，避免被拒绝的连接覆盖已有值
+        // 连接被接受后保存 instanceId 属性
         if (newInstanceId != null) {
             edgeGrpcSession.saveInstanceIdAsAttribute();
         }

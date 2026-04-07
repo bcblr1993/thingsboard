@@ -27,6 +27,7 @@ import org.thingsboard.server.service.edge.EdgeContextComponent;
 import java.util.UUID;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 
 @Slf4j
 public class PostgresEdgeGrpcSession extends EdgeGrpcSession {
@@ -34,8 +35,9 @@ public class PostgresEdgeGrpcSession extends EdgeGrpcSession {
     PostgresEdgeGrpcSession(EdgeContextComponent ctx, StreamObserver<ResponseMsg> outputStream,
                             BiConsumer<EdgeId, EdgeGrpcSession> sessionOpenListener,
                             BiConsumer<Edge, UUID> sessionCloseListener, ScheduledExecutorService sendDownlinkExecutorService,
-                            int maxInboundMessageSize, int maxHighPriorityQueueSizePerSession) {
-        super(ctx, outputStream, sessionOpenListener, sessionCloseListener, sendDownlinkExecutorService, maxInboundMessageSize, maxHighPriorityQueueSizePerSession);
+                            int maxInboundMessageSize, int maxHighPriorityQueueSizePerSession,
+                            BiFunction<EdgeId, String, String> instanceIdValidator) {
+        super(ctx, outputStream, sessionOpenListener, sessionCloseListener, sendDownlinkExecutorService, maxInboundMessageSize, maxHighPriorityQueueSizePerSession, instanceIdValidator);
     }
 
     @Override

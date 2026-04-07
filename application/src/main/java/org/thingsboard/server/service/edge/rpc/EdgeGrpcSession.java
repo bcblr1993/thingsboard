@@ -103,6 +103,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 
 @Slf4j
 @Data
@@ -119,6 +120,7 @@ public abstract class EdgeGrpcSession implements Closeable {
     protected UUID sessionId;
     private BiConsumer<EdgeId, EdgeGrpcSession> sessionOpenListener;
     private BiConsumer<Edge, UUID> sessionCloseListener;
+    private BiFunction<EdgeId, String, String> instanceIdValidator;
 
     private final EdgeSessionState sessionState = new EdgeSessionState();
     private final ReentrantLock downlinkMsgLock = new ReentrantLock();
@@ -150,12 +152,14 @@ public abstract class EdgeGrpcSession implements Closeable {
                            BiConsumer<EdgeId, EdgeGrpcSession> sessionOpenListener,
                            BiConsumer<Edge, UUID> sessionCloseListener,
                            ScheduledExecutorService sendDownlinkExecutorService,
-                           int maxInboundMessageSize, int maxHighPriorityQueueSizePerSession) {
+                           int maxInboundMessageSize, int maxHighPriorityQueueSizePerSession,
+                           BiFunction<EdgeId, String, String> instanceIdValidator) {
         this.sessionId = UUID.randomUUID();
         this.ctx = ctx;
         this.outputStream = outputStream;
         this.sessionOpenListener = sessionOpenListener;
         this.sessionCloseListener = sessionCloseListener;
+        this.instanceIdValidator = instanceIdValidator;
         this.sendDownlinkExecutorService = sendDownlinkExecutorService;
         this.maxInboundMessageSize = maxInboundMessageSize;
         this.maxHighPriorityQueueSizePerSession = maxHighPriorityQueueSizePerSession;
@@ -352,10 +356,24 @@ public abstract class EdgeGrpcSession implements Closeable {
                 if (edge.getSecret().equals(request.getEdgeSecret())) {
                     edgeVersion = request.getEdgeVersion();
                     processSaveEdgeVersionAsAttribute(request.getEdgeVersion().name());
-                    // 解析实例 ID（保存属性移到 onEdgeConnect 中，确保连接被接受后才持久化）
+                    // 解析实例 ID
                     if (request.hasInstanceId()) {
                         instanceId = request.getInstanceId();
                         log.info("[{}][{}] Edge instance ID: {}", tenantId, sessionId, instanceId);
+                    }
+                    // instanceId 校验：在 sessionOpenListener 之前判断，避免先 ACCEPTED 再拒绝导致流异常
+                    if (instanceId != null && instanceIdValidator != null) {
+                        String rejectionReason = instanceIdValidator.apply(edge.getId(), instanceId);
+                        if (rejectionReason != null) {
+                            log.warn("[{}][{}] Edge [{}] rejected: {}", tenantId, sessionId, edge.getName(), rejectionReason);
+                            ctx.getRuleProcessor().process(EdgeCommunicationFailureTrigger.builder().tenantId(tenantId).edgeId(edge.getId())
+                                    .customerId(edge.getCustomerId()).edgeName(edge.getName()).failureMsg(rejectionReason).error(rejectionReason).build());
+                            return ConnectResponseMsg.newBuilder()
+                                    .setResponseCode(ConnectResponseCode.CONNECTION_REJECTED)
+                                    .setErrorMsg(rejectionReason)
+                                    .setConfiguration(EdgeConfiguration.getDefaultInstance())
+                                    .build();
+                        }
                     }
                     sessionOpenListener.accept(edge.getId(), this);
                     return ConnectResponseMsg.newBuilder()
