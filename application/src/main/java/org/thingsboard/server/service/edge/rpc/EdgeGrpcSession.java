@@ -16,6 +16,7 @@
 package org.thingsboard.server.service.edge.rpc;
 
 import com.datastax.oss.driver.api.core.uuid.Uuids;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -42,6 +43,8 @@ import org.thingsboard.server.common.data.kv.BaseAttributeKvEntry;
 import org.thingsboard.server.common.data.kv.LongDataEntry;
 import org.thingsboard.server.common.data.kv.StringDataEntry;
 import org.thingsboard.server.common.data.limit.LimitedApi;
+import org.thingsboard.server.common.data.alarm.AlarmCreateOrUpdateActiveRequest;
+import org.thingsboard.server.common.data.alarm.AlarmSeverity;
 import org.thingsboard.server.common.data.notification.rule.trigger.EdgeCommunicationFailureTrigger;
 import org.thingsboard.server.common.data.page.PageData;
 import org.thingsboard.server.common.data.page.PageLink;
@@ -366,8 +369,7 @@ public abstract class EdgeGrpcSession implements Closeable {
                         String rejectionReason = instanceIdValidator.apply(edge.getId(), instanceId);
                         if (rejectionReason != null) {
                             log.warn("[{}][{}] Edge [{}] rejected: {}", tenantId, sessionId, edge.getName(), rejectionReason);
-                            ctx.getRuleProcessor().process(EdgeCommunicationFailureTrigger.builder().tenantId(tenantId).edgeId(edge.getId())
-                                    .customerId(edge.getCustomerId()).edgeName(edge.getName()).failureMsg(rejectionReason).error(rejectionReason).build());
+                            pushEdgeConnectionConflictAlert(rejectionReason);
                             return ConnectResponseMsg.newBuilder()
                                     .setResponseCode(ConnectResponseCode.CONNECTION_REJECTED)
                                     .setErrorMsg(rejectionReason)
@@ -416,6 +418,34 @@ public abstract class EdgeGrpcSession implements Closeable {
     public void saveInstanceIdAsAttribute() {
         AttributeKvEntry attributeKvEntry = new BaseAttributeKvEntry(new StringDataEntry(DataConstants.EDGE_INSTANCE_ID_ATTR_KEY, instanceId), System.currentTimeMillis());
         ctx.getAttributesService().save(tenantId, edge.getId(), AttributeScope.SERVER_SCOPE, attributeKvEntry);
+    }
+
+    private void pushEdgeConnectionConflictAlert(String rejectionReason) {
+        try {
+            ObjectNode details = JacksonUtil.newObjectNode();
+            details.put("alertType", "EDGE_CONNECTION_CONFLICT");
+            details.put("edgeId", edge.getId().toString());
+            details.put("edgeName", edge.getName());
+            details.put("newInstanceId", instanceId != null ? instanceId : "unknown");
+            details.put("rejectionReason", rejectionReason);
+            details.put("timestamp", System.currentTimeMillis());
+
+            long now = System.currentTimeMillis();
+            AlarmCreateOrUpdateActiveRequest request = AlarmCreateOrUpdateActiveRequest.builder()
+                    .tenantId(tenantId)
+                    .customerId(edge.getCustomerId())
+                    .type("EdgeConnectionConflict")
+                    .originator(edge.getId())
+                    .severity(AlarmSeverity.CRITICAL)
+                    .startTs(now)
+                    .endTs(now)
+                    .details(details)
+                    .build();
+            ctx.getAlarmService().createAlarm(request);
+            log.info("[{}][{}] Edge connection conflict alarm created", tenantId, edge.getId());
+        } catch (Exception e) {
+            log.warn("[{}][{}] Failed to create edge connection conflict alarm", tenantId, edge.getId(), e);
+        }
     }
 
     private void interruptGeneralProcessingOnSync() {

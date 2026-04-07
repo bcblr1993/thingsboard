@@ -388,40 +388,6 @@ public class EdgeGrpcService extends EdgeRpcServiceGrpc.EdgeRpcServiceImplBase i
         scheduleEdgeEventsCheck(edgeGrpcSession);
     }
 
-    /**
-     * 发送边缘抢占告警到规则引擎
-     */
-    private void pushEdgeKickoutAlert(TenantId tenantId, Edge edge, String oldInstanceId, String newInstanceId) {
-        try {
-            ObjectNode alertData = JacksonUtil.newObjectNode();
-            alertData.put("alertType", "EDGE_CONNECTION_CONFLICT");
-            alertData.put("edgeId", edge.getId().toString());
-            alertData.put("edgeName", edge.getName());
-            alertData.put("oldInstanceId", oldInstanceId != null ? oldInstanceId : "unknown");
-            alertData.put("newInstanceId", newInstanceId != null ? newInstanceId : "unknown");
-            alertData.put("timestamp", System.currentTimeMillis());
-
-            TbMsgMetaData md = new TbMsgMetaData();
-            md.putValue("edgeId", edge.getId().toString());
-            md.putValue("edgeName", edge.getName());
-            md.putValue("oldInstanceId", oldInstanceId != null ? oldInstanceId : "unknown");
-            md.putValue("newInstanceId", newInstanceId != null ? newInstanceId : "unknown");
-
-            TbMsg tbMsg = TbMsg.newMsg()
-                    .type(TbMsgType.ALARM)
-                    .originator(edge.getId())
-                    .copyMetaData(md)
-                    .dataType(TbMsgDataType.JSON)
-                    .data(JacksonUtil.toString(alertData))
-                    .build();
-
-            clusterService.pushMsgToRuleEngine(tenantId, edge.getId(), tbMsg, null);
-            log.info("[{}][{}] Edge connection conflict alert pushed to rule engine", tenantId, edge.getId());
-        } catch (Exception e) {
-            log.warn("[{}][{}] Failed to push edge kickout alert", tenantId, edge.getId(), e);
-        }
-    }
-
     private void startSyncProcess(TenantId tenantId, EdgeId edgeId, UUID requestId, String requestServiceId) {
         EdgeGrpcSession session = sessions.get(edgeId);
         if (session != null) {
