@@ -356,6 +356,7 @@ public abstract class EdgeGrpcSession implements Closeable {
                     if (request.hasInstanceId()) {
                         instanceId = request.getInstanceId();
                         log.info("[{}][{}] Edge instance ID: {}", tenantId, sessionId, instanceId);
+                        processSaveEdgeInstanceIdAsAttribute(instanceId);
                     }
                     sessionOpenListener.accept(edge.getId(), this);
                     return ConnectResponseMsg.newBuilder()
@@ -392,6 +393,11 @@ public abstract class EdgeGrpcSession implements Closeable {
 
     private void processSaveEdgeVersionAsAttribute(String edgeVersion) {
         AttributeKvEntry attributeKvEntry = new BaseAttributeKvEntry(new StringDataEntry(DataConstants.EDGE_VERSION_ATTR_KEY, edgeVersion), System.currentTimeMillis());
+        ctx.getAttributesService().save(tenantId, edge.getId(), AttributeScope.SERVER_SCOPE, attributeKvEntry);
+    }
+
+    private void processSaveEdgeInstanceIdAsAttribute(String instanceId) {
+        AttributeKvEntry attributeKvEntry = new BaseAttributeKvEntry(new StringDataEntry(DataConstants.EDGE_INSTANCE_ID_ATTR_KEY, instanceId), System.currentTimeMillis());
         ctx.getAttributesService().save(tenantId, edge.getId(), AttributeScope.SERVER_SCOPE, attributeKvEntry);
     }
 
@@ -956,15 +962,21 @@ public abstract class EdgeGrpcSession implements Closeable {
     }
 
     /**
-     * 关闭会话并指定原因
+     * 关闭会话并指定原因：发送 CONNECTION_REJECTED 响应后正常关闭流
      */
     public void closeWithReason(String reason) {
         log.info("[{}][{}] Closing session with reason: {}", tenantId, sessionId, reason);
         connected = false;
         try {
-            outputStream.onError(new RuntimeException(reason));
+            outputStream.onNext(ResponseMsg.newBuilder()
+                    .setConnectResponseMsg(ConnectResponseMsg.newBuilder()
+                            .setResponseCode(ConnectResponseCode.CONNECTION_REJECTED)
+                            .setErrorMsg(reason)
+                            .build())
+                    .build());
+            outputStream.onCompleted();
         } catch (Exception e) {
-            log.error("[{}][{}] Failed to send error response: {}", tenantId, sessionId, e.getMessage());
+            log.error("[{}][{}] Failed to send rejection response: {}", tenantId, sessionId, e.getMessage());
         }
     }
 

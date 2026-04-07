@@ -129,6 +129,7 @@ public class DataConstants {
     public static final String EDGE_MSG_SOURCE = "edge";
     public static final String MSG_SOURCE_KEY = "source";
     public static final String EDGE_VERSION_ATTR_KEY = "edgeVersion";
+    public static final String EDGE_INSTANCE_ID_ATTR_KEY = "instanceId";
 
     public static final String LAST_CONNECTED_GATEWAY = "lastConnectedGateway";
 
