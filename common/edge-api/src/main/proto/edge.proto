@@ -87,6 +87,7 @@ enum ConnectResponseCode {
   ACCEPTED = 0;
   BAD_CREDENTIALS = 1;
   SERVER_UNAVAILABLE = 2;
+  CONNECTION_REJECTED = 3;
 }
 
 message ConnectResponseMsg {

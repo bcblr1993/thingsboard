@@ -339,45 +339,25 @@ public class EdgeGrpcService extends EdgeRpcServiceGrpc.EdgeRpcServiceImplBase i
         log.info("[{}][{}] edge [{}] connected, instanceId: [{}].", tenantId, edgeGrpcSession.getSessionId(), edgeId,
                 newInstanceId != null ? newInstanceId : "unknown");
 
-        // 检测挤兑场景：已存在会话且 instanceId 不同
         if (sessions.containsKey(edgeId)) {
             EdgeGrpcSession oldSession = sessions.get(edgeId);
             String oldInstanceId = oldSession.getInstanceId();
 
-            // 判断是否为挤兑：instanceId 不同（含一方为 null 的情况）
             boolean sameInstance = (oldInstanceId != null && oldInstanceId.equals(newInstanceId))
                     || (oldInstanceId == null && newInstanceId == null);
-            if (!sameInstance) {
-                // 检查旧会话是否还活着
-                if (oldSession.isConnected()) {
-                    // 旧会话健康，拒绝新连接，保护旧会话
-                    log.warn("[{}][{}] Edge [{}] reject new connection to protect existing session! Old instanceId: [{}], New instanceId: [{}]",
-                            tenantId, edgeId, edge.getName(),
-                            oldInstanceId,
-                            newInstanceId != null ? newInstanceId : "unknown");
-
-                    // 发送挤兑告警（拒绝类型）
-                    pushEdgeKickoutAlert(tenantId, edge, oldInstanceId, newInstanceId, false);
-
-                    // 拒绝新连接：发送错误响应并关闭
-                    edgeGrpcSession.closeWithReason("Connection rejected: another instance is already connected");
-                    return;  // 直接返回，不替换会话
-                } else {
-                    // 旧会话不健康（已断开），接受新连接
-                    log.warn("[{}][{}] Edge [{}] old session is disconnected, accepting new connection. Old instanceId: [{}], New instanceId: [{}]",
-                            tenantId, edgeId, edge.getName(),
-                            oldInstanceId,
-                            newInstanceId != null ? newInstanceId : "unknown");
-
-                    // 发送挤兑告警（接受类型）
-                    pushEdgeKickoutAlert(tenantId, edge, oldInstanceId, newInstanceId, true);
-
-                    destroySession(oldSession);
-                }
-            } else {
-                // 同一实例重连，关闭旧会话
+            if (sameInstance) {
+                // 同一实例重连，关闭旧会话，接受新连接
                 log.info("[{}][{}] Edge [{}] reconnected (same instance), old session closed.", tenantId, edgeId, edge.getName());
                 destroySession(oldSession);
+            } else {
+                // 抢占场景：instanceId 不同，维持旧会话，拒绝新连接
+                log.warn("[{}][{}] Edge [{}] reject new connection to protect existing session! Old instanceId: [{}], New instanceId: [{}]",
+                        tenantId, edgeId, edge.getName(),
+                        oldInstanceId != null ? oldInstanceId : "unknown",
+                        newInstanceId != null ? newInstanceId : "unknown");
+                pushEdgeKickoutAlert(tenantId, edge, oldInstanceId, newInstanceId);
+                edgeGrpcSession.closeWithReason("Connection rejected: another instance is already connected");
+                return;
             }
         }
 
@@ -400,10 +380,9 @@ public class EdgeGrpcService extends EdgeRpcServiceGrpc.EdgeRpcServiceImplBase i
     }
 
     /**
-     * 发送边缘挤兑告警到规则引擎
-     * @param accepted true=接受了新连接（旧会话已不健康），false=拒绝了新连接（保护旧会话）
+     * 发送边缘抢占告警到规则引擎
      */
-    private void pushEdgeKickoutAlert(TenantId tenantId, Edge edge, String oldInstanceId, String newInstanceId, boolean accepted) {
+    private void pushEdgeKickoutAlert(TenantId tenantId, Edge edge, String oldInstanceId, String newInstanceId) {
         try {
             ObjectNode alertData = JacksonUtil.newObjectNode();
             alertData.put("alertType", "EDGE_CONNECTION_CONFLICT");
@@ -411,7 +390,6 @@ public class EdgeGrpcService extends EdgeRpcServiceGrpc.EdgeRpcServiceImplBase i
             alertData.put("edgeName", edge.getName());
             alertData.put("oldInstanceId", oldInstanceId != null ? oldInstanceId : "unknown");
             alertData.put("newInstanceId", newInstanceId != null ? newInstanceId : "unknown");
-            alertData.put("accepted", accepted);
             alertData.put("timestamp", System.currentTimeMillis());
 
             TbMsgMetaData md = new TbMsgMetaData();
@@ -419,7 +397,6 @@ public class EdgeGrpcService extends EdgeRpcServiceGrpc.EdgeRpcServiceImplBase i
             md.putValue("edgeName", edge.getName());
             md.putValue("oldInstanceId", oldInstanceId != null ? oldInstanceId : "unknown");
             md.putValue("newInstanceId", newInstanceId != null ? newInstanceId : "unknown");
-            md.putValue("accepted", String.valueOf(accepted));
 
             TbMsg tbMsg = TbMsg.newMsg()
                     .type(TbMsgType.ALARM)
@@ -430,7 +407,7 @@ public class EdgeGrpcService extends EdgeRpcServiceGrpc.EdgeRpcServiceImplBase i
                     .build();
 
             clusterService.pushMsgToRuleEngine(tenantId, edge.getId(), tbMsg, null);
-            log.info("[{}][{}] Edge connection conflict alert pushed to rule engine, accepted={}", tenantId, edge.getId(), accepted);
+            log.info("[{}][{}] Edge connection conflict alert pushed to rule engine", tenantId, edge.getId());
         } catch (Exception e) {
             log.warn("[{}][{}] Failed to push edge kickout alert", tenantId, edge.getId(), e);
         }
