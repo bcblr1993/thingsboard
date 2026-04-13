@@ -25,7 +25,7 @@ import org.thingsboard.server.common.data.query.EntityData;
 import org.thingsboard.server.common.data.query.EntityDataQuery;
 import org.thingsboard.server.dao.entity.EntityQueryDao;
 
-@Component
+@Component("jpaEntityQueryDao")
 public class JpaEntityQueryDao implements EntityQueryDao {
 
     @Autowired

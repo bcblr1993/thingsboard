@@ -206,6 +206,9 @@ public class BaseTimeseriesService implements TimeseriesService {
         }
         if(saveLatest &&  (timeseriesLatestDao instanceof RedisTimeseriesLatestDao || timeseriesLatestDao instanceof RedisClusterTimeseriesLatestDao)){
             latestFutures.add(Futures.transform(timeseriesLatestDao.saveLatest(tenantId, entityId, tsKvEntries), version -> {
+                for (TsKvEntry entry : tsKvEntries) {
+                    edqsService.onUpdate(tenantId, ObjectType.LATEST_TS_KV, new LatestTsKv(entityId, entry, version));
+                }
                 return version;
             }, MoreExecutors.directExecutor()));
         }

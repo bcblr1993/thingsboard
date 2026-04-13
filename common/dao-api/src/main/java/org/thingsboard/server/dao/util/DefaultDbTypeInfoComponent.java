@@ -28,6 +28,6 @@ public class DefaultDbTypeInfoComponent implements DbTypeInfoComponent {
 
     @Override
     public boolean isLatestTsDaoStoredToSql() {
-        return !latestTsDbType.equalsIgnoreCase("cassandra");
+        return latestTsDbType.equalsIgnoreCase("sql") || latestTsDbType.equalsIgnoreCase("timescale");
     }
 }
