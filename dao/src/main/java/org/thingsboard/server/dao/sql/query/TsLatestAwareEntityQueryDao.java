@@ -66,7 +66,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class TsLatestAwareEntityQueryDao implements EntityQueryDao {
 
-    static final int MAX_CANDIDATES = 10000;
+    static final int SCAN_PAGE_SIZE = 1000;
 
     @Autowired
     @Qualifier("jpaEntityQueryDao")
@@ -90,28 +90,27 @@ public class TsLatestAwareEntityQueryDao implements EntityQueryDao {
                 .map(f -> f.getKey().getKey())
                 .collect(Collectors.toSet());
 
-        // Build a data query to fetch candidate entities (without TS filters)
-        EntityDataQuery dataQuery = new EntityDataQuery(
-                query.getEntityFilter(),
-                new EntityDataPageLink(MAX_CANDIDATES, 0, null, null),
-                List.of(new EntityKey(EntityKeyType.ENTITY_FIELD, "name")),
-                Collections.emptyList(),
-                nonTsFilters
-        );
-
-        PageData<EntityData> candidates = delegate.findEntityDataByQuery(tenantId, customerId, dataQuery);
-        if (candidates.getData().isEmpty()) {
-            return 0;
-        }
-
-        // Fetch TS latest values from the configured backend and evaluate filters in Java
+        // Iterate candidate pages and evaluate TS filters in Java
         long count = 0;
-        for (EntityData entity : candidates.getData()) {
-            Map<String, TsKvEntry> latestMap = fetchLatestForKeys(tenantId, entity.getEntityId(), tsKeys);
-            if (evaluateFilters(latestMap, tsFilters)) {
-                count++;
+        int scanPage = 0;
+        PageData<EntityData> candidates;
+        do {
+            EntityDataQuery scanQuery = new EntityDataQuery(
+                    query.getEntityFilter(),
+                    new EntityDataPageLink(SCAN_PAGE_SIZE, scanPage, null, null),
+                    List.of(new EntityKey(EntityKeyType.ENTITY_FIELD, "name")),
+                    Collections.emptyList(),
+                    nonTsFilters
+            );
+            candidates = delegate.findEntityDataByQuery(tenantId, customerId, scanQuery);
+            for (EntityData entity : candidates.getData()) {
+                Map<String, TsKvEntry> latestMap = fetchLatestForKeys(tenantId, entity.getEntityId(), tsKeys);
+                if (evaluateFilters(latestMap, tsFilters)) {
+                    count++;
+                }
             }
-        }
+            scanPage++;
+        } while (candidates.hasNext());
         return count;
     }
 
@@ -164,33 +163,31 @@ public class TsLatestAwareEntityQueryDao implements EntityQueryDao {
             return fillTsLatestValues(tenantId, delegate.findEntityDataByQuery(tenantId, customerId, candidateQuery), latestTsKeys);
         }
 
-        // Has TS filters: fetch oversized candidate pages, filter, then manually paginate
+        // Has TS filters: iterate all candidate pages, filter, then manually paginate
         int pageSize = query.getPageLink().getPageSize();
         int page = query.getPageLink().getPage();
 
-        // We need to scan through candidates up to (page + 1) * pageSize matching entities
-        // Use a generous over-fetch strategy
-        int maxScan = Math.min(MAX_CANDIDATES, pageSize * (page + 1) * 5);
-        EntityDataQuery scanQuery = new EntityDataQuery(
-                query.getEntityFilter(),
-                new EntityDataPageLink(maxScan, 0, null, null),
-                query.getEntityFields(),
-                candidateQuery.getLatestValues(),
-                nonTsFilters
-        );
-
-        PageData<EntityData> allCandidates = delegate.findEntityDataByQuery(tenantId, customerId, scanQuery);
-
-        // Filter by TS key filters
         List<EntityData> matched = new ArrayList<>();
-        for (EntityData entity : allCandidates.getData()) {
-            Map<String, TsKvEntry> latestMap = fetchLatestForKeys(tenantId, entity.getEntityId(), allTsKeys);
-            if (evaluateFilters(latestMap, tsFilters)) {
-                // Fill TS latest values into EntityData
-                fillLatestValues(entity, latestMap, latestTsKeys);
-                matched.add(entity);
+        int scanPage = 0;
+        PageData<EntityData> candidates;
+        do {
+            EntityDataQuery scanQuery = new EntityDataQuery(
+                    query.getEntityFilter(),
+                    new EntityDataPageLink(SCAN_PAGE_SIZE, scanPage, null, null),
+                    query.getEntityFields(),
+                    candidateQuery.getLatestValues(),
+                    nonTsFilters
+            );
+            candidates = delegate.findEntityDataByQuery(tenantId, customerId, scanQuery);
+            for (EntityData entity : candidates.getData()) {
+                Map<String, TsKvEntry> latestMap = fetchLatestForKeys(tenantId, entity.getEntityId(), allTsKeys);
+                if (evaluateFilters(latestMap, tsFilters)) {
+                    fillLatestValues(entity, latestMap, latestTsKeys);
+                    matched.add(entity);
+                }
             }
-        }
+            scanPage++;
+        } while (candidates.hasNext());
 
         // Manual pagination
         int totalElements = matched.size();

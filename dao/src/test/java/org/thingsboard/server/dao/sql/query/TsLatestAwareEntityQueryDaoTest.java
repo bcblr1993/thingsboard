@@ -61,6 +61,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -92,8 +93,12 @@ class TsLatestAwareEntityQueryDaoTest {
         deviceId3 = new DeviceId(UUID.randomUUID());
     }
 
-    // ========== countEntitiesByQuery ==========
+    // ==================== countEntitiesByQuery 计数查询测试 ====================
 
+    /**
+     * 当查询中没有 TIME_SERIES 类型的 KeyFilter 时，应直接委托给底层 delegate 执行，
+     * 不需要从 TimeseriesLatestDao 获取遥测数据进行内存过滤。
+     */
     @Test
     void countEntitiesByQuery_noTsKeyFilters_shouldDelegate() {
         KeyFilter attrFilter = buildKeyFilter("status", EntityKeyType.ATTRIBUTE, EntityKeyValueType.STRING,
@@ -110,6 +115,12 @@ class TsLatestAwareEntityQueryDaoTest {
         verify(timeseriesLatestDao, never()).findLatest(any(), any(EntityId.class), anyString());
     }
 
+    /**
+     * 当查询中包含 TIME_SERIES 类型的 KeyFilter 时，应从 TimeseriesLatestDao 获取最新遥测值，
+     * 在内存中根据过滤条件进行筛选。
+     * 场景：3 个设备，device1(temperature=25.5)、device2(temperature=18.0)、device3(无遥测数据)，
+     * 过滤条件 temperature > 20，预期只有 device1 匹配，计数为 1。
+     */
     @Test
     void countEntitiesByQuery_withTsKeyFilter_shouldFilterFromBackend() {
         // Device1: temperature=25.5, Device2: temperature=18.0, Device3: no telemetry
@@ -144,6 +155,10 @@ class TsLatestAwareEntityQueryDaoTest {
         assertThat(result).isEqualTo(1L);
     }
 
+    /**
+     * 当 delegate 返回空候选列表时（即没有匹配的基础实体），应直接返回 0，
+     * 不应调用 TimeseriesLatestDao 查询遥测数据。
+     */
     @Test
     void countEntitiesByQuery_noCandidates_shouldReturnZero() {
         when(delegate.findEntityDataByQuery(eq(TENANT_ID), eq(CUSTOMER_ID), any(EntityDataQuery.class)))
@@ -159,6 +174,11 @@ class TsLatestAwareEntityQueryDaoTest {
         verify(timeseriesLatestDao, never()).findLatest(any(), any(EntityId.class), anyString());
     }
 
+    /**
+     * 多个 TIME_SERIES KeyFilter 应取交集（AND 语义），实体必须同时满足所有过滤条件。
+     * 场景：device1(temperature=25.5, humidity=60)、device2(temperature=25.5, humidity=30)，
+     * 过滤条件 temperature > 20 AND humidity >= 50，预期只有 device1 同时满足两个条件。
+     */
     @Test
     void countEntitiesByQuery_multipleTsFilters_allMustMatch() {
         // Device1: temperature=25.5, humidity=60; Device2: temperature=25.5, humidity=30
@@ -192,8 +212,12 @@ class TsLatestAwareEntityQueryDaoTest {
         assertThat(result).isEqualTo(1L);
     }
 
-    // ========== findEntityDataByQuery ==========
+    // ==================== findEntityDataByQuery 数据查询测试 ====================
 
+    /**
+     * 当查询中没有 TIME_SERIES 类型的 keyFilters 和 latestValues 时，
+     * 应直接委托给底层 delegate 处理，不涉及遥测数据填充。
+     */
     @Test
     void findEntityDataByQuery_noTsKeyFiltersAndNoTsLatestValues_shouldDelegate() {
         EntityDataQuery query = new EntityDataQuery(
@@ -213,6 +237,11 @@ class TsLatestAwareEntityQueryDaoTest {
         verify(timeseriesLatestDao, never()).findLatest(any(), any(EntityId.class), anyString());
     }
 
+    /**
+     * 当查询的 latestValues 中包含 TIME_SERIES 类型的 key，但没有 ts keyFilters 时，
+     * 应从 TimeseriesLatestDao 获取最新遥测值并填充到 EntityData 的 latest 映射中。
+     * 验证：返回的 EntityData 中 latest[TIME_SERIES]["temperature"] 的 ts 和值正确。
+     */
     @Test
     void findEntityDataByQuery_withTsLatestValuesOnly_shouldFillFromBackend() {
         TsKvEntry tempEntry = new BasicTsKvEntry(1000L, new DoubleDataEntry("temperature", 25.5));
@@ -242,6 +271,12 @@ class TsLatestAwareEntityQueryDaoTest {
         assertThat(data.getLatest().get(EntityKeyType.TIME_SERIES).get("temperature").getTs()).isEqualTo(1000L);
     }
 
+    /**
+     * 验证带 TIME_SERIES KeyFilter 的数据查询能正确过滤并进行分页。
+     * 场景：5 个设备，temperature 分别为 25/15/30/10/35，过滤条件 temperature > 20，
+     * 匹配 d1(25)、d3(30)、d5(35) 共 3 个。分页参数 pageSize=2, page=0，
+     * 预期返回 2 条数据，totalElements=3，hasNext=true。
+     */
     @Test
     void findEntityDataByQuery_withTsFilter_shouldFilterAndPaginate() {
         // 5 devices, only 3 match filter temperature > 20
@@ -287,6 +322,11 @@ class TsLatestAwareEntityQueryDaoTest {
         assertThat(result.hasNext()).isTrue(); // 3 total, page size 2
     }
 
+    /**
+     * 当请求的分页页码超出实际匹配结果范围时，应返回空数据列表，
+     * 但 totalElements 仍反映实际匹配总数，hasNext=false。
+     * 场景：1 个匹配设备，请求 page=5，预期 data 为空，totalElements=1。
+     */
     @Test
     void findEntityDataByQuery_withTsFilter_pageBeyondResults_shouldReturnEmpty() {
         TsKvEntry temp25 = new BasicTsKvEntry(System.currentTimeMillis(), new DoubleDataEntry("temperature", 25.0));
@@ -315,8 +355,13 @@ class TsLatestAwareEntityQueryDaoTest {
         assertThat(result.hasNext()).isFalse();
     }
 
-    // ========== Filter evaluation tests ==========
+    // ==================== 过滤谓词求值测试 ====================
 
+    /**
+     * 验证字符串类型过滤谓词（StringFilterPredicate）的求值逻辑。
+     * 场景：device1(status="active")、device2(status="inactive")，
+     * 过滤条件 status EQUAL "active"，预期只有 device1 匹配。
+     */
     @Test
     void countEntitiesByQuery_stringFilter_shouldEvaluateCorrectly() {
         TsKvEntry statusActive = new BasicTsKvEntry(System.currentTimeMillis(), new StringDataEntry("status", "active"));
@@ -338,6 +383,11 @@ class TsLatestAwareEntityQueryDaoTest {
         assertThat(result).isEqualTo(1L);
     }
 
+    /**
+     * 验证布尔类型过滤谓词（BooleanFilterPredicate）的求值逻辑。
+     * 场景：device1(enabled=true)、device2(enabled=false)，
+     * 过滤条件 enabled EQUAL true，预期只有 device1 匹配。
+     */
     @Test
     void countEntitiesByQuery_booleanFilter_shouldEvaluateCorrectly() {
         TsKvEntry boolTrue = new BasicTsKvEntry(System.currentTimeMillis(), new BooleanDataEntry("enabled", true));
@@ -359,6 +409,12 @@ class TsLatestAwareEntityQueryDaoTest {
         assertThat(result).isEqualTo(1L);
     }
 
+    /**
+     * 验证复合过滤谓词（ComplexFilterPredicate）AND 操作的求值逻辑。
+     * 场景：device1(temperature=25.0)、device2(temperature=35.0)，
+     * 过滤条件 temperature > 20 AND temperature < 30，
+     * 预期只有 device1(25.0) 满足 20 < temp < 30 的范围条件。
+     */
     @Test
     void countEntitiesByQuery_complexFilter_shouldEvaluateCorrectly() {
         // temperature > 20 AND temperature < 30
@@ -392,6 +448,11 @@ class TsLatestAwareEntityQueryDaoTest {
         assertThat(result).isEqualTo(1L);
     }
 
+    /**
+     * 验证字符串 CONTAINS 操作的求值逻辑。
+     * 场景：device1(description="temperature sensor")、device2(description="humidity sensor")，
+     * 过滤条件 description CONTAINS "temperature"，预期只有 device1 匹配。
+     */
     @Test
     void countEntitiesByQuery_stringFilter_containsOperation() {
         TsKvEntry desc = new BasicTsKvEntry(System.currentTimeMillis(), new StringDataEntry("description", "temperature sensor"));
@@ -413,6 +474,13 @@ class TsLatestAwareEntityQueryDaoTest {
         assertThat(result).isEqualTo(1L);
     }
 
+    /**
+     * 批量验证数值过滤谓词（NumericFilterPredicate）所有 6 种比较操作的正确性：
+     * - EQUAL / NOT_EQUAL：等于/不等于
+     * - GREATER / LESS：大于/小于
+     * - GREATER_OR_EQUAL / LESS_OR_EQUAL：大于等于/小于等于
+     * 每种操作测试匹配和不匹配两种情况。
+     */
     @Test
     void countEntitiesByQuery_numericFilter_allOperations() {
         // Test EQUAL
@@ -440,6 +508,10 @@ class TsLatestAwareEntityQueryDaoTest {
         assertThatCountWithNumericOp(NumericFilterPredicate.NumericOperation.LESS_OR_EQUAL, 25.0, 30.0).isEqualTo(1L);
     }
 
+    /**
+     * 当遥测值为 null 时（即该 key 没有数据），任何过滤条件都不应匹配。
+     * 验证 null 值不会导致过滤求值异常，且计数结果为 0。
+     */
     @Test
     void countEntitiesByQuery_nullEntry_shouldNotMatch() {
         TsKvEntry nullEntry = new BasicTsKvEntry(System.currentTimeMillis(), new StringDataEntry("temperature", null));
@@ -459,6 +531,11 @@ class TsLatestAwareEntityQueryDaoTest {
         assertThat(result).isEqualTo(0L);
     }
 
+    /**
+     * 验证字符串过滤谓词的忽略大小写（ignoreCase=true）功能。
+     * 场景：device1(status="Active")，过滤条件 status EQUAL "active"（ignoreCase=true），
+     * 预期匹配成功，计数为 1。
+     */
     @Test
     void countEntitiesByQuery_stringFilter_ignoreCase() {
         TsKvEntry statusActive = new BasicTsKvEntry(System.currentTimeMillis(), new StringDataEntry("status", "Active"));
@@ -486,6 +563,12 @@ class TsLatestAwareEntityQueryDaoTest {
         assertThat(result).isEqualTo(1L);
     }
 
+    /**
+     * 验证复合过滤谓词（ComplexFilterPredicate）OR 操作的求值逻辑。
+     * 场景：d1(temperature=25.0)、d2(temperature=35.0)、d3(temperature=5.0)，
+     * 过滤条件 temperature > 30 OR temperature < 10，
+     * 预期 d2(35.0) 和 d3(5.0) 匹配，d1(25.0) 不匹配。
+     */
     @Test
     void countEntitiesByQuery_complexFilter_orOperation() {
         // temperature > 30 OR temperature < 10
@@ -523,8 +606,112 @@ class TsLatestAwareEntityQueryDaoTest {
         assertThat(result).isEqualTo(2L);
     }
 
-    // ========== Helper methods ==========
+    // ==================== 多页迭代扫描测试 ====================
 
+    /**
+     * 验证 count 查询在候选实体跨多页时的正确性。
+     * 模拟：第 0 页有 2 个设备（hasNext=true），第 1 页有 1 个设备（hasNext=false）。
+     * 过滤条件 temperature > 20，预期只有 d1(25.5) 和 d3(30.0) 匹配，计数为 2。
+     * 此测试验证了修复前 MAX_CANDIDATES 截断导致的计数不准问题已解决。
+     */
+    @Test
+    void countEntitiesByQuery_candidatesSpanMultiplePages_shouldScanAllPages() {
+        TsKvEntry temp25 = new BasicTsKvEntry(System.currentTimeMillis(), new DoubleDataEntry("temperature", 25.5));
+        TsKvEntry temp10 = new BasicTsKvEntry(System.currentTimeMillis(), new DoubleDataEntry("temperature", 10.0));
+        TsKvEntry temp30 = new BasicTsKvEntry(System.currentTimeMillis(), new DoubleDataEntry("temperature", 30.0));
+
+        when(timeseriesLatestDao.findLatest(eq(TENANT_ID), eq(deviceId1), eq("temperature")))
+                .thenReturn(Futures.immediateFuture(temp25));
+        when(timeseriesLatestDao.findLatest(eq(TENANT_ID), eq(deviceId2), eq("temperature")))
+                .thenReturn(Futures.immediateFuture(temp10));
+        when(timeseriesLatestDao.findLatest(eq(TENANT_ID), eq(deviceId3), eq("temperature")))
+                .thenReturn(Futures.immediateFuture(temp30));
+
+        // Page 0: deviceId1, deviceId2, hasNext=true
+        when(delegate.findEntityDataByQuery(eq(TENANT_ID), eq(CUSTOMER_ID),
+                argThat(q -> q instanceof EntityDataQuery && ((EntityDataQuery) q).getPageLink().getPage() == 0)))
+                .thenReturn(new PageData<>(List.of(buildEntityData(deviceId1), buildEntityData(deviceId2)), 2, 3, true));
+        // Page 1: deviceId3, hasNext=false
+        when(delegate.findEntityDataByQuery(eq(TENANT_ID), eq(CUSTOMER_ID),
+                argThat(q -> q instanceof EntityDataQuery && ((EntityDataQuery) q).getPageLink().getPage() == 1)))
+                .thenReturn(new PageData<>(List.of(buildEntityData(deviceId3)), 2, 3, false));
+
+        KeyFilter tsFilter = buildKeyFilter("temperature", EntityKeyType.TIME_SERIES, EntityKeyValueType.NUMERIC,
+                buildNumericPredicate(NumericFilterPredicate.NumericOperation.GREATER, 20.0));
+        EntityCountQuery query = new EntityCountQuery(buildEntityListFilter(), List.of(tsFilter));
+
+        long result = tsLatestAwareEntityQueryDao.countEntitiesByQuery(TENANT_ID, CUSTOMER_ID, query);
+
+        // d1(25.5>20) and d3(30.0>20) match; d2(10.0) does not
+        assertThat(result).isEqualTo(2L);
+    }
+
+    /**
+     * 验证数据查询在候选实体跨多页时能正确收集匹配结果并进行分页。
+     * 模拟：第 0 页 3 个设备（hasNext=true），第 1 页 2 个设备（hasNext=false）。
+     * 过滤条件 temperature > 20，匹配 d1(25)、d4(30)、d5(35) 共 3 个。
+     * 分页参数 pageSize=2, page=0，预期返回 2 条，totalElements=3，hasNext=true。
+     */
+    @Test
+    void findEntityDataByQuery_candidatesSpanMultiplePages_shouldCollectAllMatches() {
+        DeviceId d4 = new DeviceId(UUID.randomUUID());
+        DeviceId d5 = new DeviceId(UUID.randomUUID());
+
+        TsKvEntry temp25 = new BasicTsKvEntry(System.currentTimeMillis(), new DoubleDataEntry("temperature", 25.0));
+        TsKvEntry temp10 = new BasicTsKvEntry(System.currentTimeMillis(), new DoubleDataEntry("temperature", 10.0));
+        TsKvEntry temp15 = new BasicTsKvEntry(System.currentTimeMillis(), new DoubleDataEntry("temperature", 15.0));
+        TsKvEntry temp30 = new BasicTsKvEntry(System.currentTimeMillis(), new DoubleDataEntry("temperature", 30.0));
+        TsKvEntry temp35 = new BasicTsKvEntry(System.currentTimeMillis(), new DoubleDataEntry("temperature", 35.0));
+
+        when(timeseriesLatestDao.findLatest(TENANT_ID, deviceId1, "temperature")).thenReturn(Futures.immediateFuture(temp25));
+        when(timeseriesLatestDao.findLatest(TENANT_ID, deviceId2, "temperature")).thenReturn(Futures.immediateFuture(temp10));
+        when(timeseriesLatestDao.findLatest(TENANT_ID, deviceId3, "temperature")).thenReturn(Futures.immediateFuture(temp15));
+        when(timeseriesLatestDao.findLatest(TENANT_ID, d4, "temperature")).thenReturn(Futures.immediateFuture(temp30));
+        when(timeseriesLatestDao.findLatest(TENANT_ID, d5, "temperature")).thenReturn(Futures.immediateFuture(temp35));
+
+        // Page 0: 3 devices, hasNext=true
+        when(delegate.findEntityDataByQuery(eq(TENANT_ID), eq(CUSTOMER_ID),
+                argThat(q -> q instanceof EntityDataQuery && ((EntityDataQuery) q).getPageLink().getPage() == 0)))
+                .thenReturn(new PageData<>(
+                        List.of(buildEntityData(deviceId1), buildEntityData(deviceId2), buildEntityData(deviceId3)),
+                        2, 5, true));
+        // Page 1: 2 devices, hasNext=false
+        when(delegate.findEntityDataByQuery(eq(TENANT_ID), eq(CUSTOMER_ID),
+                argThat(q -> q instanceof EntityDataQuery && ((EntityDataQuery) q).getPageLink().getPage() == 1)))
+                .thenReturn(new PageData<>(
+                        List.of(buildEntityData(d4), buildEntityData(d5)),
+                        2, 5, false));
+
+        KeyFilter tsFilter = buildKeyFilter("temperature", EntityKeyType.TIME_SERIES, EntityKeyValueType.NUMERIC,
+                buildNumericPredicate(NumericFilterPredicate.NumericOperation.GREATER, 20.0));
+
+        EntityDataQuery query = new EntityDataQuery(
+                buildEntityListFilter(),
+                new EntityDataPageLink(2, 0, null, null),
+                List.of(new EntityKey(EntityKeyType.ENTITY_FIELD, "name")),
+                Collections.emptyList(),
+                List.of(tsFilter)
+        );
+
+        PageData<EntityData> result = tsLatestAwareEntityQueryDao.findEntityDataByQuery(TENANT_ID, CUSTOMER_ID, query);
+
+        // d1(25), d4(30), d5(35) match across two candidate pages
+        assertThat(result.getData()).hasSize(2);
+        assertThat(result.getTotalElements()).isEqualTo(3);
+        assertThat(result.hasNext()).isTrue();
+    }
+
+    // ==================== 辅助方法 ====================
+
+    /**
+     * 辅助方法：构造一个包含单个设备和指定数值过滤条件的计数查询，执行并返回对结果的断言对象。
+     * 用于批量测试不同数值比较操作的场景。
+     *
+     * @param operation   数值比较操作（EQUAL, GREATER 等）
+     * @param actualValue 设备实际的遥测值
+     * @param threshold   过滤条件的阈值
+     * @return 对计数值的 AbstractLongAssert，可链式调用进行断言
+     */
     private org.assertj.core.api.AbstractLongAssert<?> assertThatCountWithNumericOp(
             NumericFilterPredicate.NumericOperation operation, double actualValue, double threshold) {
         TsKvEntry entry = new BasicTsKvEntry(System.currentTimeMillis(), new DoubleDataEntry("temperature", actualValue));
@@ -544,6 +731,7 @@ class TsLatestAwareEntityQueryDaoTest {
         return assertThat(result);
     }
 
+    /** 构建实体列表过滤器，筛选设备类型，默认包含 deviceId1 */
     private EntityListFilter buildEntityListFilter() {
         EntityListFilter filter = new EntityListFilter();
         filter.setEntityType(EntityType.DEVICE);
@@ -551,10 +739,12 @@ class TsLatestAwareEntityQueryDaoTest {
         return filter;
     }
 
+    /** 构建包含指定实体 ID、空的 latest 映射和空 label 的 EntityData */
     private EntityData buildEntityData(EntityId entityId) {
         return new EntityData(entityId, new HashMap<>(), null);
     }
 
+    /** 构建指定 key 类型、值类型和过滤谓词的 KeyFilter */
     private KeyFilter buildKeyFilter(String key, EntityKeyType type, EntityKeyValueType valueType, KeyFilterPredicate predicate) {
         KeyFilter filter = new KeyFilter();
         filter.setKey(new EntityKey(type, key));
@@ -563,6 +753,7 @@ class TsLatestAwareEntityQueryDaoTest {
         return filter;
     }
 
+    /** 构建数值比较过滤谓词 */
     private NumericFilterPredicate buildNumericPredicate(NumericFilterPredicate.NumericOperation operation, double value) {
         NumericFilterPredicate pred = new NumericFilterPredicate();
         pred.setOperation(operation);
@@ -570,6 +761,7 @@ class TsLatestAwareEntityQueryDaoTest {
         return pred;
     }
 
+    /** 构建字符串比较过滤谓词，默认不忽略大小写 */
     private StringFilterPredicate buildStringPredicate(StringFilterPredicate.StringOperation operation, String value) {
         StringFilterPredicate pred = new StringFilterPredicate();
         pred.setOperation(operation);
@@ -578,6 +770,7 @@ class TsLatestAwareEntityQueryDaoTest {
         return pred;
     }
 
+    /** 构建布尔比较过滤谓词 */
     private BooleanFilterPredicate buildBooleanPredicate(BooleanFilterPredicate.BooleanOperation operation, boolean value) {
         BooleanFilterPredicate pred = new BooleanFilterPredicate();
         pred.setOperation(operation);
