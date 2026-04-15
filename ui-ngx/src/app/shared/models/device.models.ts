@@ -256,6 +256,8 @@ export interface MqttDeviceProfileTransportConfiguration {
   deviceTelemetryTopic?: string;
   deviceAttributesTopic?: string;
   deviceAttributesSubscribeTopic?: string;
+  deviceRpcRequestTopic?: string;
+  deviceRpcResponseTopic?: string;
   sparkplug?: boolean;
   sendAckOnValidationException?: boolean;
   transportPayloadTypeConfiguration?: {
@@ -380,6 +382,8 @@ export const createDeviceProfileTransportConfiguration = (type: DeviceTransportT
           deviceTelemetryTopic: 'v1/devices/me/telemetry',
           deviceAttributesTopic: 'v1/devices/me/attributes',
           deviceAttributesSubscribeTopic: 'v1/devices/me/attributes',
+          deviceRpcRequestTopic: 'v1/devices/me/rpc/request/',
+          deviceRpcResponseTopic: 'v1/devices/me/rpc/response/',
           sparkplug: false,
           sparkplugAttributesMetricNames: ['Node Control/*', 'Device Control/*', 'Properties/*'],
           sendAckOnValidationException: false,
