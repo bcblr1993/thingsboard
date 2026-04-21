@@ -371,7 +371,7 @@ public abstract class EdgeGrpcSession implements Closeable {
                         log.info("[{}][{}] Edge custom version: {}", tenantId, sessionId, customVersion);
                     }
                     // instanceId 校验：在 sessionOpenListener 之前判断，避免先 ACCEPTED 再拒绝导致流异常
-                    if (instanceId != null && instanceIdValidator != null) {
+                    if (instanceIdValidator != null) {
                         String rejectionReason = instanceIdValidator.apply(edge.getId(), instanceId);
                         if (rejectionReason != null) {
                             log.warn("[{}][{}] Edge [{}] rejected: {}", tenantId, sessionId, edge.getName(), rejectionReason);

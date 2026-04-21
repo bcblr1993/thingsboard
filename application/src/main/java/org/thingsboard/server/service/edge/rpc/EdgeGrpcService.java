@@ -18,6 +18,7 @@ package org.thingsboard.server.service.edge.rpc;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import io.grpc.Server;
 import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
 import io.grpc.stub.StreamObserver;
@@ -42,6 +43,7 @@ import org.thingsboard.server.common.data.edge.Edge;
 import org.thingsboard.server.common.data.edge.EdgeEvent;
 import org.thingsboard.server.common.data.id.EdgeId;
 import org.thingsboard.server.common.data.id.TenantId;
+import org.thingsboard.server.common.data.kv.AttributeKvEntry;
 import org.thingsboard.server.common.data.kv.BooleanDataEntry;
 import org.thingsboard.server.common.data.kv.LongDataEntry;
 import org.thingsboard.server.common.data.msg.TbMsgType;
@@ -94,9 +96,6 @@ public class EdgeGrpcService extends EdgeRpcServiceGrpc.EdgeRpcServiceImplBase i
     private final ConcurrentMap<UUID, Consumer<FromEdgeSyncResponse>> localSyncEdgeRequests = new ConcurrentHashMap<>();
     private final ConcurrentMap<EdgeId, Boolean> edgeEventsMigrationProcessed = new ConcurrentHashMap<>();
     private final Queue<EdgeGrpcSession> zombieSessions = new ConcurrentLinkedQueue<>();
-
-    // 记录每个边缘端首次连接时的 instanceId，用于后续校验
-    private final ConcurrentMap<EdgeId, String> registeredInstanceIds = new ConcurrentHashMap<>();
 
     @Value("${edges.rpc.port}")
     private int rpcPort;
@@ -303,11 +302,12 @@ public class EdgeGrpcService extends EdgeRpcServiceGrpc.EdgeRpcServiceImplBase i
 
     @Override
     public void clearRegisteredInstanceId(TenantId tenantId, EdgeId edgeId) {
-        String removed = registeredInstanceIds.remove(edgeId);
-        if (removed != null) {
-            log.info("[{}][{}] Cleared registered instanceId [{}] for edge", tenantId, edgeId, removed);
-        } else {
-            log.debug("[{}][{}] No registered instanceId found for edge", tenantId, edgeId);
+        log.info("[{}][{}] Clearing instanceId for edge", tenantId, edgeId);
+        try {
+            ctx.getAttributesService().removeAll(tenantId, edgeId, AttributeScope.SERVER_SCOPE,
+                    List.of(DataConstants.EDGE_INSTANCE_ID_ATTR_KEY));
+        } catch (Exception e) {
+            log.warn("[{}][{}] Failed to remove instanceId attribute from DB", tenantId, edgeId, e);
         }
     }
 
@@ -345,17 +345,28 @@ public class EdgeGrpcService extends EdgeRpcServiceGrpc.EdgeRpcServiceImplBase i
     }
 
     private String validateInstanceId(EdgeId edgeId, String newInstanceId) {
-        String registered = registeredInstanceIds.get(edgeId);
-        if (registered == null) {
-            // 首次连接，注册 instanceId
-            registeredInstanceIds.putIfAbsent(edgeId, newInstanceId);
-            log.info("Edge [{}] instanceId registered: [{}]", edgeId, newInstanceId);
-            return null; // 通过校验
-        } else if (!registered.equals(newInstanceId)) {
-            // instanceId 不匹配，返回拒绝原因
-            return "instanceId mismatch, registered=" + registered;
+        try {
+            ListenableFuture<Optional<AttributeKvEntry>> future =
+                    ctx.getAttributesService().find(TenantId.SYS_TENANT_ID, edgeId,
+                            AttributeScope.SERVER_SCOPE, DataConstants.EDGE_INSTANCE_ID_ATTR_KEY);
+            Optional<AttributeKvEntry> attrOpt = future.get();
+            if (attrOpt != null && attrOpt.isPresent()) {
+                String dbInstanceId = attrOpt.get().getValueAsString();
+                if (dbInstanceId != null && !dbInstanceId.isEmpty()) {
+                    if (newInstanceId == null) {
+                        return "Edge was previously connected with instanceId [" + dbInstanceId
+                                + "]. Old version edge without instanceId is not allowed.";
+                    } else if (!dbInstanceId.equals(newInstanceId)) {
+                        return "instanceId mismatch, registered=" + dbInstanceId;
+                    }
+                    return null;
+                }
+            }
+            return null;
+        } catch (Exception e) {
+            log.error("Failed to validate instanceId from DB for edge [{}]", edgeId, e);
+            return null;
         }
-        return null; // 通过校验
     }
 
     private void onEdgeConnect(EdgeId edgeId, EdgeGrpcSession edgeGrpcSession) {
