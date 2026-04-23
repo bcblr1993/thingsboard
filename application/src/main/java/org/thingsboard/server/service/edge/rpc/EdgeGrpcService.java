@@ -377,7 +377,14 @@ public class EdgeGrpcService extends EdgeRpcServiceGrpc.EdgeRpcServiceImplBase i
         log.info("[{}][{}] edge [{}] connected, instanceId: [{}].", tenantId, edgeGrpcSession.getSessionId(), edgeId,
                 newInstanceId != null ? newInstanceId : "unknown");
 
-        sessions.put(edgeId, edgeGrpcSession);
+        // 踢掉已存在的旧会话（使用 put 的原子返回值避免竞态）
+        EdgeGrpcSession existingSession = sessions.put(edgeId, edgeGrpcSession);
+        if (existingSession != null && existingSession.isConnected()
+                && !existingSession.getSessionId().equals(edgeGrpcSession.getSessionId())) {
+            log.info("[{}] Existing session [{}] for edge [{}] will be disconnected, replaced by new session [{}]",
+                    tenantId, existingSession.getSessionId(), edgeId, edgeGrpcSession.getSessionId());
+            disconnectExistingSession(existingSession);
+        }
         // 连接被接受后保存 instanceId 属性
         if (newInstanceId != null) {
             edgeGrpcSession.saveInstanceIdAsAttribute();
@@ -541,6 +548,37 @@ public class EdgeGrpcService extends EdgeRpcServiceGrpc.EdgeRpcServiceImplBase i
         }
     }
 
+    private void disconnectExistingSession(EdgeGrpcSession existingSession) {
+        EdgeId edgeId = existingSession.getEdge().getId();
+        TenantId tenantId = existingSession.getEdge().getTenantId();
+        log.info("[{}][{}] Disconnecting existing session for edge [{}], replaced by new connection",
+                tenantId, existingSession.getSessionId(), edgeId);
+        // 关闭旧会话的 gRPC 流
+        boolean destroySessionResult = destroySession(existingSession);
+        if (!destroySessionResult) {
+            log.warn("[{}][{}] Failed to destroy existing session for edge [{}]. Adding to zombie queue.",
+                    tenantId, existingSession.getSessionId(), edgeId);
+            zombieSessions.add(existingSession);
+        }
+        // 清理 sessionNewEvents
+        final Lock newEventLock = sessionNewEventsLocks.computeIfAbsent(edgeId, id -> new ReentrantLock());
+        newEventLock.lock();
+        try {
+            sessionNewEvents.remove(edgeId);
+        } finally {
+            newEventLock.unlock();
+        }
+        // 取消定时任务
+        cancelScheduleEdgeEventsCheck(edgeId);
+        // 保存断开连接遥测
+        save(tenantId, edgeId, ACTIVITY_STATE, false);
+        long lastDisconnectTs = System.currentTimeMillis();
+        save(tenantId, edgeId, LAST_DISCONNECT_TIME, lastDisconnectTs);
+        pushRuleEngineMessage(tenantId, existingSession.getEdge(), lastDisconnectTs, TbMsgType.DISCONNECT_EVENT);
+        // 清除缓存
+        edgeIdServiceIdCache.evict(edgeId);
+    }
+
     private void onEdgeDisconnect(Edge edge, UUID sessionId) {
         EdgeId edgeId = edge.getId();
         log.info("[{}][{}] edge disconnected!", edgeId, sessionId);
@@ -566,10 +604,10 @@ public class EdgeGrpcService extends EdgeRpcServiceGrpc.EdgeRpcServiceImplBase i
             save(tenantId, edgeId, LAST_DISCONNECT_TIME, lastDisconnectTs);
             pushRuleEngineMessage(toRemove.getEdge().getTenantId(), edge, lastDisconnectTs, TbMsgType.DISCONNECT_EVENT);
             cancelScheduleEdgeEventsCheck(edgeId);
+            edgeIdServiceIdCache.evict(edgeId);
         } else {
-            log.debug("[{}] edge session [{}] is not available anymore, nothing to remove. most probably this session is already outdated!", edgeId, sessionId);
+            log.info("[{}] edge session [{}] is not available anymore, nothing to remove. most probably this session is already outdated!", edgeId, sessionId);
         }
-        edgeIdServiceIdCache.evict(edgeId);
     }
 
     private boolean destroySession(EdgeGrpcSession session) {

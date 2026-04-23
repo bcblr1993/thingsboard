@@ -1010,12 +1010,12 @@ public abstract class EdgeGrpcSession implements Closeable {
 
     @Override
     public void close() {
-        log.debug("[{}][{}] Closing session", tenantId, sessionId);
+        log.info("[{}][{}] Closing session, connected was: {}", tenantId, sessionId, connected);
         connected = false;
         try {
             outputStream.onCompleted();
         } catch (Exception e) {
-            log.debug("[{}][{}] Failed to close output stream: {}", tenantId, sessionId, e.getMessage());
+            log.info("[{}][{}] Failed to close output stream: {}", tenantId, sessionId, e.getMessage());
         }
     }
 
