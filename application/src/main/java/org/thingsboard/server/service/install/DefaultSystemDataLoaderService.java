@@ -163,9 +163,9 @@ public class DefaultSystemDataLoaderService implements SystemDataLoaderService {
     @Getter
     private boolean persistActivityToTelemetry;
 
-    @Value("${security.jwt.tokenExpirationTime:9000}")
+    @Value("${security.jwt.tokenExpirationTime:600}")
     private Integer tokenExpirationTime;
-    @Value("${security.jwt.refreshTokenExpTime:604800}")
+    @Value("${security.jwt.refreshTokenExpTime:108000}")
     private Integer refreshTokenExpTime;
     @Value("${security.jwt.tokenIssuer:thingsboard.io}")
     private String tokenIssuer;

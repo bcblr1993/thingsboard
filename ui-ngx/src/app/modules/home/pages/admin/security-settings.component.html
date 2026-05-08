@@ -265,7 +265,8 @@
             <input matInput type="number" required
                    formControlName="tokenExpirationTime"
                    step="1"
-                   min="60"/>
+                   min="60"
+                   max="108000"/>
             <mat-hint></mat-hint>
             <mat-error *ngIf="jwtSecuritySettingsFormGroup.get('tokenExpirationTime').hasError('required')">
               {{ 'admin.jwt.expiration-time-required' | translate }}
@@ -282,7 +283,8 @@
             <input matInput type="number" required
                    formControlName="refreshTokenExpTime"
                    step="1"
-                   min="900"/>
+                   min="900"
+                   max="108000"/>
             <mat-hint></mat-hint>
             <mat-error *ngIf="jwtSecuritySettingsFormGroup.get('refreshTokenExpTime').hasError('required')">
               {{ 'admin.jwt.refresh-expiration-time-required' | translate }}
