@@ -107,6 +107,13 @@ public class DefaultEntityTopologyService implements EntityTopologyService {
             }
         }
 
+        // Sort root level: nodes with children first
+        rootNode.getChildren().sort((a, b) -> {
+            boolean aHasChildren = a.getChildren() != null && !a.getChildren().isEmpty();
+            boolean bHasChildren = b.getChildren() != null && !b.getChildren().isEmpty();
+            return Boolean.compare(bHasChildren, aHasChildren);
+        });
+
         return rootNode;
     }
 
@@ -144,6 +151,13 @@ public class DefaultEntityTopologyService implements EntityTopologyService {
                 }
             }
         }
+
+        // Sort children at this level: nodes with children first
+        parent.getChildren().sort((a, b) -> {
+            boolean aHasChildren = a.getChildren() != null && !a.getChildren().isEmpty();
+            boolean bHasChildren = b.getChildren() != null && !b.getChildren().isEmpty();
+            return Boolean.compare(bHasChildren, aHasChildren);
+        });
     }
 
     private HierarchyNode copyNode(HierarchyNode original) {
