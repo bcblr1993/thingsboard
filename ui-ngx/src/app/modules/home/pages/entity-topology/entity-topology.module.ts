@@ -20,6 +20,7 @@ import { SharedModule } from '@shared/shared.module';
 import { EntityTopologyComponent } from './entity-topology.component';
 import { EntityTopologyRoutingModule } from './entity-topology-routing.module';
 import { HomeComponentsModule } from '@modules/home/components/home-components.module';
+import { ScrollingModule } from '@angular/cdk/scrolling';
 
 @NgModule({
   declarations: [
@@ -29,6 +30,7 @@ import { HomeComponentsModule } from '@modules/home/components/home-components.m
     CommonModule,
     SharedModule,
     HomeComponentsModule,
+    ScrollingModule,
     EntityTopologyRoutingModule
   ]
 })

@@ -14,13 +14,12 @@
 /// limitations under the License.
 ///
 
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { PageComponent } from '@shared/components/page.component';
 import { Store } from '@ngrx/store';
 import { AppState } from '@core/core.state';
 import { EntityRelationService } from '@core/http/entity-relation.service';
 import { EntityType } from '@shared/models/entity-type.models';
-import { NestedTreeControl } from '@angular/cdk/tree';
 import { MatTreeNestedDataSource } from '@angular/material/tree';
 import { HierarchyNode } from '@shared/models/relation.models';
 import { TranslateService } from '@ngx-translate/core';
@@ -60,26 +59,48 @@ import { AssetId } from '@shared/models/id/asset-id';
 import { Device, DeviceCredentials } from '@shared/models/device.models';
 import { Asset } from '@shared/models/asset.models';
 
+interface VisibleHierarchyNode {
+  node: HierarchyNode;
+  level: number;
+  path: string;
+  expandable: boolean;
+  displayName: string;
+  tooltipText: string;
+}
+
 @Component({
   selector: 'tb-entity-topology',
   templateUrl: './entity-topology.component.html',
   styleUrls: ['./entity-topology.component.scss']
 })
-export class EntityTopologyComponent extends PageComponent implements OnInit {
+export class EntityTopologyComponent extends PageComponent implements OnInit, OnDestroy {
 
   @ViewChild('searchInput') searchInput: ElementRef;
   @ViewChild('scrollContainer') scrollContainer: ElementRef;
+  @ViewChild('orgTreeWrapper') orgTreeWrapper: ElementRef<HTMLDivElement>;
   @ViewChild('entityDetailsPanel') entityDetailsPanel: EntityDetailsPanelComponent;
 
-  treeControl = new NestedTreeControl<HierarchyNode>(node => node.children);
   dataSource = new MatTreeNestedDataSource<HierarchyNode>();
 
   searchQuery = '';
   textSearchMode = false;
   previewMode = false;
   loading = false;
+  visibleNodes: VisibleHierarchyNode[] = [];
+  previewNodes: HierarchyNode[] = [];
+  previewRenderLimit = 1000;
+  previewRenderedNodeCount = 0;
+  previewCompactMode = false;
+  previewLabelsVisible = true;
+  previewRelationLabelsVisible = true;
+  readonly previewLabelsHidden = false;
+  readonly initialPreviewNodeLimit = 1000;
+  readonly previewNodeStep = 100;
+  readonly treeIndentPx = 32;
   private allNodes: HierarchyNode[] = [];
   private dataGeneration = 0;
+  private expandedNodeIds = new Set<string>();
+  private searchDebounceHandle: ReturnType<typeof setTimeout> | null = null;
 
   // Drag variables
   isDragging = false;
@@ -97,8 +118,12 @@ export class EntityTopologyComponent extends PageComponent implements OnInit {
   private deviceConfig: EntityTableConfig<DeviceInfo>;
   private assetConfig: EntityTableConfig<AssetInfo>;
 
-  hasChild = (_: number, node: HierarchyNode) => !!node.children && node.children.length > 0;
-  trackByFn = (_: number, node: HierarchyNode) => `${node.id}_${this.dataGeneration}`;
+  get hasMorePreviewNodes(): boolean {
+    return this.previewRenderedNodeCount < this.visibleNodes.length;
+  }
+
+  trackByVisibleNode = (_: number, item: VisibleHierarchyNode) => `${item.path}_${this.dataGeneration}`;
+  trackByOrgNode = (index: number, node: HierarchyNode) => `${this.getNodeKey(node)}_${index}`;
 
   constructor(
     protected store: Store<AppState>,
@@ -108,7 +133,8 @@ export class EntityTopologyComponent extends PageComponent implements OnInit {
     private translate: TranslateService,
     private router: Router,
     private dialog: MatDialog,
-    private dialogService: DialogService
+    private dialogService: DialogService,
+    private cd: ChangeDetectorRef
   ) {
     super(store);
   }
@@ -117,66 +143,123 @@ export class EntityTopologyComponent extends PageComponent implements OnInit {
     this.loadHierarchy();
   }
 
+  ngOnDestroy() {
+    if (this.searchDebounceHandle) {
+      clearTimeout(this.searchDebounceHandle);
+    }
+  }
+
   loadHierarchy() {
     this.loading = true;
-    this.entityRelationService.getEntityTopology().subscribe(backendTree => {
-      const transformNode = (node: any): HierarchyNode => {
-        let icon = 'domain';
-        switch (node.entityType) {
-          case EntityType.DEVICE:
-            icon = 'devices_other';
-            break;
-          case EntityType.TENANT:
-            icon = 'supervisor_account';
-            break;
-          case EntityType.ASSET:
-            icon = 'domain';
-            break;
-        }
-        const result: any = {
-          id: node.id,
-          entityType: node.entityType as EntityType,
-          name: node.name,
-          relationType: node.relationType,
-          additionalInfo: node.additionalInfo,
-          icon: icon,
-          children: (node.children || []).map(c => transformNode(c))
+    this.entityRelationService.getEntityTopology().subscribe({
+      next: backendTree => {
+        const transformNode = (node: any, path: string): HierarchyNode => {
+          let icon = 'domain';
+          switch (node.entityType) {
+            case EntityType.DEVICE:
+              icon = 'devices_other';
+              break;
+            case EntityType.TENANT:
+              icon = 'supervisor_account';
+              break;
+            case EntityType.ASSET:
+              icon = 'domain';
+              break;
+          }
+          const result: any = {
+            id: node.id,
+            entityType: node.entityType as EntityType,
+            name: node.name,
+            relationType: node.relationType,
+            additionalInfo: node.additionalInfo,
+            icon: icon,
+            uiPath: path,
+            children: (node.children || []).map((c, index) => transformNode(c, `${path}/${c.id}_${index}`))
+          };
+          result.edgeLabel = this.getEdgeLabelText(result);
+          return result as HierarchyNode;
         };
-        result.edgeLabel = this.getEdgeLabelText(result);
-        return result as HierarchyNode;
-      };
 
-      const rootNode = transformNode(backendTree);
-      this.allNodes = [rootNode];
-      this.dataSource.data = this.allNodes;
-
-      // Ensure root connects are visibly expanded by default (shows up to level 2)
-      this.treeControl.expand(rootNode);
-      this.loading = false;
+        const rootNode = transformNode(backendTree, `${backendTree.id}_0`);
+        this.sortHierarchyChildren(rootNode);
+        this.allNodes = [rootNode];
+        this.dataSource.data = this.allNodes;
+        this.expandedNodeIds.clear();
+        this.expandRootNodes();
+        this.loading = false;
+      },
+      error: () => {
+        this.allNodes = [];
+        this.dataSource.data = [];
+        this.visibleNodes = [];
+        this.expandedNodeIds.clear();
+        this.loading = false;
+      }
     });
   }
 
   togglePreviewMode() {
     this.previewMode = !this.previewMode;
-    if (!this.previewMode) {
+    if (this.previewMode) {
+      this.resetPreviewLimit();
+      this.refreshPreviewNodes();
+      this.scheduleFitPreviewToView();
+    } else {
       this.resetZoom();
     }
   }
 
   zoomIn() {
-    if (this.zoom < 2) {
-      this.zoom = Math.round((this.zoom + 0.2) * 10) / 10;
-    }
+    this.setPreviewZoom(this.zoom + 0.2);
   }
 
   zoomOut() {
-    if (this.zoom > 0.2) {
-      this.zoom = Math.round((this.zoom - 0.2) * 10) / 10;
-    }
+    this.setPreviewZoom(this.zoom - 0.2);
   }
 
   resetZoom() {
     this.zoom = 1;
+  }
+
+  centerPreview() {
+    const container = this.scrollContainer?.nativeElement;
+    if (!container) {
+      return;
+    }
+    container.scrollLeft = Math.max(0, (container.scrollWidth - container.clientWidth) / 2);
+    container.scrollTop = Math.max(0, (container.scrollHeight - container.clientHeight) / 2);
+  }
+
+  fitPreviewToView() {
+    const container = this.scrollContainer?.nativeElement;
+    const wrapper = this.orgTreeWrapper?.nativeElement;
+    if (!container || !wrapper) {
+      return;
+    }
+    const bounds = wrapper.getBoundingClientRect();
+    const unscaledWidth = bounds.width / this.zoom;
+    const unscaledHeight = bounds.height / this.zoom;
+    if (!unscaledWidth || !unscaledHeight) {
+      return;
+    }
+    const availableWidth = Math.max(120, container.clientWidth - 96);
+    const availableHeight = Math.max(120, container.clientHeight - 140);
+    this.setPreviewZoom(Math.min(1.4, availableWidth / unscaledWidth, availableHeight / unscaledHeight));
+    setTimeout(() => this.centerPreview(), 0);
+  }
+
+  toggleCompactPreview() {
+    this.previewCompactMode = !this.previewCompactMode;
+    this.scheduleFitPreviewToView();
+  }
+
+  togglePreviewLabels() {
+    this.previewLabelsVisible = !this.previewLabelsVisible;
+    this.scheduleFitPreviewToView();
+  }
+
+  togglePreviewRelationLabels() {
+    this.previewRelationLabelsVisible = !this.previewRelationLabelsVisible;
   }
 
   enterSearchMode() {
@@ -192,15 +275,21 @@ export class EntityTopologyComponent extends PageComponent implements OnInit {
     this.onSearchChange();
   }
 
+  scheduleSearchChange() {
+    if (this.searchDebounceHandle) {
+      clearTimeout(this.searchDebounceHandle);
+    }
+    this.searchDebounceHandle = setTimeout(() => this.onSearchChange(), 150);
+  }
+
   onSearchChange() {
-    // Increment generation to invalidate trackBy cache and force CDK Tree to re-render
+    // Increment generation to invalidate the virtual-scroll trackBy cache after filtering.
     this.dataGeneration++;
+    this.resetPreviewLimit();
     if (!this.searchQuery) {
       this.dataSource.data = this.allNodes;
-      // Re-expand root
-      if (this.allNodes.length > 0) {
-        this.treeControl.expand(this.allNodes[0]);
-      }
+      this.expandedNodeIds.clear();
+      this.expandRootNodes();
       return;
     }
     const query = this.searchQuery.toLowerCase();
@@ -221,28 +310,140 @@ export class EntityTopologyComponent extends PageComponent implements OnInit {
   }
 
   expandAll() {
-    const nodesToExpand: HierarchyNode[] = [];
     const expandRecursive = (nodes: HierarchyNode[]) => {
       nodes.forEach(node => {
-        nodesToExpand.push(node);
+        this.expandedNodeIds.add(this.getNodeKey(node));
         if (node.children) {
           expandRecursive(node.children);
         }
       });
     };
     if (this.dataSource.data) {
+      this.expandedNodeIds.clear();
       expandRecursive(this.dataSource.data);
-      // Batch select to avoid O(N) change events cascading in CDK Tree when expanding large trees
-      this.treeControl.expansionModel.select(...nodesToExpand);
+      this.refreshVisibleNodes();
     }
   }
 
   collapseAll() {
-    this.treeControl.collapseAll();
-    // Re-expand root
-    if (this.dataSource.data.length > 0) {
-      this.treeControl.expand(this.dataSource.data[0]);
+    this.expandedNodeIds.clear();
+    this.expandRootNodes();
+  }
+
+  isNodeExpanded(node: HierarchyNode): boolean {
+    return this.expandedNodeIds.has(this.getNodeKey(node));
+  }
+
+  toggleNode(node: HierarchyNode, event?: Event) {
+    if (event) {
+      event.stopPropagation();
     }
+    const hasChildren = !!(node.children?.length || (node as any).hasChildren);
+    if (!hasChildren) {
+      return;
+    }
+    const nodeKey = this.getNodeKey(node);
+    if (this.isNodeExpanded(node)) {
+      this.expandedNodeIds.delete(nodeKey);
+    } else {
+      this.expandedNodeIds.add(nodeKey);
+    }
+    this.refreshVisibleNodes();
+  }
+
+  showMorePreviewNodes() {
+    this.previewRenderLimit += this.previewNodeStep;
+    this.refreshPreviewNodes();
+    this.cd.detectChanges();
+  }
+
+  private expandRootNodes() {
+    (this.dataSource.data || []).forEach(node => this.expandedNodeIds.add(this.getNodeKey(node)));
+    this.refreshVisibleNodes();
+  }
+
+  private refreshVisibleNodes() {
+    const visibleNodes: VisibleHierarchyNode[] = [];
+    const addVisibleNodes = (nodes: HierarchyNode[], level: number, parentPath: string) => {
+      nodes.forEach((node, index) => {
+        const path = this.getNodeKey(node) || (parentPath ? `${parentPath}/${node.id}_${index}` : `${node.id}_${index}`);
+        const expandable = !!node.children && node.children.length > 0;
+        visibleNodes.push({
+          node,
+          level,
+          path,
+          expandable,
+          displayName: node.name,
+          tooltipText: ''
+        });
+        if (expandable && this.isNodeExpanded(node)) {
+          addVisibleNodes(node.children, level + 1, path);
+        }
+      });
+    };
+    addVisibleNodes(this.dataSource.data || [], 0, '');
+    this.visibleNodes = visibleNodes;
+    this.refreshPreviewNodes();
+  }
+
+  private refreshPreviewNodes() {
+    let remaining = this.previewRenderLimit;
+    let rendered = 0;
+    const buildPreviewNodes = (nodes: HierarchyNode[]): HierarchyNode[] => {
+      const result: HierarchyNode[] = [];
+      for (const node of nodes) {
+        if (remaining <= 0) {
+          break;
+        }
+        remaining--;
+        rendered++;
+        const childCount = node.children?.length || 0;
+        const children = childCount > 0 && this.isNodeExpanded(node) ? buildPreviewNodes(node.children) : [];
+        result.push({
+          ...(node as any),
+          children,
+          hasChildren: childCount > 0,
+          childCount
+        });
+      }
+      return result;
+    };
+    this.previewNodes = buildPreviewNodes(this.dataSource.data || []);
+    this.previewRenderedNodeCount = rendered;
+  }
+
+  private resetPreviewLimit() {
+    this.previewRenderLimit = this.initialPreviewNodeLimit;
+  }
+
+  private setPreviewZoom(value: number) {
+    this.zoom = Math.round(Math.min(2, Math.max(0.2, value)) * 10) / 10;
+  }
+
+  private scheduleFitPreviewToView() {
+    setTimeout(() => this.fitPreviewToView(), 0);
+  }
+
+  private getNodeKey(node: HierarchyNode): string {
+    return (node as any).uiPath || node.id;
+  }
+
+  private sortHierarchyChildren(node: HierarchyNode) {
+    if (!node.children || node.children.length === 0) {
+      return;
+    }
+    node.children.sort((a, b) => {
+      const aChildCount = a.children?.length || 0;
+      const bChildCount = b.children?.length || 0;
+      if (!!bChildCount !== !!aChildCount) {
+        return bChildCount ? 1 : -1;
+      }
+      if (bChildCount !== aChildCount) {
+        return bChildCount - aChildCount;
+      }
+      return (a.name || '').localeCompare(b.name || '');
+    });
+    node.children.forEach(child => this.sortHierarchyChildren(child));
   }
 
   getEdgeLabelText(node: HierarchyNode): string {
@@ -263,7 +464,7 @@ export class EntityTopologyComponent extends PageComponent implements OnInit {
   }
 
   startDrag(e: MouseEvent) {
-    if (!this.scrollContainer || (e.target as HTMLElement).closest('.org-toggle-btn')) {
+    if (!this.scrollContainer || (e.target as HTMLElement).closest('.org-node-toggle, .preview-load-more')) {
       return;
     }
     this.isDragging = true;

@@ -59,6 +59,13 @@
 
 .tb-entity-table .tb-entity-table-content .tree-scroll-container {
   padding: 4px 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.tb-entity-table .tb-entity-table-content .tree-virtual-viewport {
+  height: 100%;
+  width: 100%;
 }
 
 .tb-entity-table .tb-entity-table-content .no-data-found {
@@ -79,7 +86,7 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  min-height: 48px;
+  height: 48px;
   padding-right: 16px;
   border-radius: 4px;
   transition: background-color 0.2s;
@@ -103,6 +110,7 @@
 .node-icon {
   margin-right: 12px;
   font-size: 20px;
+  flex: 0 0 20px;
   width: 20px;
   height: 20px;
 }
@@ -117,8 +125,49 @@
   flex: 1;
 }
 
+::ng-deep .entity-topology-name-tooltip {
+  max-width: 520px !important;
+  max-height: 240px;
+  overflow: auto;
+  white-space: normal;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  line-height: 18px;
+  font-size: 13px;
+  text-align: left;
+}
+
 .hidden {
   display: none;
+}
+
+.invisible-toggle {
+  visibility: hidden;
+}
+
+.preview-load-more {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: calc(100% - 160px);
+  padding: 6px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  color: rgba(0, 0, 0, 0.64);
+  font-size: 13px;
+  z-index: 100;
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 /* Org Chart Styles */
@@ -137,6 +186,17 @@
 
 .org-tree {
   display: inline-flex;
+  --org-line-color: #9fb9d8;
+  --org-child-top-gap: 30px;
+  --org-node-top-gap: 28px;
+  --org-edge-label-top: 25px;
+  --org-sibling-gap: 14px;
+}
+
+.org-tree.relations-visible {
+  --org-child-top-gap: 36px;
+  --org-node-top-gap: 52px;
+  --org-edge-label-top: 30px;
 }
 .org-tree-wrapper {
   display: inline-block;
@@ -149,7 +209,7 @@
   }
 }
 .org-tree ul {
-  padding-top: 20px;
+  padding-top: var(--org-child-top-gap);
   position: relative;
   display: flex;
   margin: 0;
@@ -163,7 +223,7 @@
   text-align: center;
   list-style-type: none;
   position: relative;
-  padding: 24px 12px 0 12px;
+  padding: var(--org-node-top-gap) var(--org-sibling-gap) 0 var(--org-sibling-gap);
 }
 
 /* Connectors */
@@ -172,14 +232,15 @@
   position: absolute;
   top: 0;
   right: 50%;
-  border-top: 2px solid #aec5df;
+  border-top: 2px solid var(--org-line-color);
   width: 50%;
-  height: 24px;
+  height: var(--org-node-top-gap);
+  z-index: 0;
 }
 .org-tree li::after {
   right: auto;
   left: 50%;
-  border-left: 2px solid #aec5df;
+  border-left: 2px solid var(--org-line-color);
 }
 
 /* Clear Extra Lines */
@@ -193,7 +254,7 @@
   border: 0 none;
 }
 .org-tree li:last-child::before {
-  border-right: 2px solid #aec5df;
+  border-right: 2px solid var(--org-line-color);
   border-radius: 0 4px 0 0;
 }
 .org-tree li:first-child::after {
@@ -206,50 +267,54 @@
   position: absolute;
   top: 0;
   left: 50%;
-  border-left: 2px solid #aec5df;
+  border-left: 2px solid var(--org-line-color);
   width: 0;
-  height: 20px;
+  height: var(--org-child-top-gap);
   transform: translateX(-1px);
+  z-index: 0;
 }
 
 /* Edge label mapping to relationType */
 .org-tree .edge-label {
   position: absolute;
-  top: 12px; /* Middle of the 24px upper padding */
-  left: 50%;
-  transform: translate(-50%, -50%);
+  top: var(--org-edge-label-top);
+  left: calc(50% + 10px);
+  transform: translateY(-50%);
   background: #fff;
-  border: 1px solid #f44336;
-  color: #c62828;
+  border: 1px solid #c8d8ea;
+  color: #3f5f7f;
   padding: 2px 6px;
   font-size: 11px;
-  border-radius: 12px;
-  z-index: 10;
-  max-width: 80px;
+  border-radius: 10px;
+  z-index: 3;
+  max-width: 132px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   cursor: pointer;
+  box-shadow: 0 1px 3px rgba(63, 81, 181, 0.12);
 }
 .org-tree li:only-child > .edge-label {
-  top: -10px; /* Middle of the parent ul's 20px padding */
+  top: -10px;
 }
 
 /* Node Box */
 .org-tree .node-box {
   border: 1px solid #aec5df;
-  padding: 12px 16px;
+  padding: 12px 14px;
   background: #fff;
   border-radius: 8px;
-  display: inline-flex;
+  display: flex;
   flex-direction: column;
   align-items: center;
-  min-width: 130px;
-  max-width: 200px;
+  justify-content: flex-start;
+  width: 160px;
+  height: 110px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
   box-sizing: border-box;
   z-index: 2;
   position: relative;
+  overflow: hidden;
 }
 .org-tree .node-box.root-node {
   background: #3f51b5;
@@ -260,11 +325,24 @@
 .org-tree .node-box.root-node .node-type {
   color: rgba(255,255,255,0.8);
 }
+.org-tree .node-box .node-icon-wrap {
+  flex: 0 0 36px;
+  width: 48px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  overflow: visible;
+}
 .org-tree .node-box .node-icon {
   font-size: 28px;
   height: 28px;
-  width: 28px;
-  margin-bottom: 6px;
+  width: 40px;
+  min-width: 40px;
+  line-height: 28px;
+  margin: 0;
+  overflow: visible;
 }
 .org-tree .node-box.root-node .node-icon {
   color: #fff;
@@ -272,40 +350,139 @@
 .org-tree .node-box .node-name {
   font-weight: 500;
   font-size: 14px;
-  line-height: 20px;
-  white-space: nowrap;
+  line-height: 18px;
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  max-height: 36px;
   overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
+  text-align: center;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
-.org-tree .org-toggle-btn {
+.org-tree .org-node-toggle {
   position: absolute;
-  bottom: -11px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 22px;
+  top: 6px;
+  right: 6px;
+  z-index: 6;
+  min-width: 32px;
   height: 22px;
-  border-radius: 50%;
-  background: #fff;
-  border: 1px solid #aec5df;
-  display: flex;
-  justify-content: center;
+  min-height: 22px;
+  padding: 0 5px;
+  border: 1px solid #c8d8ea;
+  border-radius: 11px;
+  background: #f7fafd;
+  color: #51657e;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
+  gap: 1px;
+  line-height: 18px;
+  box-shadow: none;
+}
+
+.org-tree .node-box.root-node .org-node-toggle {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.38);
+  color: #fff;
+}
+
+.org-tree .org-node-toggle .mat-icon {
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+  line-height: 14px;
+}
+
+.org-tree .org-node-toggle span {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.org-tree .org-node-toggle:hover {
+  background: #edf3f9;
+}
+
+.org-tree.compact-org {
+  --org-sibling-gap: 8px;
+  --org-child-top-gap: 24px;
+  --org-node-top-gap: 24px;
+  --org-edge-label-top: 22px;
+}
+
+.org-tree.compact-org.relations-visible {
+  --org-child-top-gap: 32px;
+  --org-node-top-gap: 44px;
+  --org-edge-label-top: 26px;
+}
+
+.org-tree.compact-org .node-box {
+  width: 128px;
+  height: 82px;
+  padding: 9px 10px;
+  border-radius: 6px;
+}
+
+.org-tree.compact-org .node-box .node-icon-wrap {
+  flex-basis: 30px;
+  height: 30px;
+  margin-bottom: 4px;
+}
+
+.org-tree.compact-org .node-box .node-icon {
+  font-size: 24px;
+  height: 24px;
+  line-height: 24px;
+}
+
+.org-tree.compact-org .node-box .node-name {
+  font-size: 12px;
+  line-height: 15px;
+  min-height: 30px;
+  max-height: 30px;
+}
+
+.org-tree.labels-hidden {
+  --org-sibling-gap: 6px;
+  --org-child-top-gap: 22px;
+  --org-node-top-gap: 22px;
+  --org-edge-label-top: 20px;
+}
+
+.org-tree.labels-hidden.relations-visible {
+  --org-child-top-gap: 28px;
+  --org-node-top-gap: 38px;
+  --org-edge-label-top: 24px;
+}
+
+.org-tree.labels-hidden .node-box {
+  width: 68px;
+  height: 54px;
+  padding: 9px;
+}
+
+.org-tree.labels-hidden .node-box .node-icon-wrap {
+  margin-bottom: 0;
+}
+
+.org-tree.labels-hidden .node-box .node-name {
+  display: none;
+}
+
+.org-tree.labels-hidden .org-node-toggle {
+  top: 2px;
+  right: 2px;
+  min-width: 22px;
+  width: 22px;
+  height: 18px;
+  min-height: 18px;
   padding: 0;
-  color: #3f51b5;
-  z-index: 5;
 }
-.org-tree .root-node .org-toggle-btn {
-  border-color: #3f51b5;
-}
-.org-tree .org-toggle-btn .mat-icon {
-  font-size: 16px;
-  width: 16px;
-  height: 16px;
-  line-height: 16px;
-}
-.org-tree .org-toggle-btn:hover {
-  background: #f0f4f8;
+
+.org-tree.labels-hidden .org-node-toggle span {
+  display: none;
 }
 
 .zoom-controls {

@@ -2563,7 +2563,15 @@
         "type-mobile-app-bundle": "移动应用包",
         "type-mobile-app-bundles": "移动应用包",
         "list-of-mobile-app-bundles": "{ count, plural, =1 {一个移动应用包} other {# 个移动应用包列表} }",
-        "hierarchy": "实体拓扑"
+        "hierarchy": "实体拓扑",
+        "hierarchy-preview-rendered-prefix": "已显示",
+        "hierarchy-preview-rendered-suffix": "个可见节点",
+        "hierarchy-preview-show-more": "再显示 {{count}} 个",
+        "hierarchy-fit-view": "适配视图",
+        "hierarchy-center-view": "居中视图",
+        "hierarchy-compact-mode": "紧凑图",
+        "hierarchy-toggle-labels": "显示或隐藏名称",
+        "hierarchy-toggle-relations": "显示或隐藏关系标签"
     },
     "entity-field": {
         "created-time": "创建时间",

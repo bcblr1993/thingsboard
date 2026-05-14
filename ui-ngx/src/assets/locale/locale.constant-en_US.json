@@ -2686,7 +2686,15 @@
         "type-mobile-app-bundle": "Mobile bundle",
         "type-mobile-app-bundles": "Mobile bundles",
         "list-of-mobile-app-bundles": "{ count, plural, =1 {One mobile bundle} other {List of # mobile bundles} }",
-        "hierarchy": "Entity Topology"
+        "hierarchy": "Entity Topology",
+        "hierarchy-preview-rendered-prefix": "Showing",
+        "hierarchy-preview-rendered-suffix": "visible nodes",
+        "hierarchy-preview-show-more": "Show {{count}} more",
+        "hierarchy-fit-view": "Fit view",
+        "hierarchy-center-view": "Center view",
+        "hierarchy-compact-mode": "Compact chart",
+        "hierarchy-toggle-labels": "Show or hide labels",
+        "hierarchy-toggle-relations": "Show or hide relation labels"
     },
     "entity-field": {
         "created-time": "Created time",

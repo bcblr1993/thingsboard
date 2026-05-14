@@ -68,7 +68,7 @@
             <mat-form-field class="flex-1">
               <mat-label>&nbsp;</mat-label>
               <input #searchInput matInput [(ngModel)]="searchQuery"
-                     (ngModelChange)="onSearchChange()"
+                     (ngModelChange)="scheduleSearchChange()"
                      placeholder="{{ 'action.search' | translate }}"
                      (keydown.escape)="exitSearchMode()">
             </mat-form-field>
@@ -90,47 +90,50 @@
 
           <!-- Standard Tree Mode -->
           <div class="tree-scroll-container" *ngIf="!previewMode && dataSource.data.length > 0">
-            <mat-tree [dataSource]="dataSource" [treeControl]="treeControl" [trackBy]="trackByFn" class="entities-tree">
-              <!-- Leaf node -->
-              <mat-tree-node *matTreeNodeDef="let node" matTreeNodeToggle>
-                <div class="node-row clickable" [class.mat-selected]="currentEntityId?.id === node.id" (click)="openDetails(node)">
-                  <button mat-icon-button (click)="$event.stopPropagation()" disabled></button>
-                  <mat-icon color="primary" class="node-icon">{{node.icon}}</mat-icon>
-                  <span class="node-title" #nodeTitle1
-                        (mouseenter)="$any(node).tooltipText = nodeTitle1.offsetWidth < nodeTitle1.scrollWidth ? node.name : ''"
-                        [matTooltip]="$any(node).tooltipText"
-                        matTooltipPosition="above">{{node.name}}</span>
-                </div>
-              </mat-tree-node>
-
-              <!-- Parent node -->
-              <mat-nested-tree-node *matTreeNodeDef="let node; when: hasChild">
-                <div class="node-row clickable" [class.mat-selected]="currentEntityId?.id === node.id" (click)="openDetails(node)">
-                  <button mat-icon-button matTreeNodeToggle (click)="$event.stopPropagation()">
-                    <mat-icon class="mat-icon-rtl-mirror">
-                      {{treeControl.isExpanded(node) ? 'expand_more' : 'chevron_right'}}
-                    </mat-icon>
-                  </button>
-                  <mat-icon color="primary" class="node-icon">{{node.icon}}</mat-icon>
-                  <span class="node-title" #nodeTitle2
-                        (mouseenter)="$any(node).tooltipText = nodeTitle2.offsetWidth < nodeTitle2.scrollWidth ? node.name : ''"
-                        [matTooltip]="$any(node).tooltipText"
-                        matTooltipPosition="above">{{node.name}}</span>
-                </div>
-                <div [class.hidden]="!treeControl.isExpanded(node)" role="group" class="tree-node-children">
-                  <ng-container matTreeNodeOutlet></ng-container>
-                </div>
-              </mat-nested-tree-node>
-            </mat-tree>
+            <cdk-virtual-scroll-viewport [itemSize]="48" [minBufferPx]="480" [maxBufferPx]="960" class="tree-virtual-viewport">
+              <div *cdkVirtualFor="let item of visibleNodes; trackBy: trackByVisibleNode"
+                   class="node-row clickable"
+                   [class.mat-selected]="currentEntityId?.id === item.node.id"
+                   [style.padding-left.px]="item.level * treeIndentPx"
+                   (click)="openDetails(item.node)">
+                <button mat-icon-button
+                        [disabled]="!item.expandable"
+                        [class.invisible-toggle]="!item.expandable"
+                        (click)="toggleNode(item.node, $event)">
+                  <mat-icon class="mat-icon-rtl-mirror" *ngIf="item.expandable">
+                    {{ isNodeExpanded(item.node) ? 'expand_more' : 'chevron_right' }}
+                  </mat-icon>
+                </button>
+                <mat-icon color="primary" class="node-icon">{{ item.node.icon }}</mat-icon>
+                <span class="node-title"
+                      [matTooltip]="item.tooltipText"
+                      matTooltipClass="entity-topology-name-tooltip"
+                      matTooltipPosition="above">{{ item.displayName }}</span>
+              </div>
+            </cdk-virtual-scroll-viewport>
           </div>
 
           <!-- Org Chart Preview Mode -->
           <div class="org-chart-container" *ngIf="previewMode && dataSource.data.length > 0">
-            <div class="org-tree-wrapper" [style.zoom]="zoom" [style.transform]="'scale(' + zoom + ')'">
-              <div class="org-tree">
-                <ng-container *ngTemplateOutlet="orgNodeTemplate; context:{nodes: dataSource.data, isRoot: true}"></ng-container>
+            <div class="org-tree-wrapper" #orgTreeWrapper [style.zoom]="zoom" [style.transform]="'scale(' + zoom + ')'">
+              <div class="org-tree"
+                   [class.compact-org]="previewCompactMode"
+                   [class.labels-hidden]="previewLabelsHidden"
+                   [class.relations-visible]="previewRelationLabelsVisible">
+                <ng-container *ngTemplateOutlet="orgNodeTemplate; context:{nodes: previewNodes, isRoot: true}"></ng-container>
               </div>
             </div>
+          </div>
+
+          <div class="preview-load-more" *ngIf="previewMode && dataSource.data.length > 0 && hasMorePreviewNodes">
+            <span>
+              {{ 'entity.hierarchy-preview-rendered-prefix' | translate }}
+              {{ previewRenderedNodeCount }} / {{ visibleNodes.length }}
+              {{ 'entity.hierarchy-preview-rendered-suffix' | translate }}
+            </span>
+            <button mat-button color="primary" (click)="showMorePreviewNodes()">
+              {{ 'entity.hierarchy-preview-show-more' | translate:{count: previewNodeStep} }}
+            </button>
           </div>
 
           <div class="no-data-found flex items-center justify-center" *ngIf="dataSource.data.length === 0">
@@ -140,6 +143,9 @@
 
         <!-- Zoom Controls -->
         <div class="zoom-controls" *ngIf="previewMode && dataSource.data.length > 0">
+          <button mat-icon-button (click)="fitPreviewToView()" matTooltip="{{ 'entity.hierarchy-fit-view' | translate }}">
+            <mat-icon>fit_screen</mat-icon>
+          </button>
           <button mat-icon-button (click)="zoomIn()" matTooltip="{{ 'action.zoom-in' | translate }}">
             <mat-icon>add</mat-icon>
           </button>
@@ -149,28 +155,36 @@
           <button mat-icon-button (click)="resetZoom()" matTooltip="{{ 'action.restore' | translate }}">
             <mat-icon>restart_alt</mat-icon>
           </button>
+          <button mat-icon-button (click)="centerPreview()" matTooltip="{{ 'entity.hierarchy-center-view' | translate }}">
+            <mat-icon>filter_center_focus</mat-icon>
+          </button>
         </div>
 
         <ng-template #orgNodeTemplate let-nodes="nodes" let-isRoot="isRoot">
           <ul>
-            <li *ngFor="let node of nodes">
-              <div class="edge-label" *ngIf="!isRoot && $any(node).edgeLabel" [matTooltip]="$any(node).edgeLabel" matTooltipPosition="above">
+            <li *ngFor="let node of nodes; trackBy: trackByOrgNode">
+              <div class="edge-label" *ngIf="previewRelationLabelsVisible && !isRoot && $any(node).edgeLabel" [matTooltip]="$any(node).edgeLabel" matTooltipPosition="above">
                 {{ $any(node).edgeLabel }}
               </div>
-              <div class="node-box" [ngClass]="{'root-node': isRoot}">
-                <mat-icon class="node-icon" [color]="isRoot ? '' : 'primary'">{{node.icon}}</mat-icon>
+              <div class="node-box" [ngClass]="{'root-node': isRoot, 'has-children': $any(node).hasChildren}">
+                <div class="node-icon-wrap">
+                  <mat-icon class="node-icon" [color]="isRoot ? '' : 'primary'">{{node.icon}}</mat-icon>
+                </div>
                 <div class="node-name" #nodeName
                      (mouseenter)="$any(node).tooltipText = nodeName.offsetWidth < nodeName.scrollWidth ? node.name : ''"
                      [matTooltip]="$any(node).tooltipText"
                      matTooltipPosition="above">{{node.name}}</div>
-                <button mat-icon-button *ngIf="node.children && node.children.length > 0"
-                        class="org-toggle-btn"
+                <button mat-button *ngIf="$any(node).hasChildren"
+                        class="org-node-toggle"
+                        [matTooltip]="(isNodeExpanded(node) ? 'action.collapse-all' : 'action.expand-all') | translate"
+                        matTooltipPosition="above"
                         (mousedown)="$event.stopPropagation()"
-                        (click)="treeControl.toggle(node); $event.stopPropagation()">
-                  <mat-icon>{{ treeControl.isExpanded(node) ? 'remove' : 'add' }}</mat-icon>
+                        (click)="toggleNode(node, $event)">
+                  <mat-icon>{{ isNodeExpanded(node) ? 'remove' : 'add' }}</mat-icon>
+                  <span>{{ $any(node).childCount }}</span>
                 </button>
               </div>
-              <ng-container *ngIf="node.children && node.children.length > 0 && treeControl.isExpanded(node)">
+              <ng-container *ngIf="$any(node).hasChildren && isNodeExpanded(node)">
                 <ng-container *ngTemplateOutlet="orgNodeTemplate; context:{nodes: node.children, isRoot: false}"></ng-container>
               </ng-container>
             </li>
