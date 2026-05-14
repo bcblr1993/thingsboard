@@ -105,7 +105,7 @@ export class MqttDeviceProfileTransportConfigurationComponent implements Control
           enableCompatibilityWithJsonPayloadFormat: [false, Validators.required],
           useJsonPayloadFormatForDefaultDownlinkTopics: [false, Validators.required]
         })
-      }, {validators: this.uniqueDeviceTopicValidator}
+      }, {validators: this.uniqueDeviceTopicValidator.bind(this)}
     );
     this.mqttDeviceProfileTransportConfigurationFormGroup.get('transportPayloadTypeConfiguration.transportPayloadType').valueChanges.pipe(
       takeUntil(this.destroy$)
@@ -169,6 +169,8 @@ export class MqttDeviceProfileTransportConfigurationComponent implements Control
       if (!this.disabled) {
         this.mqttDeviceProfileTransportConfigurationFormGroup.get('sparkplug').updateValueAndValidity({onlySelf: true});
       }
+      this.mqttDeviceProfileTransportConfigurationFormGroup.markAllAsTouched();
+      this.mqttDeviceProfileTransportConfigurationFormGroup.updateValueAndValidity({emitEvent: false});
     }
   }
 
@@ -256,6 +258,9 @@ export class MqttDeviceProfileTransportConfigurationComponent implements Control
       if (!topic.endsWith('/')) {
         return { invalidRpcTopicTrailingSlash: { valid: false } };
       }
+      if (!this.trimTrailingSlash(topic)) {
+        return { invalidRpcTopicPrefix: { valid: false } };
+      }
       return null;
     };
   }
@@ -263,10 +268,21 @@ export class MqttDeviceProfileTransportConfigurationComponent implements Control
   private uniqueDeviceTopicValidator(control: UntypedFormGroup): { [key: string]: boolean } | null {
     if (control.getRawValue()) {
       const formValue = control.getRawValue() as MqttDeviceProfileTransportConfiguration;
+      const errors: { [key: string]: boolean } = {};
       if (formValue.deviceAttributesTopic === formValue.deviceTelemetryTopic) {
-        return {unique: true};
+        errors.unique = true;
       }
+      const rpcRequestTopic = this.trimTrailingSlash(formValue.deviceRpcRequestTopic);
+      const telemetryTopic = this.trimTrailingSlash(formValue.deviceTelemetryTopic);
+      if (rpcRequestTopic && telemetryTopic && rpcRequestTopic === telemetryTopic) {
+        errors.rpcRequestTelemetryTopicSame = true;
+      }
+      return Object.keys(errors).length ? errors : null;
     }
     return null;
+  }
+
+  private trimTrailingSlash(topic: string): string {
+    return topic?.trim().replace(/\/+$/, '');
   }
 }

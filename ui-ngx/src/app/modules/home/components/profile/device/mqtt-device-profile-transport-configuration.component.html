@@ -15,7 +15,8 @@
     limitations under the License.
 
 -->
-<form [formGroup]="mqttDeviceProfileTransportConfigurationFormGroup" style="padding-top: 8px;">
+<form *ngIf="mqttDeviceProfileTransportConfigurationFormGroup"
+      [formGroup]="mqttDeviceProfileTransportConfigurationFormGroup" style="padding-top: 8px;">
   <mat-checkbox formControlName="sparkplug">
     {{ 'device-profile.mqtt-device-topic-filters-spark-plug' | translate }}
   </mat-checkbox>
@@ -31,7 +32,8 @@
                         formControlName="sparkplugAttributesMetricNames">
   </tb-string-items-list>
 </form>
-<form [formGroup]="mqttDeviceProfileTransportConfigurationFormGroup" style="padding-bottom: 16px;" *ngIf="!mqttDeviceProfileTransportConfigurationFormGroup.get('sparkplug').value">
+<form [formGroup]="mqttDeviceProfileTransportConfigurationFormGroup" style="padding-bottom: 16px;"
+      *ngIf="mqttDeviceProfileTransportConfigurationFormGroup && !mqttDeviceProfileTransportConfigurationFormGroup.get('sparkplug').value">
   <fieldset class="fields-group">
     <legend class="group-title" translate>device-profile.mqtt-device-topic-filters</legend>
     <div class="flex flex-col gap-2">
@@ -85,6 +87,12 @@
       <mat-error *ngIf="mqttDeviceProfileTransportConfigurationFormGroup.hasError('unique')">
         {{ 'device-profile.mqtt-device-topic-filters-unique' | translate }}
       </mat-error>
+      <mat-error *ngIf="mqttDeviceProfileTransportConfigurationFormGroup.hasError('rpcRequestTelemetryTopicSame')">
+        {{ 'device-profile.rpc-request-topic-telemetry-unique' | translate }}
+      </mat-error>
+      <div class="tb-hint" innerHTML="{{ 'device-profile.support-level-wildcards' | translate }}"></div>
+      <div class="tb-hint" innerHTML="{{ 'device-profile.single-level-wildcards-hint' | translate }}"></div>
+      <div class="tb-hint" innerHTML="{{ 'device-profile.multi-level-wildcards-hint' | translate }}"></div>
       <div class="flex flex-row gap-2 xs:flex-col">
         <mat-form-field class="flex-1">
           <mat-label translate>device-profile.rpc-request-topic</mat-label>
@@ -99,6 +107,9 @@
           </mat-error>
           <mat-error *ngIf="mqttDeviceProfileTransportConfigurationFormGroup.get('deviceRpcRequestTopic').hasError('invalidRpcTopicTrailingSlash')">
             {{ 'device-profile.rpc-topic-trailing-slash' | translate }}
+          </mat-error>
+          <mat-error *ngIf="mqttDeviceProfileTransportConfigurationFormGroup.get('deviceRpcRequestTopic').hasError('invalidRpcTopicPrefix')">
+            {{ 'device-profile.rpc-topic-prefix-required' | translate }}
           </mat-error>
         </mat-form-field>
         <mat-form-field class="flex-1">
@@ -115,11 +126,12 @@
           <mat-error *ngIf="mqttDeviceProfileTransportConfigurationFormGroup.get('deviceRpcResponseTopic').hasError('invalidRpcTopicTrailingSlash')">
             {{ 'device-profile.rpc-topic-trailing-slash' | translate }}
           </mat-error>
+          <mat-error *ngIf="mqttDeviceProfileTransportConfigurationFormGroup.get('deviceRpcResponseTopic').hasError('invalidRpcTopicPrefix')">
+            {{ 'device-profile.rpc-topic-prefix-required' | translate }}
+          </mat-error>
         </mat-form-field>
       </div>
-      <div class="tb-hint" innerHTML="{{ 'device-profile.support-level-wildcards' | translate }}"></div>
-      <div class="tb-hint" innerHTML="{{ 'device-profile.single-level-wildcards-hint' | translate }}"></div>
-      <div class="tb-hint" innerHTML="{{ 'device-profile.multi-level-wildcards-hint' | translate }}"></div>
+      <div class="tb-hint" innerHTML="{{ 'device-profile.rpc-topic-prefix-hint' | translate }}"></div>
     </div>
   </fieldset>
   <section formGroupName="transportPayloadTypeConfiguration">
