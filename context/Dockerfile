@@ -1,4 +1,4 @@
-FROM eclipse-temurin:17-jre
+FROM eclipse-temurin:17-jdk
 
 # 设置系统环境变量
 ENV LANG=C.UTF-8
