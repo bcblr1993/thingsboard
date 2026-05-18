@@ -43,6 +43,7 @@ import { TimeService } from '@core/services/time.service';
 import { UtilsService } from '@core/services/utils.service';
 import { MatDialog, MatDialogConfig } from '@angular/material/dialog';
 import { AlertDialogComponent } from '@shared/components/dialog/alert-dialog.component';
+import { IdleService } from '@core/services/idle.service';
 import { OAuth2ClientLoginInfo, PlatformType } from '@shared/models/oauth2.models';
 import { isMobileApp } from '@core/utils';
 import { TwoFactorAuthProviderType, TwoFaProviderInfo } from '@shared/models/two-factor-auth.models';
@@ -63,7 +64,8 @@ export class AuthService {
         private utils: UtilsService,
         private translate: TranslateService,
         private dialog: MatDialog,
-        private menuService: MenuService
+        private menuService: MenuService,
+        private idleService: IdleService
     ) {
     }
 
@@ -604,6 +606,7 @@ export class AuthService {
 
     private notifyAuthenticated(authPayload: AuthPayload) {
         this.store.dispatch(new ActionAuthAuthenticated(authPayload));
+        this.idleService.startMonitoring(() => this.logout(true));
     }
 
     private updateAndValidateToken(token, prefix, notify) {
@@ -626,6 +629,7 @@ export class AuthService {
     }
 
     private clearJwtToken() {
+        this.idleService.stopMonitoring();
         this.setUserFromJwtToken(null, null, true);
     }
 

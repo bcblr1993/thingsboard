@@ -50,8 +50,14 @@ public class DefaultSecuritySettingsService implements SecuritySettingsService {
         } else {
             securitySettings = new SecuritySettings();
             securitySettings.setPasswordPolicy(new UserPasswordPolicy());
-            securitySettings.getPasswordPolicy().setMinimumLength(6);
+            securitySettings.getPasswordPolicy().setMinimumLength(8);
             securitySettings.getPasswordPolicy().setMaximumLength(72);
+            securitySettings.getPasswordPolicy().setMinimumLowercaseLetters(1);
+            securitySettings.getPasswordPolicy().setMinimumDigits(1);
+            securitySettings.getPasswordPolicy().setMinimumSpecialCharacters(1);
+            securitySettings.getPasswordPolicy().setPasswordExpirationPeriodDays(90);
+            securitySettings.getPasswordPolicy().setPasswordReuseFrequencyDays(90);
+            securitySettings.setMaxFailedLoginAttempts(5);
             securitySettings.setMobileSecretKeyLength(DEFAULT_MOBILE_SECRET_KEY_LENGTH);
             securitySettings.setPasswordResetTokenTtl(24);
             securitySettings.setUserActivationTokenTtl(24);
