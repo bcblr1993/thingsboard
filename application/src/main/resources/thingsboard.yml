@@ -155,8 +155,8 @@ plugins:
 security:
   # JWT Token parameters
   jwt: # Since 3.4.2 values are persisted in the database during installation or upgrade. On Install, the key will be generated randomly if no custom value set. You can change it later from Web UI under SYS_ADMIN
-    tokenExpirationTime: "${JWT_TOKEN_EXPIRATION_TIME:9000}" # Number of seconds (2.5 hours)
-    refreshTokenExpTime: "${JWT_REFRESH_TOKEN_EXPIRATION_TIME:604800}" # Number of seconds (1 week).
+    tokenExpirationTime: "${JWT_TOKEN_EXPIRATION_TIME:600}" # Number of seconds (10 minutes)
+    refreshTokenExpTime: "${JWT_REFRESH_TOKEN_EXPIRATION_TIME:108000}" # Number of seconds (30 hours).
     tokenIssuer: "${JWT_TOKEN_ISSUER:thingsboard.io}" # User JWT Token issuer
     tokenSigningKey: "${JWT_TOKEN_SIGNING_KEY:thingsboardDefaultSigningKey}" # Base64 encoded
   # Enable/disable access to Tenant Administrators JWT token by System Administrator or Customer Users JWT token by Tenant Administrator

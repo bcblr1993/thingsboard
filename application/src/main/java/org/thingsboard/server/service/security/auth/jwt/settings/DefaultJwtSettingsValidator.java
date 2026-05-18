@@ -48,9 +48,6 @@ public class DefaultJwtSettingsValidator implements JwtSettingsValidator {
         if (jwtSettings.getTokenExpirationTime() >= jwtSettings.getRefreshTokenExpTime()) {
             throw new DataValidationException("JWT token expiration time should greater than JWT refresh token expiration time!");
         }
-        if (jwtSettings.getRefreshTokenExpTime() > TimeUnit.HOURS.toSeconds(30)) {
-            throw new DataValidationException("JWT refresh token expiration time should not exceed 30 hours!");
-        }
         if (StringUtils.isEmpty(jwtSettings.getTokenSigningKey())) {
             throw new DataValidationException("JWT token signing key should be specified!");
         }
