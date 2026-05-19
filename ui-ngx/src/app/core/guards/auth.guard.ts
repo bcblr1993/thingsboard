@@ -149,6 +149,15 @@ export class AuthGuard {
                                     }
                                 }
                                 // 菜单不为空，继续正常的路由逻辑
+                                // 账号页面始终允许访问（通过用户菜单进入，不在主导航菜单中）
+                                if (url.startsWith('/account')) {
+                                    if (data.redirectTo) {
+                                        const authority = Authority[authState.authUser.authority];
+                                        const redirect = isObject(data.redirectTo) ? data.redirectTo[authority] : data.redirectTo;
+                                        return of(this.router.parseUrl(redirect));
+                                    }
+                                    return of(true);
+                                }
                                 return this.menuService.isPathAllowed(url).pipe(
                                     take(1),
                                     switchMap(isAllowed => {
