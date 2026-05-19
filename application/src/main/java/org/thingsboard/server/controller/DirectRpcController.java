@@ -201,6 +201,11 @@ public class DirectRpcController extends BaseController {
             throw new IllegalArgumentException("'method' 字段必须是非空字符串");
         }
 
+        // 验证必填字段 params，调用方无参数时也需要显式传 {}
+        if (!rpcRequestBody.has("params") || rpcRequestBody.get("params").isNull()) {
+            throw new IllegalArgumentException("RPC 请求体必须包含非 null 的 'params' 字段");
+        }
+
         // 验证可选字段 timeout（如果存在）
         if (rpcRequestBody.has(DataConstants.TIMEOUT) && !rpcRequestBody.get(DataConstants.TIMEOUT).isNull()) {
             long timeout = rpcRequestBody.get(DataConstants.TIMEOUT).asLong();
@@ -333,9 +338,8 @@ public class DirectRpcController extends BaseController {
         // 解析方法名（已验证为非空）
         String method = rpcRequestBody.get("method").asText();
 
-        // 解析 params（可选，可以是任意 JSON 值包括 null）
+        // 解析 params（必填，可以是任意非 null JSON 值）
         String params = parseRpcJsonData(rpcRequestBody.get("params"));
-
         // 解析附加信息（可选的元数据）
         String additionalInfo = parseRpcJsonData(rpcRequestBody.get(DataConstants.ADDITIONAL_INFO));
 
