@@ -80,6 +80,7 @@ export class SecuritySettingsComponent extends PageComponent implements HasConfi
       userActivationTokenTtl: [24, [Validators.required, Validators.min(1), Validators.max(24)]],
       passwordResetTokenTtl: [24, [Validators.required, Validators.min(1), Validators.max(24)]],
       mobileSecretKeyLength: [null, [Validators.min(1)]],
+      idleTimeoutMinutes: [null, [Validators.min(1)]],
       passwordPolicy: this.fb.group(
         {
           minimumLength: [null, [Validators.required, Validators.min(6), Validators.max(50)]],

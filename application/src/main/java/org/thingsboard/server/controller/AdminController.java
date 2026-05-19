@@ -28,6 +28,7 @@ import com.google.api.client.json.gson.GsonFactory;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
+import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -170,6 +171,15 @@ public class AdminController extends BaseController {
     public SecuritySettings getSecuritySettings() throws ThingsboardException {
         accessControlService.checkPermission(getCurrentUser(), Resource.ADMIN_SETTINGS, Operation.READ);
         return checkNotNull(securitySettingsService.getSecuritySettings());
+    }
+
+    @Hidden
+    @PreAuthorize("hasAnyAuthority('SYS_ADMIN', 'TENANT_ADMIN', 'CUSTOMER_USER')")
+    @GetMapping(value = "/idleTimeout")
+    @ResponseBody
+    public Integer getIdleTimeout() throws ThingsboardException {
+        SecuritySettings securitySettings = checkNotNull(securitySettingsService.getSecuritySettings());
+        return securitySettings.getIdleTimeoutMinutes();
     }
 
     @ApiOperation(value = "Update Security Settings (saveSecuritySettings)",

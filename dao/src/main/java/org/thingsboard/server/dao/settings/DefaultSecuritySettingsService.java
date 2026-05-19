@@ -61,6 +61,7 @@ public class DefaultSecuritySettingsService implements SecuritySettingsService {
             securitySettings.setMobileSecretKeyLength(DEFAULT_MOBILE_SECRET_KEY_LENGTH);
             securitySettings.setPasswordResetTokenTtl(24);
             securitySettings.setUserActivationTokenTtl(24);
+            securitySettings.setIdleTimeoutMinutes(10);
         }
         return securitySettings;
     }

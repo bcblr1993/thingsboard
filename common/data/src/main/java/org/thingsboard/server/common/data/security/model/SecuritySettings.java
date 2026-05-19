@@ -51,4 +51,7 @@ public class SecuritySettings implements Serializable {
     @Schema(description = "TTL in hours for password reset link", minimum = "1", maximum = "24", requiredMode = Schema.RequiredMode.REQUIRED)
     private Integer passwordResetTokenTtl;
 
+    @Schema(description = "Idle timeout in minutes before automatic logout. Defaults to 10 if null.")
+    private Integer idleTimeoutMinutes;
+
 }

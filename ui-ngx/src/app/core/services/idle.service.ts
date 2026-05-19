@@ -15,8 +15,7 @@
 ///
 
 import { Injectable, NgZone } from '@angular/core';
-
-const DEFAULT_IDLE_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+import { HttpClient } from '@angular/common/http';
 
 const IDLE_EVENTS: (keyof DocumentEventMap)[] = ['mousemove', 'keydown', 'click', 'touchstart'];
 
@@ -25,13 +24,29 @@ const IDLE_EVENTS: (keyof DocumentEventMap)[] = ['mousemove', 'keydown', 'click'
 })
 export class IdleService {
 
-    private timeoutMs = DEFAULT_IDLE_TIMEOUT_MS;
+    private timeoutMs = 10 * 60 * 1000;
     private timer: ReturnType<typeof setTimeout> | null = null;
     private timeoutCallback: (() => void) | null = null;
     private boundHandleActivity: () => void;
 
-    constructor(private ngZone: NgZone) {
+    constructor(private ngZone: NgZone,
+                private http: HttpClient) {
         this.boundHandleActivity = this.handleActivity.bind(this);
+    }
+
+    fetchConfigAndStart(timeoutCallback: () => void): void {
+        this.http.get<number>('/api/admin/idleTimeout').subscribe(
+            (idleMinutes) => {
+                if (idleMinutes && idleMinutes > 0) {
+                    this.startMonitoring(timeoutCallback, idleMinutes * 60 * 1000);
+                } else {
+                    this.stopMonitoring();
+                }
+            },
+            () => {
+                this.startMonitoring(timeoutCallback);
+            }
+        );
     }
 
     startMonitoring(timeoutCallback: () => void, timeoutMs?: number): void {

@@ -606,7 +606,7 @@ export class AuthService {
 
     private notifyAuthenticated(authPayload: AuthPayload) {
         this.store.dispatch(new ActionAuthAuthenticated(authPayload));
-        this.idleService.startMonitoring(() => this.logout(true));
+        this.idleService.fetchConfigAndStart(() => this.logout(true));
     }
 
     private updateAndValidateToken(token, prefix, notify) {

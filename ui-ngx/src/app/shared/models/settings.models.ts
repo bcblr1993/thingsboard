@@ -116,6 +116,7 @@ export interface SecuritySettings {
   mobileSecretKeyLength: number;
   userActivationTokenTtl: number;
   passwordResetTokenTtl: number;
+  idleTimeoutMinutes: number;
 }
 
 export interface JwtSettings {
