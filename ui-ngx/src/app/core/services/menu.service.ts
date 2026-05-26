@@ -22,6 +22,7 @@ import { catchError, filter, first, map, switchMap, take } from 'rxjs/operators'
 import { buildUserHome, HomeSection, MenuId, MenuSection, referenceToMenuSection } from '@core/services/menu.models';
 import { Observable, of, ReplaySubject, Subject } from 'rxjs';
 import { AuthState } from '@core/auth/auth.models';
+import { Authority } from '@shared/models/authority.enum';
 import { NavigationEnd, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 
@@ -49,7 +50,7 @@ export class MenuService {
     this.store.pipe(select(selectIsAuthenticated)).pipe(
       filter(authenticated => authenticated),
       switchMap(() => this.store.pipe(select(selectAuth), take(1))),
-      filter(authState => !!authState.authUser)
+      filter(authState => !!authState.authUser && authState.authUser.authority !== Authority.PRE_VERIFICATION_TOKEN)
     ).subscribe((authState) => {
       this.buildMenu(authState);
     });

@@ -606,7 +606,11 @@ export class AuthService {
 
     private notifyAuthenticated(authPayload: AuthPayload) {
         this.store.dispatch(new ActionAuthAuthenticated(authPayload));
-        this.idleService.fetchConfigAndStart(() => this.logout(true));
+        if (authPayload.authUser?.authority !== Authority.PRE_VERIFICATION_TOKEN) {
+            this.idleService.fetchConfigAndStart(() => this.logout(true));
+        } else {
+          this.idleService.stopMonitoring();
+        }
     }
 
     private updateAndValidateToken(token, prefix, notify) {
