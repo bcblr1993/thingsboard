@@ -2510,6 +2510,34 @@ public class RestClient implements Closeable {
         return RestJsonConverter.toTimeseries(timeseries);
     }
 
+    public List<TsKvEntry> getTimeseriesFill(EntityId entityId, List<String> keys, Long interval, Aggregation agg,
+                                             boolean fillMissing, SortOrder.Direction sortOrder, Long startTime,
+                                             Long endTime, boolean useStrictDataTypes) {
+        Map<String, String> params = new HashMap<>();
+        params.put("entityType", entityId.getEntityType().name());
+        params.put("entityId", entityId.getId().toString());
+        params.put("keys", listToString(keys));
+        params.put("startTs", String.valueOf(startTime));
+        params.put("endTs", String.valueOf(endTime));
+        params.put("interval", String.valueOf(interval));
+        params.put("agg", agg.name());
+        params.put("fillMissing", Boolean.toString(fillMissing));
+        params.put("orderBy", sortOrder != null ? sortOrder.name() : "DESC");
+        params.put("useStrictDataTypes", Boolean.toString(useStrictDataTypes));
+
+        Map<String, List<JsonNode>> timeseries = restTemplate.exchange(
+                baseURL + "/api/plugins/telemetry/{entityType}/{entityId}/values/timeseries/fill" +
+                        "?keys={keys}&startTs={startTs}&endTs={endTs}&interval={interval}&agg={agg}" +
+                        "&fillMissing={fillMissing}&orderBy={orderBy}&useStrictDataTypes={useStrictDataTypes}",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                new ParameterizedTypeReference<Map<String, List<JsonNode>>>() {
+                },
+                params).getBody();
+
+        return RestJsonConverter.toTimeseries(timeseries);
+    }
+
     public boolean saveDeviceAttributes(DeviceId deviceId, String scope, JsonNode request) {
         return restTemplate
                 .postForEntity(baseURL + "/api/plugins/telemetry/{deviceId}/{scope}", request, Object.class, deviceId.getId().toString(), scope)

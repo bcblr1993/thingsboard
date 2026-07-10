@@ -333,6 +333,44 @@ public class TelemetryController extends BaseController {
         return response;
     }
 
+    @ApiOperation(value = "Get time series data grouped into intervals with optional gap filling",
+            notes = "Returns time series data grouped into fixed millisecond intervals. " +
+                    "Supports NONE, AVG, MIN and MAX aggregations and optional previous-value gap filling. " +
+                    "\n\n" + INVALID_ENTITY_ID_OR_ENTITY_TYPE_DESCRIPTION + TENANT_OR_CUSTOMER_AUTHORITY_PARAGRAPH)
+    @PreAuthorize("hasAnyAuthority('SYS_ADMIN', 'TENANT_ADMIN', 'CUSTOMER_USER')")
+    @RequestMapping(value = "/{entityType}/{entityId}/values/timeseries/fill", method = RequestMethod.GET)
+    @ResponseBody
+    public DeferredResult<ResponseEntity> getTimeseriesFill(
+            @Parameter(description = ENTITY_TYPE_PARAM_DESCRIPTION, required = true, schema = @Schema(defaultValue = "DEVICE"))
+            @PathVariable("entityType") String entityType,
+            @Parameter(description = ENTITY_ID_PARAM_DESCRIPTION, required = true)
+            @PathVariable("entityId") String entityIdStr,
+            @Parameter(description = TELEMETRY_KEYS_BASE_DESCRIPTION, required = true)
+            @RequestParam(name = "keys") String keys,
+            @Parameter(description = "Start timestamp of the time range in milliseconds, UTC.")
+            @RequestParam(name = "startTs") Long startTs,
+            @Parameter(description = "End timestamp of the time range in milliseconds, UTC.")
+            @RequestParam(name = "endTs") Long endTs,
+            @Parameter(description = "Fixed interval in milliseconds. Minimum value is 1000.")
+            @RequestParam(name = "interval") Long interval,
+            @Parameter(description = "Aggregation function.", schema = @Schema(allowableValues = {"NONE", "AVG", "MIN", "MAX"}))
+            @RequestParam(name = "agg") String aggStr,
+            @Parameter(description = "Whether to fill missing intervals using the previous value.")
+            @RequestParam(name = "fillMissing") Boolean fillMissing,
+            @Parameter(description = SORT_ORDER_DESCRIPTION, schema = @Schema(allowableValues = {"ASC", "DESC"}))
+            @RequestParam(name = "orderBy", defaultValue = "DESC") String orderBy,
+            @Parameter(description = STRICT_DATA_TYPES_DESCRIPTION)
+            @RequestParam(name = "useStrictDataTypes", required = false, defaultValue = "false") Boolean useStrictDataTypes) throws ThingsboardException {
+        Aggregation aggregation = checkEnumParameter("agg", aggStr, Aggregation::valueOf);
+        List<String> keyList = toKeysList(keys);
+        DeferredResult<ResponseEntity> response = new DeferredResult<>();
+        Futures.addCallback(tbTelemetryService.getTimeseriesFill(
+                        EntityIdFactory.getByTypeAndId(entityType, entityIdStr), keyList, startTs, endTs,
+                        interval, aggregation, fillMissing, orderBy, getCurrentUser()),
+                getTsKvListCallback(response, useStrictDataTypes), MoreExecutors.directExecutor());
+        return response;
+    }
+
     @ApiOperation(value = "Get first time series value in each interval (getTimeseriesFirstValue)",
             notes = "Returns the first value of time series data for each interval within the specified time range. " +
                     "Unlike aggregation functions, this returns the actual first value in each time bucket. " +

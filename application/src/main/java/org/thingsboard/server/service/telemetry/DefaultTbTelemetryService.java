@@ -26,21 +26,33 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.thingsboard.common.util.JacksonUtil;
+import org.thingsboard.server.common.data.exception.ThingsboardErrorCode;
+import org.thingsboard.server.common.data.exception.ThingsboardException;
 import org.thingsboard.server.common.data.id.EntityId;
+import org.thingsboard.server.common.data.id.TenantId;
 import org.thingsboard.server.common.data.kv.*;
 import org.thingsboard.server.dao.timeseries.TimeseriesService;
+import org.thingsboard.server.exception.InvalidParametersException;
 import org.thingsboard.server.service.security.AccessValidator;
 import org.thingsboard.server.service.security.ValidationResult;
 import org.thingsboard.server.service.security.model.SecurityUser;
 import org.thingsboard.server.service.security.permission.Operation;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class DefaultTbTelemetryService implements TbTelemetryService {
+
+    private static final int MAX_RAW_DATA_POINTS = 1_000_000;
+    private static final int MAX_RESULT_DATA_POINTS = 1_000_000;
+    private static final int MAX_KEYS = 30;
+    private static final long MIN_INTERVAL = TimeUnit.SECONDS.toMillis(1);
+    private static final long MAX_TIME_RANGE = TimeUnit.DAYS.toMillis(31);
+    private static final String DATA_LIMIT_EXCEEDED_MESSAGE = "请求数据量过大";
 
     private final TimeseriesService tsService;
     private final AccessValidator accessValidator;
@@ -85,6 +97,151 @@ public class DefaultTbTelemetryService implements TbTelemetryService {
             }
         });
         return future;
+    }
+
+    @Override
+    public ListenableFuture<List<TsKvEntry>> getTimeseriesFill(EntityId entityId, List<String> keys, Long startTs, Long endTs,
+                                                               Long interval, Aggregation agg, Boolean fillMissing, String orderBy,
+                                                               SecurityUser currentUser) throws ThingsboardException {
+        validateTimeseriesFillRequest(keys, startTs, endTs, interval, agg, fillMissing, orderBy);
+        SettableFuture<List<TsKvEntry>> future = SettableFuture.create();
+        accessValidator.validate(currentUser, Operation.READ_TELEMETRY, entityId, new FutureCallback<>() {
+            @Override
+            public void onSuccess(ValidationResult validationResult) {
+                TimeseriesFillQueryContext context = new TimeseriesFillQueryContext(keys);
+                queryNextFillKey(currentUser.getTenantId(), entityId, startTs, endTs, interval, agg,
+                        fillMissing, orderBy, context, future);
+            }
+
+            @Override
+            public void onFailure(Throwable t) {
+                future.setException(t);
+            }
+        });
+        return future;
+    }
+
+    private void queryNextFillKey(TenantId tenantId, EntityId entityId, long startTs, long endTs, long interval,
+                                  Aggregation aggregation, boolean fillMissing, String orderBy,
+                                  TimeseriesFillQueryContext context, SettableFuture<List<TsKvEntry>> future) {
+        if (future.isDone()) {
+            return;
+        }
+        if (context.keyIndex >= context.keys.size()) {
+            future.set(context.result);
+            return;
+        }
+
+        String key = context.keys.get(context.keyIndex);
+        int queryLimit = context.remainingRawPoints + 1;
+        ReadTsKvQuery dataQuery = new BaseReadTsKvQuery(key, startTs, endTs, AggregationParams.none(), queryLimit, "ASC");
+        Futures.addCallback(tsService.findAll(tenantId, entityId, Collections.singletonList(dataQuery)), new FutureCallback<>() {
+            @Override
+            public void onSuccess(List<TsKvEntry> data) {
+                List<TsKvEntry> keyData = data == null ? Collections.emptyList() : data;
+                if (keyData.size() >= queryLimit) {
+                    failDataLimit(future);
+                    return;
+                }
+                context.remainingRawPoints -= keyData.size();
+                if (fillMissing && startTs > 0) {
+                    ReadTsKvQuery seedQuery = new BaseReadTsKvQuery(key, 0L, startTs, AggregationParams.none(), 1, "DESC");
+                    Futures.addCallback(tsService.findAll(tenantId, entityId, Collections.singletonList(seedQuery)), new FutureCallback<>() {
+                        @Override
+                        public void onSuccess(List<TsKvEntry> seedData) {
+                            TsKvEntry seed = seedData == null || seedData.isEmpty() ? null : seedData.get(0);
+                            processFillKey(tenantId, entityId, startTs, endTs, interval, aggregation, true,
+                                    orderBy, context, future, key, seed, keyData);
+                        }
+
+                        @Override
+                        public void onFailure(Throwable t) {
+                            future.setException(t);
+                        }
+                    }, MoreExecutors.directExecutor());
+                } else {
+                    processFillKey(tenantId, entityId, startTs, endTs, interval, aggregation, false,
+                            orderBy, context, future, key, null, keyData);
+                }
+            }
+
+            @Override
+            public void onFailure(Throwable t) {
+                future.setException(t);
+            }
+        }, MoreExecutors.directExecutor());
+    }
+
+    private void processFillKey(TenantId tenantId, EntityId entityId, long startTs, long endTs, long interval,
+                                Aggregation aggregation, boolean fillMissing, String orderBy,
+                                TimeseriesFillQueryContext context, SettableFuture<List<TsKvEntry>> future,
+                                String key, TsKvEntry seed, List<TsKvEntry> keyData) {
+        try {
+            if (!Aggregation.NONE.equals(aggregation) && !TimeseriesFillProcessor.isNumericSeries(seed, keyData)) {
+                log.warn("Skipping non-numeric timeseries key [{}] for [{}] aggregation", key, aggregation);
+            } else {
+                List<TsKvEntry> keyResult = TimeseriesFillProcessor.processKey(key, seed, keyData, startTs, endTs,
+                        interval, aggregation, fillMissing, orderBy, context.remainingResultPoints);
+                context.result.addAll(keyResult);
+                context.remainingResultPoints -= keyResult.size();
+            }
+            context.keyIndex++;
+            queryNextFillKey(tenantId, entityId, startTs, endTs, interval, aggregation, fillMissing,
+                    orderBy, context, future);
+        } catch (TimeseriesFillProcessor.ResultLimitExceededException e) {
+            failDataLimit(future);
+        } catch (Throwable t) {
+            future.setException(t);
+        }
+    }
+
+    private void validateTimeseriesFillRequest(List<String> keys, Long startTs, Long endTs, Long interval,
+                                               Aggregation aggregation, Boolean fillMissing, String orderBy) throws ThingsboardException {
+        if (keys == null || keys.isEmpty()) {
+            throw badRequest("keys can't be empty");
+        }
+        if (keys.size() > MAX_KEYS) {
+            throw badRequest("keys can't be more than " + MAX_KEYS);
+        }
+        if (startTs == null || endTs == null || startTs < 0 || endTs <= startTs) {
+            throw badRequest("endTs must be greater than startTs");
+        }
+        if (endTs - startTs > MAX_TIME_RANGE) {
+            throw badRequest("Time range can't be more than 31 days");
+        }
+        if (interval == null || interval < MIN_INTERVAL) {
+            throw badRequest("interval can't be less than 1000");
+        }
+        if (!Aggregation.NONE.equals(aggregation) && !Aggregation.AVG.equals(aggregation)
+                && !Aggregation.MIN.equals(aggregation) && !Aggregation.MAX.equals(aggregation)) {
+            throw badRequest("Unsupported aggregation: " + aggregation);
+        }
+        if (fillMissing == null) {
+            throw badRequest("fillMissing must be specified");
+        }
+        if (!"ASC".equalsIgnoreCase(orderBy) && !"DESC".equalsIgnoreCase(orderBy)) {
+            throw badRequest("Unsupported orderBy: " + orderBy);
+        }
+    }
+
+    private ThingsboardException badRequest(String message) {
+        return new ThingsboardException(message, ThingsboardErrorCode.BAD_REQUEST_PARAMS);
+    }
+
+    private void failDataLimit(SettableFuture<List<TsKvEntry>> future) {
+        future.setException(new InvalidParametersException(DATA_LIMIT_EXCEEDED_MESSAGE));
+    }
+
+    private static final class TimeseriesFillQueryContext {
+        private final List<String> keys;
+        private final List<TsKvEntry> result = new ArrayList<>();
+        private int keyIndex;
+        private int remainingRawPoints = MAX_RAW_DATA_POINTS;
+        private int remainingResultPoints = MAX_RESULT_DATA_POINTS;
+
+        private TimeseriesFillQueryContext(List<String> keys) {
+            this.keys = keys;
+        }
     }
 
     @Override

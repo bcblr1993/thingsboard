@@ -23,6 +23,7 @@ import org.thingsboard.server.common.data.Device;
 import org.thingsboard.server.common.data.SaveDeviceWithCredentialsRequest;
 import org.thingsboard.server.common.data.kv.BasicTsKvEntry;
 import org.thingsboard.server.common.data.kv.LongDataEntry;
+import org.thingsboard.server.common.data.kv.StringDataEntry;
 import org.thingsboard.server.common.data.query.EntityKey;
 import org.thingsboard.server.common.data.query.SingleEntityFilter;
 import org.thingsboard.server.common.data.security.DeviceCredentials;
@@ -107,6 +108,102 @@ public class TelemetryControllerTest extends AbstractControllerTest {
         var monthResult = result.get("t").get(0);
         Assert.assertEquals(22L, monthResult.get("value").asLong());
         Assert.assertEquals(middleOfTheInterval, monthResult.get("ts").asLong());
+    }
+
+    @Test
+    public void testTimeseriesFillAvgUsesTimeWeightedState() throws Exception {
+        loginTenantAdmin();
+        Device device = createDevice();
+        long startTs = 1_700_010_000_000L;
+        long interval = TimeUnit.MINUTES.toMillis(1);
+        long endTs = startTs + 3 * interval;
+
+        tsService.save(tenantId, device.getId(),
+                new BasicTsKvEntry(startTs - 1, new LongDataEntry("temperature", 10L))).get();
+        tsService.save(tenantId, device.getId(),
+                new BasicTsKvEntry(startTs + interval + 30_000, new LongDataEntry("temperature", 20L))).get();
+
+        ObjectNode result = doGetAsync("/api/plugins/telemetry/DEVICE/" + device.getId() +
+                        "/values/timeseries/fill?keys=temperature&startTs={startTs}&endTs={endTs}" +
+                        "&interval={interval}&agg=AVG&fillMissing=true&orderBy=ASC&useStrictDataTypes=true",
+                ObjectNode.class, startTs, endTs, interval);
+
+        Assert.assertEquals(3, result.get("temperature").size());
+        Assert.assertEquals(10.0, result.get("temperature").get(0).get("value").asDouble(), 0.0001);
+        Assert.assertEquals(15.0, result.get("temperature").get(1).get("value").asDouble(), 0.0001);
+        Assert.assertEquals(20.0, result.get("temperature").get(2).get("value").asDouble(), 0.0001);
+    }
+
+    @Test
+    public void testTimeseriesFillNoneUsesBucketEndState() throws Exception {
+        loginTenantAdmin();
+        Device device = createDevice();
+        long startTs = 1_700_020_000_000L;
+        long interval = TimeUnit.SECONDS.toMillis(1);
+        long endTs = startTs + 3 * interval;
+
+        tsService.save(tenantId, device.getId(),
+                new BasicTsKvEntry(startTs - 1, new LongDataEntry("state", 7L))).get();
+        tsService.save(tenantId, device.getId(),
+                new BasicTsKvEntry(startTs + interval + 500, new LongDataEntry("state", 8L))).get();
+
+        ObjectNode result = doGetAsync("/api/plugins/telemetry/DEVICE/" + device.getId() +
+                        "/values/timeseries/fill?keys=state&startTs={startTs}&endTs={endTs}" +
+                        "&interval={interval}&agg=NONE&fillMissing=true&orderBy=ASC&useStrictDataTypes=true",
+                ObjectNode.class, startTs, endTs, interval);
+
+        Assert.assertEquals(3, result.get("state").size());
+        Assert.assertEquals(7L, result.get("state").get(0).get("value").asLong());
+        Assert.assertEquals(8L, result.get("state").get(1).get("value").asLong());
+        Assert.assertEquals(8L, result.get("state").get(2).get("value").asLong());
+    }
+
+    @Test
+    public void testTimeseriesFillDisabledOmitsEmptyBuckets() throws Exception {
+        loginTenantAdmin();
+        Device device = createDevice();
+        long startTs = 1_700_030_000_000L;
+        long interval = TimeUnit.MINUTES.toMillis(1);
+        long endTs = startTs + 3 * interval;
+
+        tsService.save(tenantId, device.getId(),
+                new BasicTsKvEntry(startTs + 1_000, new LongDataEntry("temperature", 10L))).get();
+        tsService.save(tenantId, device.getId(),
+                new BasicTsKvEntry(startTs + 2_000, new LongDataEntry("temperature", 20L))).get();
+        tsService.save(tenantId, device.getId(),
+                new BasicTsKvEntry(startTs + 2 * interval + 1_000, new LongDataEntry("temperature", 30L))).get();
+
+        ObjectNode result = doGetAsync("/api/plugins/telemetry/DEVICE/" + device.getId() +
+                        "/values/timeseries/fill?keys=temperature&startTs={startTs}&endTs={endTs}" +
+                        "&interval={interval}&agg=AVG&fillMissing=false&orderBy=ASC&useStrictDataTypes=true",
+                ObjectNode.class, startTs, endTs, interval);
+
+        Assert.assertEquals(2, result.get("temperature").size());
+        Assert.assertEquals(startTs, result.get("temperature").get(0).get("ts").asLong());
+        Assert.assertEquals(15.0, result.get("temperature").get(0).get("value").asDouble(), 0.0001);
+        Assert.assertEquals(startTs + 2 * interval, result.get("temperature").get(1).get("ts").asLong());
+    }
+
+    @Test
+    public void testTimeseriesFillValidationAndNonNumericSkip() throws Exception {
+        loginTenantAdmin();
+        Device device = createDevice();
+        long startTs = 1_700_040_000_000L;
+        long endTs = startTs + TimeUnit.MINUTES.toMillis(1);
+
+        doGetAsync("/api/plugins/telemetry/DEVICE/" + device.getId() +
+                "/values/timeseries/fill?keys=temperature&startTs={startTs}&endTs={endTs}" +
+                "&interval=60000&agg=SUM&fillMissing=true", startTs, endTs)
+                .andExpect(status().isBadRequest());
+
+        tsService.save(tenantId, device.getId(),
+                new BasicTsKvEntry(startTs, new StringDataEntry("temperature", "warm"))).get();
+        ObjectNode result = doGetAsync("/api/plugins/telemetry/DEVICE/" + device.getId() +
+                        "/values/timeseries/fill?keys=temperature&startTs={startTs}&endTs={endTs}" +
+                        "&interval=60000&agg=AVG&fillMissing=true",
+                ObjectNode.class, startTs, endTs);
+
+        Assert.assertTrue(result.isEmpty());
     }
 
     @Test

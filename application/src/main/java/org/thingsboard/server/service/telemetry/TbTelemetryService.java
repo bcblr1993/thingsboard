@@ -40,6 +40,17 @@ public interface TbTelemetryService {
                                                    String orderBy,
                                                    Boolean useStrictDataTypes,
                                                    SecurityUser currentUser) throws ThingsboardException;
+
+    ListenableFuture<List<TsKvEntry>> getTimeseriesFill(EntityId entityId,
+                                                        List<String> keys,
+                                                        Long startTs,
+                                                        Long endTs,
+                                                        Long interval,
+                                                        Aggregation agg,
+                                                        Boolean fillMissing,
+                                                        String orderBy,
+                                                        SecurityUser currentUser) throws ThingsboardException;
+
     /**
      * 获取单设备单测点从{@code startTs}到{@code endTs}的每个{@code interval}内的第一个值。
      *
