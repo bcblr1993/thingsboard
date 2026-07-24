@@ -34,7 +34,9 @@ import org.thingsboard.server.common.data.kv.*;
 import org.thingsboard.server.dao.timeseries.TimeseriesService;
 import org.thingsboard.server.exception.InvalidParametersException;
 import org.thingsboard.server.service.security.AccessValidator;
+import org.thingsboard.server.service.security.ValidationCallback;
 import org.thingsboard.server.service.security.ValidationResult;
+import org.thingsboard.server.service.security.ValidationResultCode;
 import org.thingsboard.server.service.security.model.SecurityUser;
 import org.thingsboard.server.service.security.permission.Operation;
 
@@ -103,12 +105,17 @@ public class DefaultTbTelemetryService implements TbTelemetryService {
     public ListenableFuture<List<TsKvEntry>> getTimeseriesFill(EntityId entityId, List<String> keys, Long startTs, Long endTs,
                                                                Long interval, Aggregation agg, Boolean fillMissing, String orderBy,
                                                                SecurityUser currentUser) throws ThingsboardException {
-        validateTimeseriesFillRequest(keys, startTs, endTs, interval, agg, fillMissing, orderBy);
+        List<String> distinctKeys = keys == null ? null : new ArrayList<>(new LinkedHashSet<>(keys));
+        validateTimeseriesFillRequest(distinctKeys, startTs, endTs, interval, agg, fillMissing, orderBy);
         SettableFuture<List<TsKvEntry>> future = SettableFuture.create();
         accessValidator.validate(currentUser, Operation.READ_TELEMETRY, entityId, new FutureCallback<>() {
             @Override
             public void onSuccess(ValidationResult validationResult) {
-                TimeseriesFillQueryContext context = new TimeseriesFillQueryContext(keys);
+                if (validationResult.getResultCode() != ValidationResultCode.OK) {
+                    future.setException(ValidationCallback.getException(validationResult));
+                    return;
+                }
+                TimeseriesFillQueryContext context = new TimeseriesFillQueryContext(distinctKeys);
                 queryNextFillKey(currentUser.getTenantId(), entityId, startTs, endTs, interval, agg,
                         fillMissing, orderBy, context, future);
             }

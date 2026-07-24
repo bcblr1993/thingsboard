@@ -135,7 +135,7 @@ public class TelemetryControllerTest extends AbstractControllerTest {
     }
 
     @Test
-    public void testTimeseriesFillNoneUsesBucketEndState() throws Exception {
+    public void testTimeseriesFillDefaultsToNoneAggregation() throws Exception {
         loginTenantAdmin();
         Device device = createDevice();
         long startTs = 1_700_020_000_000L;
@@ -149,7 +149,7 @@ public class TelemetryControllerTest extends AbstractControllerTest {
 
         ObjectNode result = doGetAsync("/api/plugins/telemetry/DEVICE/" + device.getId() +
                         "/values/timeseries/fill?keys=state&startTs={startTs}&endTs={endTs}" +
-                        "&interval={interval}&agg=NONE&fillMissing=true&orderBy=ASC&useStrictDataTypes=true",
+                        "&interval={interval}&fillMissing=true&orderBy=ASC&useStrictDataTypes=true",
                 ObjectNode.class, startTs, endTs, interval);
 
         Assert.assertEquals(3, result.get("state").size());

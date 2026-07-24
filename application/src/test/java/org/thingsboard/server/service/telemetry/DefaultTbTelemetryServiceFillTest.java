@@ -32,6 +32,8 @@ import org.thingsboard.server.common.data.kv.ReadTsKvQuery;
 import org.thingsboard.server.common.data.kv.StringDataEntry;
 import org.thingsboard.server.common.data.kv.TsKvEntry;
 import org.thingsboard.server.dao.timeseries.TimeseriesService;
+import org.thingsboard.server.exception.AccessDeniedException;
+import org.thingsboard.server.exception.EntityNotFoundException;
 import org.thingsboard.server.exception.InvalidParametersException;
 import org.thingsboard.server.service.security.AccessValidator;
 import org.thingsboard.server.service.security.ValidationResult;
@@ -46,6 +48,7 @@ import java.util.concurrent.ExecutionException;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -98,6 +101,62 @@ public class DefaultTbTelemetryServiceFillTest {
         Assert.assertEquals(2, result.size());
         Assert.assertEquals("first", result.get(0).getKey());
         Assert.assertEquals("second", result.get(1).getKey());
+    }
+
+    @Test
+    public void testDuplicateKeysAreQueriedOnceInOriginalOrder() throws Exception {
+        List<String> queriedKeys = new ArrayList<>();
+        when(tsService.findAll(eq(tenantId), eq(deviceId), any())).thenAnswer(invocation -> {
+            List<ReadTsKvQuery> queries = invocation.getArgument(2);
+            String key = queries.get(0).getKey();
+            queriedKeys.add(key);
+            return Futures.immediateFuture(List.of(
+                    new BasicTsKvEntry(START_TS, new LongDataEntry(key, 1L))));
+        });
+
+        List<TsKvEntry> result = service.getTimeseriesFill(deviceId, List.of("first", "second", "first"),
+                START_TS, END_TS, 1_000L, Aggregation.NONE, false, "ASC", user).get();
+
+        Assert.assertEquals(List.of("first", "second"), queriedKeys);
+        Assert.assertEquals(2, result.size());
+        Assert.assertEquals("first", result.get(0).getKey());
+        Assert.assertEquals("second", result.get(1).getKey());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void testAccessDeniedDoesNotQueryTimeseries() {
+        doAnswer(invocation -> {
+            FutureCallback<ValidationResult<Object>> callback = invocation.getArgument(3);
+            callback.onSuccess(ValidationResult.accessDenied("Permission denied"));
+            return null;
+        }).when(accessValidator).validate(eq(user), any(), eq(deviceId), any());
+
+        ExecutionException error = Assert.assertThrows(ExecutionException.class, () ->
+                service.getTimeseriesFill(deviceId, List.of("temperature"), START_TS, END_TS,
+                        1_000L, Aggregation.NONE, false, "ASC", user).get());
+
+        Assert.assertTrue(error.getCause() instanceof AccessDeniedException);
+        Assert.assertEquals("Permission denied", error.getCause().getMessage());
+        verifyNoInteractions(tsService);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void testForeignTenantDeviceDoesNotQueryTimeseries() {
+        doAnswer(invocation -> {
+            FutureCallback<ValidationResult<Object>> callback = invocation.getArgument(3);
+            callback.onSuccess(ValidationResult.entityNotFound("Device with requested id wasn't found!"));
+            return null;
+        }).when(accessValidator).validate(eq(user), any(), eq(deviceId), any());
+
+        ExecutionException error = Assert.assertThrows(ExecutionException.class, () ->
+                service.getTimeseriesFill(deviceId, List.of("temperature"), START_TS, END_TS,
+                        1_000L, Aggregation.NONE, false, "ASC", user).get());
+
+        Assert.assertTrue(error.getCause() instanceof EntityNotFoundException);
+        Assert.assertEquals("Device with requested id wasn't found!", error.getCause().getMessage());
+        verifyNoInteractions(tsService);
     }
 
     @Test

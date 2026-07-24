@@ -353,8 +353,9 @@ public class TelemetryController extends BaseController {
             @RequestParam(name = "endTs") Long endTs,
             @Parameter(description = "Fixed interval in milliseconds. Minimum value is 1000.")
             @RequestParam(name = "interval") Long interval,
-            @Parameter(description = "Aggregation function.", schema = @Schema(allowableValues = {"NONE", "AVG", "MIN", "MAX"}))
-            @RequestParam(name = "agg") String aggStr,
+            @Parameter(description = "Aggregation function. Defaults to NONE.",
+                    schema = @Schema(allowableValues = {"NONE", "AVG", "MIN", "MAX"}, defaultValue = "NONE"))
+            @RequestParam(name = "agg", defaultValue = "NONE") String aggStr,
             @Parameter(description = "Whether to fill missing intervals using the previous value.")
             @RequestParam(name = "fillMissing") Boolean fillMissing,
             @Parameter(description = SORT_ORDER_DESCRIPTION, schema = @Schema(allowableValues = {"ASC", "DESC"}))
