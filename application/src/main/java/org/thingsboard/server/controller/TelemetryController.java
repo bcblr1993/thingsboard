@@ -84,6 +84,8 @@ import org.thingsboard.server.common.msg.rule.engine.DeviceAttributesEventNotifi
 import org.thingsboard.server.config.annotations.ApiOperation;
 import org.thingsboard.server.dao.timeseries.TimeseriesService;
 import org.thingsboard.server.exception.InvalidParametersException;
+import org.thingsboard.server.exception.ThingsboardErrorResponse;
+import org.thingsboard.server.exception.ToErrorResponseEntity;
 import org.thingsboard.server.exception.UncheckedApiException;
 import org.thingsboard.server.queue.util.TbCoreComponent;
 import org.thingsboard.server.service.security.AccessValidator;
@@ -368,7 +370,7 @@ public class TelemetryController extends BaseController {
         Futures.addCallback(tbTelemetryService.getTimeseriesFill(
                         EntityIdFactory.getByTypeAndId(entityType, entityIdStr), keyList, startTs, endTs,
                         interval, aggregation, fillMissing, orderBy, getCurrentUser()),
-                getTsKvListCallback(response, useStrictDataTypes), MoreExecutors.directExecutor());
+                getTimeseriesFillCallback(response, useStrictDataTypes), MoreExecutors.directExecutor());
         return response;
     }
 
@@ -944,6 +946,43 @@ public class TelemetryController extends BaseController {
                 log.error("Failed to fetch historical data", e);
                 AccessValidator.handleError(e, response, HttpStatus.INTERNAL_SERVER_ERROR);
             }
+        };
+    }
+
+    private FutureCallback<List<TsKvEntry>> getTimeseriesFillCallback(final DeferredResult<ResponseEntity> response,
+                                                                       Boolean useStrictDataTypes) {
+        FutureCallback<List<TsKvEntry>> successCallback = getTsKvListCallback(response, useStrictDataTypes);
+        return new FutureCallback<>() {
+            @Override
+            public void onSuccess(List<TsKvEntry> data) {
+                successCallback.onSuccess(data);
+            }
+
+            @Override
+            public void onFailure(Throwable e) {
+                log.error("Failed to fetch historical data with gap filling", e);
+                HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
+                String message = e.getMessage();
+                if (e instanceof ToErrorResponseEntity errorResponseEntity) {
+                    ResponseEntity<String> legacyResponse = errorResponseEntity.toErrorResponseEntity();
+                    status = HttpStatus.valueOf(legacyResponse.getStatusCode().value());
+                    message = legacyResponse.getBody();
+                }
+                ThingsboardErrorResponse errorResponse = ThingsboardErrorResponse.of(
+                        message, getErrorCode(status), status);
+                response.setResult(new ResponseEntity<>(errorResponse, status));
+            }
+        };
+    }
+
+    private ThingsboardErrorCode getErrorCode(HttpStatus status) {
+        return switch (status) {
+            case BAD_REQUEST -> ThingsboardErrorCode.BAD_REQUEST_PARAMS;
+            case UNAUTHORIZED -> ThingsboardErrorCode.AUTHENTICATION;
+            case FORBIDDEN -> ThingsboardErrorCode.PERMISSION_DENIED;
+            case NOT_FOUND -> ThingsboardErrorCode.ITEM_NOT_FOUND;
+            case TOO_MANY_REQUESTS -> ThingsboardErrorCode.TOO_MANY_REQUESTS;
+            default -> ThingsboardErrorCode.GENERAL;
         };
     }
 

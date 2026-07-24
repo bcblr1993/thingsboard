@@ -18,6 +18,7 @@ package org.thingsboard.server.controller;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.Assert;
 import org.junit.Test;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.thingsboard.server.common.data.Device;
 import org.thingsboard.server.common.data.SaveDeviceWithCredentialsRequest;
@@ -31,8 +32,11 @@ import org.thingsboard.server.common.data.security.DeviceCredentialsType;
 import org.thingsboard.server.dao.service.DaoSqlTest;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.thingsboard.server.common.data.query.EntityKeyType.TIME_SERIES;
 
@@ -204,6 +208,23 @@ public class TelemetryControllerTest extends AbstractControllerTest {
                 ObjectNode.class, startTs, endTs);
 
         Assert.assertTrue(result.isEmpty());
+    }
+
+    @Test
+    public void testTimeseriesFillNotFoundReturnsJsonError() throws Exception {
+        loginTenantAdmin();
+        long startTs = 1_700_050_000_000L;
+        long endTs = startTs + TimeUnit.MINUTES.toMillis(1);
+
+        doGetAsync("/api/plugins/telemetry/DEVICE/" + UUID.randomUUID() +
+                "/values/timeseries/fill?keys=temperature&startTs={startTs}&endTs={endTs}" +
+                "&interval=60000&agg=NONE&fillMissing=false", startTs, endTs)
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.message").value("Device with requested id wasn't found!"))
+                .andExpect(jsonPath("$.errorCode").value(32))
+                .andExpect(jsonPath("$.timestamp").isNumber());
     }
 
     @Test
