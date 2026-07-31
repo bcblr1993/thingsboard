@@ -1,0 +1,31 @@
+/**
+ * Copyright © 2016-2025 The Thingsboard Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.thingsboard.server.dao.util;
+
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+
+/**
+ * {@code database.ts_latest.type=valkey-cluster-fast} —— Valkey 集群的高吞吐 latest 实现。
+ * Valkey 与 Redis 协议兼容，实现逻辑共用 {@code AbstractFastTimeseriesLatestDao}，
+ * 仅装配条件与指标标签不同，便于 A/B 对比。
+ */
+@Retention(RetentionPolicy.RUNTIME)
+@ConditionalOnProperty(prefix = "database.ts_latest", value = "type", havingValue = "valkey-cluster-fast")
+public @interface ValkeyClusterFastTsLatestDao {
+}
