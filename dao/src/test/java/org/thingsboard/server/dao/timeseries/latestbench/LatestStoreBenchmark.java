@@ -136,6 +136,11 @@ public class LatestStoreBenchmark {
             "if #out > 0 then redis.call('hset', KEYS[1], unpack(out)) end " +
             "return cnt";
 
+    // ── Lua：变体 E —— 只写不读的 Lua(无守卫)。用于隔离「Lua 本身的开销」：
+    //    E vs D 的差 = 纯 Lua 解释/调用开销；C vs E 的差 = ts 守卫(那次 HMGET 批读)的成本。
+    private static final String LUA_E_WRITE_ONLY =
+            "redis.call('hset', KEYS[1], unpack(ARGV)) return #ARGV / 2";
+
     public static void main(String[] args) throws Exception {
         if (args.length < 1) {
             System.out.println("用法: LatestStoreBenchmark <host:port> [host:port ...]   (第一个建议为 redis, 第二个 valkey)");
@@ -179,13 +184,270 @@ public class LatestStoreBenchmark {
             all.put(server + " @" + host + ":" + port, perVariant);
         }
         printSummary(all);
+
+        // ── 读性能与读写混合(高频查询场景)──────────────────────────────────────
+        System.out.println();
+        System.out.println("═".repeat(96));
+        System.out.println("读性能（对标生产三种读路径）");
+        System.out.println("═".repeat(96));
+        System.out.printf("%-30s %14s %14s %14s%n", "读模式", "点/秒", "命令/秒", "说明");
+        System.out.println("─".repeat(96));
+        for (String target : args) {
+            String[] hp = target.split(":");
+            String host = hp[0];
+            int port = Integer.parseInt(hp[1]);
+            System.out.printf("▶ %s%n", probeServer(host, port));
+            runReadBench(host, port, devices);
+        }
+
+        // ── 高频查询延迟（不使用管道，反映单次查询的真实响应时间）────────────────
+        System.out.println();
+        System.out.println("═".repeat(96));
+        System.out.println("高频查询延迟（单次请求-响应，无管道）");
+        System.out.println("═".repeat(96));
+        for (String target : args) {
+            String[] hp = target.split(":");
+            System.out.printf("▶ %s%n", probeServer(hp[0], Integer.parseInt(hp[1])));
+            runLatencyBench(hp[0], Integer.parseInt(hp[1]), devices);
+        }
+    }
+
+    private enum ReadMode {
+        HGET_SINGLE("HGET 逐点读(朴素)", "findLatest(key) 单点"),
+        HMGET_BATCH("HMGET 批量读(新实现)", "findLatest(keys) 多点一次"),
+        HGETALL_DEVICE("HGETALL 整设备", "findAllLatest(entityId)");
+
+        final String label;
+        final String note;
+
+        ReadMode(String label, String note) {
+            this.label = label;
+            this.note = note;
+        }
+    }
+
+    private static void runReadBench(String host, int port, List<Device> devices) throws Exception {
+        JedisPoolConfig cfg = new JedisPoolConfig();
+        cfg.setMaxTotal(WRITER_THREADS * 2);
+        try (JedisPool pool = new JedisPool(cfg, host, port, 30000)) {
+            // 先用生产写路径灌满数据
+            try (Jedis j = pool.getResource()) {
+                j.flushAll();
+            }
+            execRound(pool, Variant.C_MULTIFIELD, devices, 1000L);
+
+            long pointsPerRound = devices.stream().mapToLong(d -> d.fields.length).sum();
+            for (ReadMode mode : ReadMode.values()) {
+                double best = 0;
+                for (int r = 0; r < ROUNDS; r++) {
+                    long t0 = System.nanoTime();
+                    readRound(pool, mode, devices);
+                    double sec = (System.nanoTime() - t0) / 1e9;
+                    best = Math.max(best, pointsPerRound / sec);
+                }
+                double cmds = switch (mode) {
+                    case HGET_SINGLE -> best;                       // 每点 1 条命令
+                    case HMGET_BATCH, HGETALL_DEVICE -> best / avgFields(devices); // 每设备 1 条
+                };
+                System.out.printf("  %-28s %,14.0f %,14.0f   %s%n", mode.label, best, cmds, mode.note);
+            }
+
+            // 读写混合: 一半线程写、一半线程读, 反映真实并发下的相互影响
+            double mixed = runMixed(pool, devices);
+            System.out.printf("  %-28s %,14.0f %14s   %s%n", "读写混合(写50%/读50%)", mixed, "-",
+                    "总吞吐(读+写点数)，反映单线程争用");
+        }
+    }
+
+    /**
+     * 高频查询延迟测试：单次请求-响应（<b>不使用管道</b>，管道会掩盖真实延迟）。
+     * 分两种条件：① 空载；② <b>并发写入压力下</b>——后者才是生产真实场景。
+     */
+    private static void runLatencyBench(String host, int port, List<Device> devices) throws Exception {
+        JedisPoolConfig cfg = new JedisPoolConfig();
+        cfg.setMaxTotal(WRITER_THREADS * 3);
+        try (JedisPool pool = new JedisPool(cfg, host, port, 30000)) {
+            try (Jedis j = pool.getResource()) {
+                j.flushAll();
+            }
+            execRound(pool, Variant.C_MULTIFIELD, devices, 1000L);
+
+            for (boolean underWriteLoad : new boolean[]{false, true}) {
+                java.util.concurrent.atomic.AtomicBoolean stop = new java.util.concurrent.atomic.AtomicBoolean();
+                ExecutorService loadEs = null;
+                if (underWriteLoad) {
+                    // 后台持续写入, 模拟生产中"边写边查"
+                    loadEs = Executors.newFixedThreadPool(Math.max(1, WRITER_THREADS / 2));
+                    int half = Math.max(1, WRITER_THREADS / 2);
+                    int chunk = (devices.size() + half - 1) / half;
+                    for (int t = 0; t < half; t++) {
+                        int from = t * chunk;
+                        int to = Math.min(devices.size(), from + chunk);
+                        if (from >= to) break;
+                        List<Device> slice = devices.subList(from, to);
+                        loadEs.submit(() -> {
+                            long ts = 9000L;
+                            try (Jedis j = pool.getResource()) {
+                                while (!stop.get()) {
+                                    writeSlice(j, Variant.C_MULTIFIELD, slice, ts++);
+                                }
+                            } catch (Exception ignore) {
+                                // 压测背景负载, 忽略
+                            }
+                        });
+                    }
+                    Thread.sleep(300); // 让写入压力建立起来
+                }
+                System.out.printf("  %s%n", underWriteLoad ? "── 并发写入压力下（生产真实场景）──" : "── 空载 ──");
+                for (ReadMode mode : ReadMode.values()) {
+                    long[] us = measureLatency(pool, mode, devices);
+                    System.out.printf("    %-24s p50 %6.2fms  p95 %6.2fms  p99 %6.2fms  max %7.2fms%n",
+                            mode.label, us[0] / 1000.0, us[1] / 1000.0, us[2] / 1000.0, us[3] / 1000.0);
+                }
+                if (loadEs != null) {
+                    stop.set(true);
+                    loadEs.shutdown();
+                    loadEs.awaitTermination(30, TimeUnit.SECONDS);
+                }
+            }
+        }
+    }
+
+    /** 单连接串行发起 N 次读, 记录每次耗时, 返回 [p50,p95,p99,max]（微秒）。 */
+    private static long[] measureLatency(JedisPool pool, ReadMode mode, List<Device> devices) {
+        int samples = Integer.getInteger("bench.latencySamples", 3000);
+        long[] lat = new long[samples];
+        try (Jedis j = pool.getResource()) {
+            for (int i = 0; i < samples; i++) {
+                Device d = devices.get(i % devices.size());
+                long t0 = System.nanoTime();
+                switch (mode) {
+                    case HGET_SINGLE -> j.hget(d.dataKey, d.fields[i % d.fields.length]);
+                    case HMGET_BATCH -> j.hmget(d.dataKey, d.fields);
+                    case HGETALL_DEVICE -> j.hgetAll(d.dataKey);
+                }
+                lat[i] = (System.nanoTime() - t0) / 1000;
+            }
+        }
+        java.util.Arrays.sort(lat);
+        return new long[]{
+                lat[(int) (samples * 0.50)],
+                lat[(int) (samples * 0.95)],
+                lat[(int) (samples * 0.99)],
+                lat[samples - 1]
+        };
+    }
+
+    private static double avgFields(List<Device> devices) {
+        return devices.stream().mapToLong(d -> d.fields.length).sum() / (double) devices.size();
+    }
+
+    private static void readRound(JedisPool pool, ReadMode mode, List<Device> devices) throws Exception {
+        ExecutorService es = Executors.newFixedThreadPool(WRITER_THREADS);
+        try {
+            int chunk = (devices.size() + WRITER_THREADS - 1) / WRITER_THREADS;
+            List<Future<?>> fs = new ArrayList<>();
+            for (int t = 0; t < WRITER_THREADS; t++) {
+                int from = t * chunk;
+                int to = Math.min(devices.size(), from + chunk);
+                if (from >= to) break;
+                List<Device> slice = devices.subList(from, to);
+                fs.add(es.submit((Callable<Void>) () -> {
+                    try (Jedis j = pool.getResource()) {
+                        readSlice(j, mode, slice);
+                    }
+                    return null;
+                }));
+            }
+            for (Future<?> f : fs) {
+                f.get();
+            }
+        } finally {
+            es.shutdown();
+            es.awaitTermination(60, TimeUnit.SECONDS);
+        }
+    }
+
+    private static void readSlice(Jedis j, ReadMode mode, List<Device> devices) {
+        int inFlight = 0;
+        Pipeline p = j.pipelined();
+        for (Device d : devices) {
+            switch (mode) {
+                case HGET_SINGLE -> {
+                    for (String f : d.fields) {
+                        p.hget(d.dataKey, f);
+                    }
+                    inFlight += d.fields.length;
+                }
+                case HMGET_BATCH -> {
+                    p.hmget(d.dataKey, d.fields);
+                    inFlight++;
+                }
+                case HGETALL_DEVICE -> {
+                    p.hgetAll(d.dataKey);
+                    inFlight++;
+                }
+            }
+            if (inFlight >= PIPELINE_DEPTH) {
+                p.sync();
+                p = j.pipelined();
+                inFlight = 0;
+            }
+        }
+        if (inFlight > 0) {
+            p.sync();
+        }
+    }
+
+    /** 读写混合：一半线程执行生产写路径(C)，一半执行批量读(HMGET)，测总吞吐。 */
+    private static double runMixed(JedisPool pool, List<Device> devices) throws Exception {
+        long pointsPerRound = devices.stream().mapToLong(d -> d.fields.length).sum();
+        double best = 0;
+        for (int r = 0; r < ROUNDS; r++) {
+            ExecutorService es = Executors.newFixedThreadPool(WRITER_THREADS);
+            long ts = 5000L + r;
+            long t0 = System.nanoTime();
+            try {
+                int half = Math.max(1, WRITER_THREADS / 2);
+                int chunk = (devices.size() + half - 1) / half;
+                List<Future<?>> fs = new ArrayList<>();
+                for (int t = 0; t < half; t++) {
+                    int from = t * chunk;
+                    int to = Math.min(devices.size(), from + chunk);
+                    if (from >= to) break;
+                    List<Device> slice = devices.subList(from, to);
+                    fs.add(es.submit((Callable<Void>) () -> {
+                        try (Jedis j = pool.getResource()) {
+                            writeSlice(j, Variant.C_MULTIFIELD, slice, ts);
+                        }
+                        return null;
+                    }));
+                    fs.add(es.submit((Callable<Void>) () -> {
+                        try (Jedis j = pool.getResource()) {
+                            readSlice(j, ReadMode.HMGET_BATCH, slice);
+                        }
+                        return null;
+                    }));
+                }
+                for (Future<?> f : fs) {
+                    f.get();
+                }
+            } finally {
+                es.shutdown();
+                es.awaitTermination(60, TimeUnit.SECONDS);
+            }
+            double sec = (System.nanoTime() - t0) / 1e9;
+            best = Math.max(best, (pointsPerRound * 2) / sec); // 读+写各一轮
+        }
+        return best;
     }
 
     private enum Variant {
         A_CURRENT("A 现网 Lua(双哈希3op)", true, 1),
         B_MERGED_TS("B 合并ts 单哈希(2op)", true, 1),
-        C_MULTIFIELD("C 整设备批读批写", true, 200),
-        D_NOGUARD("D 原生HSET多field(无守卫)", false, 200);
+        C_MULTIFIELD("C 新实现 Lua(读+比较+写)", true, 200),
+        E_LUA_WRITE_ONLY("E Lua仅写(无守卫,隔离Lua开销)", false, 200),
+        D_NOGUARD("D 原生HSET(无Lua无守卫)", false, 200);
 
         final String label;
         final boolean tsGuarded;
@@ -357,6 +619,15 @@ public class LatestStoreBenchmark {
                     }
                     p.eval(LUA_C_MULTIFIELD, List.of(d.dataKey), argv);
                 }
+                case E_LUA_WRITE_ONLY -> {
+                    List<String> argv = new ArrayList<>(d.fields.length * 2);
+                    String val = ts + "|" + payload;
+                    for (String f : d.fields) {
+                        argv.add(f);
+                        argv.add(val);
+                    }
+                    p.eval(LUA_E_WRITE_ONLY, List.of(d.dataKey), argv);
+                }
                 case D_NOGUARD -> {
                     Map<String, String> m = new HashMap<>(d.fields.length * 2);
                     String val = ts + "|" + payload;
@@ -408,11 +679,12 @@ public class LatestStoreBenchmark {
             }
         }
         System.out.println();
-        System.out.println("解读要点:");
-        System.out.println("  • B/A 比值 = 「合并 ts 到单哈希」的收益(操作数 3→2, 内存省一半)");
-        System.out.println("  • C/B 比值 = 「整设备一次批读批写」的收益(命令数摊薄)");
-        System.out.println("  • D/C 比值 = 「ts 守卫的成本」——D 去掉了服务端守卫, 差值即为保证的代价");
-        System.out.println("  • 若 D/C 接近 1, 说明守卫几乎免费 → 直接选 C, 保证与性能兼得");
+        System.out.println("归因分析(关键):");
+        System.out.println("  • D vs E  = 「Lua 本身的开销」  —— 两者都无守卫, 只差一层 Lua");
+        System.out.println("      若 E/D 接近 1.0 → Lua 几乎免费, 「Lua 慢」是误解");
+        System.out.println("  • E vs C  = 「ts 守卫的成本」    —— 两者都走 Lua, 只差那次 HMGET 批读+比较");
+        System.out.println("  • B/A     = 「合并 ts 到单哈希」的收益(操作数 3→2, 内存省一半)");
+        System.out.println("  • C/B     = 「整设备批读批写」的收益(命令数摊薄约 200 倍)");
     }
 
     private static final LongAdder UNUSED = new LongAdder();
