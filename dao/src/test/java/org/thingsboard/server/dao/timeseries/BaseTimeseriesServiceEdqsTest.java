@@ -43,6 +43,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -92,10 +93,12 @@ class BaseTimeseriesServiceEdqsTest {
         timeseriesService.save(TENANT_ID, DEVICE_ID, List.of(tsEntry1, tsEntry2), 0L);
 
         ArgumentCaptor<LatestTsKv> captor = ArgumentCaptor.forClass(LatestTsKv.class);
-        verify(edqsService).onUpdate(eq(TENANT_ID), eq(ObjectType.LATEST_TS_KV), captor.capture());
+        verify(edqsService, times(2)).onUpdate(
+                eq(TENANT_ID), eq(ObjectType.LATEST_TS_KV), captor.capture());
 
-        LatestTsKv captured = captor.getValue();
-        assertThat(captured).isNotNull();
+        assertThat(captor.getAllValues())
+                .extracting(LatestTsKv::getKey)
+                .containsExactlyInAnyOrder("temperature", "status");
     }
 
     @Test
@@ -112,7 +115,8 @@ class BaseTimeseriesServiceEdqsTest {
 
         timeseriesService.save(TENANT_ID, DEVICE_ID, List.of(tsEntry1, tsEntry2), 0L);
 
-        verify(edqsService).onUpdate(eq(TENANT_ID), eq(ObjectType.LATEST_TS_KV), any(LatestTsKv.class));
+        verify(edqsService, times(2)).onUpdate(
+                eq(TENANT_ID), eq(ObjectType.LATEST_TS_KV), any(LatestTsKv.class));
     }
 
     @Test
@@ -144,7 +148,8 @@ class BaseTimeseriesServiceEdqsTest {
 
         timeseriesService.saveLatest(TENANT_ID, DEVICE_ID, List.of(tsEntry1, tsEntry2));
 
-        verify(edqsService).onUpdate(eq(TENANT_ID), eq(ObjectType.LATEST_TS_KV), any(LatestTsKv.class));
+        verify(edqsService, times(2)).onUpdate(
+                eq(TENANT_ID), eq(ObjectType.LATEST_TS_KV), any(LatestTsKv.class));
     }
 
     @Test

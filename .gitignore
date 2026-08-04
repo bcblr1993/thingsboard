@@ -22,6 +22,11 @@ tmp_sh/
 .settings/
 /bin
 bin/
+# IoTDB HA 镜像的运行脚本属于交付物，不是构建产物。
+!docker/iotdb/ha/bin/
+!docker/iotdb/ha/bin/*.sh
+!docker/iotdb/bin/
+!docker/iotdb/bin/*.sh
 **/dependency-reduced-pom.xml
 pom.xml.versionsBackup
 .DS_Store

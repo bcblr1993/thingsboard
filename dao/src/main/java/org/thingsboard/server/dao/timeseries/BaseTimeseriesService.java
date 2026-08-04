@@ -47,6 +47,7 @@ import org.thingsboard.server.dao.exception.IncorrectParameterException;
 import org.thingsboard.server.dao.service.Validator;
 import org.thingsboard.server.dao.sqlts.CachedRedisSqlTimeseriesLatestDao;
 import org.thingsboard.server.dao.sqlts.SqlTimeseriesLatestDao;
+import org.thingsboard.server.dao.timeseries.iotdb.IotdbTimeseriesLatestDao;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -84,6 +85,9 @@ public class BaseTimeseriesService implements TimeseriesService {
 
     @Value("${database.ts_max_intervals}")
     private long maxTsIntervals;
+
+    @Value("${database.ts.type:}")
+    private String tsType;
 
     @Autowired
     private TimeseriesDao timeseriesDao;
@@ -134,8 +138,11 @@ public class BaseTimeseriesService implements TimeseriesService {
     @Override
     public ListenableFuture<List<TsKvEntry>> findLatest(TenantId tenantId, EntityId entityId, Collection<String> keys) {
         validate(entityId);
-        List<ListenableFuture<TsKvEntry>> futures = new ArrayList<>(keys.size());
         keys.forEach(key -> Validator.validateString(key, k -> "Incorrect key " + k));
+        if (timeseriesLatestDao instanceof BatchedTimeseriesLatestDao) {
+            return ((BatchedTimeseriesLatestDao) timeseriesLatestDao).findLatest(tenantId, entityId, keys);
+        }
+        List<ListenableFuture<TsKvEntry>> futures = new ArrayList<>(keys.size());
         for (String key : keys) {
             futures.add(timeseriesLatestDao.findLatest(tenantId, entityId, key));
         }
@@ -188,14 +195,25 @@ public class BaseTimeseriesService implements TimeseriesService {
         if (saveTs && entityId.getEntityType().equals(EntityType.ENTITY_VIEW)) {
             throw new IncorrectParameterException("Telemetry data can't be stored for entity view. Read only");
         }
-        List<ListenableFuture<Integer>> tsFutures = saveTs ? new ArrayList<>(tsKvEntries.size() * INSERTS_PER_ENTRY_WITHOUT_LATEST) : null;
+        boolean batchTimeseriesSave = saveTs && timeseriesDao instanceof BatchedTimeseriesDao;
+        List<ListenableFuture<Integer>> tsFutures = saveTs
+                ? new ArrayList<>(batchTimeseriesSave ? 1 : tsKvEntries.size() * INSERTS_PER_ENTRY_WITHOUT_LATEST)
+                : null;
         List<ListenableFuture<Long>> latestFutures = saveLatest ? new ArrayList<>(tsKvEntries.size()) : null;
+        // When both historical and latest use IoTDB, the historical save() already maintains the
+        // native LastCache, so an explicit per-entry saveLatest would be a redundant second write.
+        // Skip it here (still performed for latest-only calls where saveTs=false).
+        boolean skipRedundantIotdbLatest = saveTs && timeseriesLatestDao instanceof IotdbTimeseriesLatestDao
+                && "iotdb".equalsIgnoreCase(tsType);
+        if (batchTimeseriesSave) {
+            tsFutures.add(((BatchedTimeseriesDao) timeseriesDao).saveBatch(tenantId, entityId, tsKvEntries, ttl));
+        }
         for (TsKvEntry tsKvEntry : tsKvEntries) {
-            if (saveTs) {
+            if (saveTs && !batchTimeseriesSave) {
                 tsFutures.add(timeseriesDao.savePartition(tenantId, entityId, tsKvEntry.getTs(), tsKvEntry.getKey()));
                 tsFutures.add(timeseriesDao.save(tenantId, entityId, tsKvEntry, ttl));
             }
-            if (saveLatest && (timeseriesLatestDao instanceof  CassandraBaseTimeseriesLatestDao || timeseriesLatestDao instanceof SqlTimeseriesLatestDao || timeseriesLatestDao instanceof CachedRedisSqlTimeseriesLatestDao)) {
+            if (saveLatest && !skipRedundantIotdbLatest && (timeseriesLatestDao instanceof  CassandraBaseTimeseriesLatestDao || timeseriesLatestDao instanceof SqlTimeseriesLatestDao || timeseriesLatestDao instanceof CachedRedisSqlTimeseriesLatestDao || timeseriesLatestDao instanceof IotdbTimeseriesLatestDao)) {
                 latestFutures.add(Futures.transform(timeseriesLatestDao.saveLatest(tenantId, entityId, tsKvEntry), version -> {
                     if (version != null) {
                         edqsService.onUpdate(tenantId, ObjectType.LATEST_TS_KV, new LatestTsKv(entityId, tsKvEntry, version));

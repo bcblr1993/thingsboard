@@ -1,0 +1,103 @@
+#
+# Copyright © 2016-2025 The Thingsboard Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+services:
+  pipe-proxy:
+    image: local/iotdb-ha:1.3.7-ha1
+    platform: linux/amd64
+    container_name: iotdb-pipe-proxy
+    hostname: iotdb-pipe-proxy
+    restart: unless-stopped
+    entrypoint:
+      - /usr/bin/dumb-init
+      - --
+      - /opt/iotdb-ha/bin/pipe-proxy.sh
+    env_file:
+      - ./node.env
+    cap_add:
+      - NET_ADMIN
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 128m
+    mem_reservation: 64m
+    cpus: 0.50
+    networks:
+      pipe-proxy-net:
+        ipv4_address: "${PIPE_PROXY_HOST:-172.31.255.2}"
+    volumes:
+      - /srv/iotdb-ha/state:/var/lib/iotdb-ha
+      - ha-runtime:/run/iotdb-ha
+    healthcheck:
+      disable: true
+    logging:
+      driver: json-file
+      options:
+        max-size: 20m
+        max-file: "3"
+
+  iotdb-ha:
+    image: local/iotdb-ha:1.3.7-ha1
+    platform: linux/amd64
+    container_name: iotdb-ha
+    hostname: iotdb-ha
+    restart: unless-stopped
+    depends_on:
+      - pipe-proxy
+    network_mode: host
+    env_file:
+      - ./node.env
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - NET_BROADCAST
+    security_opt:
+      - no-new-privileges:true
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    mem_limit: 24g
+    mem_reservation: 18g
+    stop_grace_period: 120s
+    tmpfs:
+      - /run:size=64m,mode=755
+    volumes:
+      - /srv/iotdb-ha/data:/iotdb/data
+      - /srv/iotdb-ha/logs:/iotdb/logs
+      - /srv/iotdb-ha/state:/var/lib/iotdb-ha
+      - /srv/iotdb-ha/secrets:/run/secrets:ro
+      - ha-runtime:/run/iotdb-ha
+    logging:
+      driver: json-file
+      options:
+        max-size: 100m
+        max-file: "5"
+
+networks:
+  pipe-proxy-net:
+    name: iotdb-ha-pipe-proxy
+    driver: bridge
+    ipam:
+      config:
+        - subnet: "${PIPE_PROXY_SUBNET:-172.31.255.0/29}"
+
+volumes:
+  ha-runtime:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=16m,mode=0755

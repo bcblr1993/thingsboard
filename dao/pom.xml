@@ -161,6 +161,20 @@
             <groupId>com.datastax.oss</groupId>
             <artifactId>java-driver-query-builder</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.apache.iotdb</groupId>
+            <artifactId>iotdb-session</artifactId>
+            <exclusions>
+                <!-- tsfile 传递引入 antlr4-runtime:4.9.3(ATN v3), 会与 Hibernate 6 所需的
+                     antlr4-runtime:4.13(ATN v4) 冲突, 导致应用启动时 HqlLexer 报
+                     "Could not deserialize ATN with version 4 (expected 3)"。
+                     IoTDB 客户端的写入/查询不做本地 SQL/路径解析(在服务端), 可安全排除。 -->
+                <exclusion>
+                    <groupId>org.antlr</groupId>
+                    <artifactId>antlr4-runtime</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
         <dependency> <!--need for datastax-->
             <groupId>io.netty</groupId>
             <artifactId>netty-transport-native-epoll</artifactId>

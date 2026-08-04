@@ -303,7 +303,7 @@ cloud:
     baseURL: https://newcloud.sprixin.com/
     tenant:
       username: cloud@sprixin.com
-      password: eBrfmK0W5tFciz
+      password: "${CLOUD_TENANT_PASSWORD}"
     period_min: 10
 ```
 
