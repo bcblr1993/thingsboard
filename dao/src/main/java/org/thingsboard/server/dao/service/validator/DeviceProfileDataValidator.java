@@ -47,6 +47,7 @@ import org.thingsboard.server.common.data.id.RuleChainId;
 import org.thingsboard.server.common.data.id.TenantId;
 import org.thingsboard.server.common.data.queue.Queue;
 import org.thingsboard.server.common.data.rule.RuleChain;
+import org.thingsboard.server.common.data.util.SecurePathUtils;
 import org.thingsboard.server.common.msg.EncryptionUtil;
 import org.thingsboard.server.dao.dashboard.DashboardService;
 import org.thingsboard.server.dao.device.DeviceDao;
@@ -58,7 +59,8 @@ import org.thingsboard.server.dao.queue.QueueService;
 import org.thingsboard.server.dao.rule.RuleChainService;
 import org.thingsboard.server.dao.tenant.TenantService;
 
-import java.io.FileInputStream;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.security.KeyStore;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.PKIXParameters;
@@ -411,8 +413,8 @@ public class DeviceProfileDataValidator extends AbstractHasOtaPackageValidator<D
     }
 
     private boolean isDeviceProfileCertificateInJavaCacerts(String deviceProfileX509Secret) {
-        try {
-            FileInputStream is = new FileInputStream(javaCacertsPath);
+        try (InputStream is = Files.newInputStream(SecurePathUtils.requireReadableRegularFile(
+                javaCacertsPath, "Java cacerts path"))) {
             KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
             keystore.load(is, javaCacertsPassword.toCharArray());
 

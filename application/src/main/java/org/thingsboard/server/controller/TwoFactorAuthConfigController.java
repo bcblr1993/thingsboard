@@ -20,6 +20,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -48,7 +49,7 @@ import java.util.stream.Collectors;
 import static org.thingsboard.server.controller.ControllerConstants.NEW_LINE;
 
 @RestController
-@RequestMapping("/api/2fa")
+@RequestMapping(value = "/api/2fa", produces = MediaType.APPLICATION_JSON_VALUE)
 @TbCoreComponent
 @RequiredArgsConstructor
 public class TwoFactorAuthConfigController extends BaseController {
@@ -260,8 +261,10 @@ public class TwoFactorAuthConfigController extends BaseController {
     @PostMapping("/settings")
     @PreAuthorize("hasAnyAuthority('SYS_ADMIN')")
     public PlatformTwoFaSettings savePlatformTwoFaSettings(@Parameter(description = "Settings value", required = true)
-                                          @RequestBody PlatformTwoFaSettings twoFaSettings) throws ThingsboardException {
-        return twoFaConfigManager.savePlatformTwoFaSettings(getTenantId(), twoFaSettings);
+                                          @RequestBody @Valid PlatformTwoFaSettings twoFaSettings) throws ThingsboardException {
+        twoFaConfigManager.savePlatformTwoFaSettings(getTenantId(), twoFaSettings);
+        return twoFaConfigManager.getPlatformTwoFaSettings(getTenantId(), false)
+                .orElseThrow(() -> new IllegalStateException("Saved platform 2FA settings are not available"));
     }
 
 

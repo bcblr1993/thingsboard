@@ -216,6 +216,7 @@ public class ThingsboardSecurityConfiguration {
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.headers(headers -> headers
+                        .contentTypeOptions(config -> {})
                         .cacheControl(config -> {})
                         .frameOptions(config -> {}).disable())
                 .cors(cors -> {})

@@ -36,6 +36,7 @@ import org.thingsboard.server.common.data.id.TenantId;
 import org.thingsboard.server.common.data.oauth2.OAuth2ClientRegistrationTemplate;
 import org.thingsboard.server.common.data.rule.RuleChain;
 import org.thingsboard.server.common.data.rule.RuleChainMetaData;
+import org.thingsboard.server.common.data.util.SecurePathUtils;
 import org.thingsboard.server.common.data.widget.WidgetTypeDetails;
 import org.thingsboard.server.common.data.widget.WidgetsBundle;
 import org.thingsboard.server.common.data.security.Authority;
@@ -129,35 +130,54 @@ public class InstallScripts {
     private MenuSettingService menuSettingService;
 
     Path getTenantRuleChainsDir() {
-        return Paths.get(getDataDir(), JSON_DIR, TENANT_DIR, RULE_CHAINS_DIR);
+        return resolveDataPath(JSON_DIR, TENANT_DIR, RULE_CHAINS_DIR);
     }
 
     Path getDeviceProfileDefaultRuleChainTemplateFilePath() {
-        return Paths.get(getDataDir(), JSON_DIR, TENANT_DIR, DEVICE_PROFILE_DIR, "rule_chain_template.json");
+        return resolveDataPath(JSON_DIR, TENANT_DIR, DEVICE_PROFILE_DIR, "rule_chain_template.json");
     }
 
     Path getEdgeRuleChainsDir() {
-        return Paths.get(getDataDir(), JSON_DIR, EDGE_DIR, RULE_CHAINS_DIR);
+        return resolveDataPath(JSON_DIR, EDGE_DIR, RULE_CHAINS_DIR);
     }
 
     public String getDataDir() {
+        return getDataDirPath().toString();
+    }
+
+    public Path getDataDirPath() {
         if (!StringUtils.isEmpty(dataDir)) {
-            if (!Paths.get(this.dataDir).toFile().isDirectory()) {
-                throw new RuntimeException("'install.data_dir' property value is not a valid directory!");
+            try {
+                return SecurePathUtils.requireDirectory(dataDir, "install.data_dir");
+            } catch (IOException e) {
+                throw new UncheckedIOException("'install.data_dir' property value is not a valid directory", e);
             }
-            return dataDir;
         } else {
             String workDir = System.getProperty("user.dir");
+            Path dataDirPath;
             if (workDir.endsWith("application")) {
-                return Paths.get(workDir, SRC_DIR, MAIN_DIR, DATA_DIR).toString();
+                dataDirPath = Paths.get(workDir, SRC_DIR, MAIN_DIR, DATA_DIR);
             } else {
-                Path dataDirPath = Paths.get(workDir, APP_DIR, SRC_DIR, MAIN_DIR, DATA_DIR);
-                if (Files.exists(dataDirPath)) {
-                    return dataDirPath.toString();
-                } else {
-                    throw new RuntimeException("Not valid working directory: " + workDir + ". Please use either root project directory, application module directory or specify valid \"install.data_dir\" ENV variable to avoid automatic data directory lookup!");
-                }
+                dataDirPath = Paths.get(workDir, APP_DIR, SRC_DIR, MAIN_DIR, DATA_DIR);
             }
+            try {
+                return SecurePathUtils.requireDirectory(dataDirPath.toString(), "ThingsBoard install data directory");
+            } catch (IOException e) {
+                throw new UncheckedIOException("Not valid working directory: " + workDir + ". Please use either root project directory, application module directory or specify valid \"install.data_dir\" ENV variable to avoid automatic data directory lookup!", e);
+            }
+        }
+    }
+
+    public Path resolveDataPath(String... relativeParts) {
+        return SecurePathUtils.resolveUnderRoot(getDataDirPath(), relativeParts);
+    }
+
+    public Path resolveDataFile(String... relativeParts) {
+        Path path = resolveDataPath(relativeParts);
+        try {
+            return SecurePathUtils.requireReadableRegularFile(path, "ThingsBoard install data file");
+        } catch (IOException e) {
+            throw new UncheckedIOException("Invalid ThingsBoard install data file: " + path, e);
         }
     }
 
@@ -212,7 +232,7 @@ public class InstallScripts {
     public void loadSystemWidgets() {
         log.info("Loading system widgets");
         Map<Path, JsonNode> widgetsBundlesMap = new HashMap<>();
-        Path widgetBundlesDir = Paths.get(getDataDir(), JSON_DIR, SYSTEM_DIR, WIDGET_BUNDLES_DIR);
+        Path widgetBundlesDir = resolveDataPath(JSON_DIR, SYSTEM_DIR, WIDGET_BUNDLES_DIR);
         try (Stream<Path> dirStream = listDir(widgetBundlesDir).filter(path -> path.toString().endsWith(JSON_EXT))) {
             dirStream.forEach(
                     path -> {
@@ -243,7 +263,7 @@ public class InstallScripts {
                     }
             );
         }
-        Path widgetTypesDir = Paths.get(getDataDir(), JSON_DIR, SYSTEM_DIR, WIDGET_TYPES_DIR);
+        Path widgetTypesDir = resolveDataPath(JSON_DIR, SYSTEM_DIR, WIDGET_TYPES_DIR);
         if (Files.exists(widgetTypesDir)) {
             try (Stream<Path> dirStream = listDir(widgetTypesDir).filter(path -> path.toString().endsWith(JSON_EXT))) {
                 dirStream.forEach(
@@ -300,7 +320,7 @@ public class InstallScripts {
 
     private void loadSystemScadaSymbols() {
         log.info("Loading system SCADA symbols");
-        Path scadaSymbolsDir = Paths.get(getDataDir(), JSON_DIR, SYSTEM_DIR, SCADA_SYMBOLS_DIR);
+        Path scadaSymbolsDir = resolveDataPath(JSON_DIR, SYSTEM_DIR, SCADA_SYMBOLS_DIR);
         if (Files.exists(scadaSymbolsDir)) {
             WidgetTypeDetails scadaSymbolWidgetTemplate = widgetTypeService.findWidgetTypeDetailsByTenantIdAndFqn(TenantId.SYS_TENANT_ID, "scada_symbol");
             try (Stream<Path> dirStream = listDir(scadaSymbolsDir).filter(path -> path.toString().endsWith(SVG_EXT))) {
@@ -396,8 +416,8 @@ public class InstallScripts {
 
     public void loadSystemImagesAndResources() {
         log.info("Loading system images and resources...");
-        Stream<Path> dashboardsFiles = Stream.concat(listDir(Paths.get(getDataDir(), JSON_DIR, DEMO_DIR, DASHBOARDS_DIR)),
-                listDir(Paths.get(getDataDir(), JSON_DIR, TENANT_DIR, DASHBOARDS_DIR)));
+        Stream<Path> dashboardsFiles = Stream.concat(listDir(resolveDataPath(JSON_DIR, DEMO_DIR, DASHBOARDS_DIR)),
+                listDir(resolveDataPath(JSON_DIR, TENANT_DIR, DASHBOARDS_DIR)));
         try (dashboardsFiles) {
             dashboardsFiles.forEach(file -> {
                 try {
@@ -409,19 +429,19 @@ public class InstallScripts {
             });
         }
 
-        Path resourcesDir = Path.of(getDataDir(), RESOURCES_DIR);
+        Path resourcesDir = resolveDataPath(RESOURCES_DIR);
         loadSystemResources(resourcesDir.resolve("images"), ResourceType.IMAGE, null);
         loadSystemResources(resourcesDir.resolve("js_modules"), ResourceType.JS_MODULE, ResourceSubType.EXTENSION);
         loadSystemResources(resourcesDir.resolve("dashboards"), ResourceType.DASHBOARD, null);
     }
 
     public void loadDashboards(TenantId tenantId, CustomerId customerId) {
-        Path dashboardsDir = Paths.get(getDataDir(), JSON_DIR, DEMO_DIR, DASHBOARDS_DIR);
+        Path dashboardsDir = resolveDataPath(JSON_DIR, DEMO_DIR, DASHBOARDS_DIR);
         loadDashboardsFromDir(tenantId, customerId, dashboardsDir);
     }
 
     public void createDefaultTenantDashboards(TenantId tenantId, CustomerId customerId) {
-        Path dashboardsDir = Paths.get(getDataDir(), JSON_DIR, TENANT_DIR, DASHBOARDS_DIR);
+        Path dashboardsDir = resolveDataPath(JSON_DIR, TENANT_DIR, DASHBOARDS_DIR);
         loadDashboardsFromDir(tenantId, customerId, dashboardsDir);
     }
 
@@ -456,7 +476,7 @@ public class InstallScripts {
     }
 
     public void createOAuth2Templates() {
-        Path oauth2ConfigTemplatesDir = Paths.get(getDataDir(), JSON_DIR, SYSTEM_DIR, OAUTH2_CONFIG_TEMPLATES_DIR);
+        Path oauth2ConfigTemplatesDir = resolveDataPath(JSON_DIR, SYSTEM_DIR, OAUTH2_CONFIG_TEMPLATES_DIR);
         try (Stream<Path> dirStream = listDir(oauth2ConfigTemplatesDir).filter(path -> path.toString().endsWith(JSON_EXT))) {
             dirStream.forEach(
                     path -> {
@@ -479,7 +499,7 @@ public class InstallScripts {
     }
 
     public void loadSystemLwm2mResources() {
-        Path resourceLwm2mPath = Paths.get(getDataDir(), MODELS_LWM2M_DIR);
+        Path resourceLwm2mPath = resolveDataPath(MODELS_LWM2M_DIR);
         try (Stream<Path> dirStream = listDir(resourceLwm2mPath).filter(path -> path.toString().endsWith(InstallScripts.XML_EXT))) {
             dirStream.forEach(
                     path -> {
@@ -529,7 +549,8 @@ public class InstallScripts {
 
     private Stream<Path> listDir(Path dir) {
         try {
-            return Files.list(dir);
+            return Files.list(dir)
+                    .map(path -> SecurePathUtils.resolveUnderRoot(dir, path.getFileName().toString()));
         } catch (NoSuchFileException e) {
             return Stream.empty();
         } catch (IOException e) {
@@ -550,7 +571,7 @@ public class InstallScripts {
     }
 
     public void createDefaultMenuSettings() {
-        Path menuSettingsFile = Paths.get(getDataDir(), JSON_DIR, SYSTEM_DIR, "menu_settings", "default_menu_settings.json");
+        Path menuSettingsFile = resolveDataFile(JSON_DIR, SYSTEM_DIR, "menu_settings", "default_menu_settings.json");
         try {
             JsonNode menuSettingsJson = JacksonUtil.toJsonNode(menuSettingsFile.toFile());
             menuSettingsJson.fields().forEachRemaining(entry -> {

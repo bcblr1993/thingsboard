@@ -15,11 +15,16 @@
  */
 package org.thingsboard.server.common.data.trendz;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 @Data
 @NoArgsConstructor
@@ -27,7 +32,26 @@ import java.io.Serializable;
 public class TrendzSettings implements Serializable {
 
     private boolean enabled;
+    @Size(max = 2048)
     private String baseUrl;
+    @Size(max = 4096)
     private String apiKey;
+
+    @JsonIgnore
+    @AssertTrue(message = "baseUrl must be an HTTP or HTTPS URL without user information")
+    public boolean isBaseUrlValid() {
+        if (baseUrl == null || baseUrl.isBlank()) {
+            return !enabled;
+        }
+        try {
+            URI uri = new URI(baseUrl.trim());
+            String scheme = uri.getScheme();
+            return ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme))
+                    && uri.getHost() != null
+                    && uri.getUserInfo() == null;
+        } catch (URISyntaxException e) {
+            return false;
+        }
+    }
 
 }

@@ -19,12 +19,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.thingsboard.server.common.data.util.SecurePathUtils;
 import org.thingsboard.server.service.install.InstallScripts;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -53,11 +53,14 @@ public abstract class BaseEdgeInstallUpgradeInstructionsService {
     }
 
     protected Path resolveFile(String subDir, String... subDirs) {
-        return getEdgeInstructionsDir().resolve(Paths.get(subDir, subDirs));
+        String[] relativeParts = new String[subDirs.length + 1];
+        relativeParts[0] = subDir;
+        System.arraycopy(subDirs, 0, relativeParts, 1, subDirs.length);
+        return SecurePathUtils.resolveUnderRoot(getEdgeInstructionsDir(), relativeParts);
     }
 
     protected Path getEdgeInstructionsDir() {
-        return Paths.get(installScripts.getDataDir(), InstallScripts.JSON_DIR, EDGE_DIR, INSTRUCTIONS_DIR, getBaseDirName());
+        return installScripts.resolveDataPath(InstallScripts.JSON_DIR, EDGE_DIR, INSTRUCTIONS_DIR, getBaseDirName());
     }
 
     protected abstract String getBaseDirName();

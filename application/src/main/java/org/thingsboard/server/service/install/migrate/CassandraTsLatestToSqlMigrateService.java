@@ -20,6 +20,9 @@ import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.support.EncodedResource;
+import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.stereotype.Service;
 import org.thingsboard.server.common.data.StringUtils;
 import org.thingsboard.server.common.data.UUIDConverter;
@@ -33,10 +36,8 @@ import org.thingsboard.server.dao.util.NoSqlTsDao;
 import org.thingsboard.server.dao.util.SqlTsLatestDao;
 import org.thingsboard.server.service.install.InstallScripts;
 
-import java.nio.charset.Charset;
-import java.nio.file.Files;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.util.Arrays;
@@ -95,7 +96,7 @@ public class CassandraTsLatestToSqlMigrateService implements TsLatestMigrateServ
     public void migrate() throws Exception {
         log.info("Performing migration of latest timeseries data from cassandra to SQL database ...");
         try (Connection conn = DriverManager.getConnection(dbUrl, dbUserName, dbPassword)) {
-            Path schemaUpdateFile = Paths.get(installScripts.getDataDir(), SQL_DIR, "schema-ts-latest-psql.sql");
+            Path schemaUpdateFile = installScripts.resolveDataFile(SQL_DIR, "schema-ts-latest-psql.sql");
             loadSql(schemaUpdateFile, conn);
             conn.setAutoCommit(false);
             for (CassandraToSqlTable table : tables) {
@@ -228,8 +229,10 @@ public class CassandraTsLatestToSqlMigrateService implements TsLatestMigrateServ
     }
 
     private void loadSql(Path sqlFile, Connection conn) throws Exception {
-        String sql = new String(Files.readAllBytes(sqlFile), Charset.forName("UTF-8"));
-        conn.createStatement().execute(sql); //NOSONAR, ignoring because method used to execute thingsboard database upgrade script
+        ScriptUtils.executeSqlScript(conn,
+                new EncodedResource(new FileSystemResource(sqlFile), StandardCharsets.UTF_8),
+                false, false, ScriptUtils.DEFAULT_COMMENT_PREFIXES, ScriptUtils.EOF_STATEMENT_SEPARATOR,
+                ScriptUtils.DEFAULT_BLOCK_COMMENT_START_DELIMITER, ScriptUtils.DEFAULT_BLOCK_COMMENT_END_DELIMITER);
         Thread.sleep(5000);
     }
 }

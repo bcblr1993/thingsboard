@@ -27,11 +27,13 @@ import {
   OnChanges,
   Output,
   Renderer2,
+  SecurityContext,
   SimpleChanges,
   Type,
   ViewChild,
   ViewContainerRef
 } from '@angular/core';
+import { DomSanitizer } from '@angular/platform-browser';
 import { MarkdownService, PrismPlugin } from 'ngx-markdown';
 import { DynamicComponentFactoryService } from '@core/services/dynamic-component-factory.service';
 import { SHARED_MODULE_TOKEN } from '@shared/components/tokens';
@@ -79,6 +81,10 @@ export class TbMarkdownComponent implements OnChanges {
   @coerceBoolean()
   usePlainMarkdown = false;
 
+  @Input()
+  @coerceBoolean()
+  sanitizeHtml = false;
+
   @Output() ready = new EventEmitter<void>();
 
   isMarkdownReady = false;
@@ -93,7 +99,8 @@ export class TbMarkdownComponent implements OnChanges {
               public markdownService: MarkdownService,
               @Inject(SHARED_MODULE_TOKEN) private sharedModule: Type<any>,
               private dynamicComponentFactoryService: DynamicComponentFactoryService,
-              private renderer: Renderer2) {}
+              private renderer: Renderer2,
+              private domSanitizer: DomSanitizer) {}
 
   ngOnChanges(changes: SimpleChanges): void {
     for (const propName of Object.keys(changes)) {
@@ -113,7 +120,10 @@ export class TbMarkdownComponent implements OnChanges {
   }
 
   private render(markdown: string) {
-    const compiled = this.markdownService.parse(markdown, { decodeHtml: false });
+    let compiled = this.markdownService.parse(markdown, { decodeHtml: false });
+    if (this.sanitizeHtml) {
+      compiled = this.domSanitizer.sanitize(SecurityContext.HTML, compiled) || '';
+    }
     let markdownClass = 'tb-markdown-view';
     if (this.markdownClass) {
       markdownClass += ` ${this.markdownClass}`;

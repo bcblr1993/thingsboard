@@ -18,13 +18,16 @@ package org.thingsboard.server.service.install;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.support.EncodedResource;
+import org.springframework.jdbc.datasource.init.ScriptUtils;
 
 import java.io.IOException;
-import java.nio.file.Files;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 @Slf4j
@@ -76,10 +79,12 @@ public abstract class SqlAbstractDatabaseSchemaService implements DatabaseSchema
     }
 
     void executeQueryFromFile(String schemaIdxSql) throws SQLException, IOException {
-        Path schemaIdxFile = Paths.get(installScripts.getDataDir(), SQL_DIR, schemaIdxSql);
-        String sql = Files.readString(schemaIdxFile);
+        Path schemaIdxFile = installScripts.resolveDataFile(SQL_DIR, schemaIdxSql);
         try (Connection conn = DriverManager.getConnection(dbUrl, dbUserName, dbPassword)) {
-            conn.createStatement().execute(sql); //NOSONAR, ignoring because method used to load initial thingsboard database schema
+            ScriptUtils.executeSqlScript(conn,
+                    new EncodedResource(new FileSystemResource(schemaIdxFile), StandardCharsets.UTF_8),
+                    false, false, ScriptUtils.DEFAULT_COMMENT_PREFIXES, ScriptUtils.EOF_STATEMENT_SEPARATOR,
+                    ScriptUtils.DEFAULT_BLOCK_COMMENT_START_DELIMITER, ScriptUtils.DEFAULT_BLOCK_COMMENT_END_DELIMITER);
         }
     }
 
@@ -94,6 +99,21 @@ public abstract class SqlAbstractDatabaseSchemaService implements DatabaseSchema
             log.info("Successfully executed query: {}", logQuery);
             Thread.sleep(5000);
         } catch (InterruptedException | SQLException e) {
+            throw new RuntimeException("Failed to execute query: " + logQuery, e);
+        }
+    }
+
+    protected void executeQuery(String query, long parameter, String logQuery) {
+        try (Connection conn = DriverManager.getConnection(dbUrl, dbUserName, dbPassword);
+             PreparedStatement statement = conn.prepareStatement(query)) {
+            statement.setLong(1, parameter);
+            statement.execute();
+            log.info("Successfully executed query: {}", logQuery);
+            Thread.sleep(5000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Interrupted while executing query: " + logQuery, e);
+        } catch (SQLException e) {
             throw new RuntimeException("Failed to execute query: " + logQuery, e);
         }
     }

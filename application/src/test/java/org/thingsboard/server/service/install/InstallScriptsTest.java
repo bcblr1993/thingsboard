@@ -27,6 +27,7 @@ import org.thingsboard.server.common.data.id.RuleChainId;
 import org.thingsboard.server.common.data.id.TenantId;
 import org.thingsboard.server.common.data.rule.RuleChain;
 import org.thingsboard.server.common.data.rule.RuleChainMetaData;
+import org.thingsboard.server.common.data.util.SecurePathUtils;
 import org.thingsboard.server.dao.dashboard.DashboardService;
 import org.thingsboard.server.dao.oauth2.OAuth2ConfigTemplateService;
 import org.thingsboard.server.dao.resource.ImageService;
@@ -39,6 +40,8 @@ import org.thingsboard.server.dao.widget.WidgetTypeService;
 import org.thingsboard.server.dao.widget.WidgetsBundleService;
 import org.thingsboard.server.service.install.update.ResourcesUpdater;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
@@ -106,7 +109,13 @@ class InstallScriptsTest {
 
     private void validateRuleChainTemplate(Path templateFilePath) {
         log.warn("validateRuleChainTemplate {}", templateFilePath);
-        JsonNode ruleChainJson = JacksonUtil.toJsonNode(templateFilePath.toFile());
+        final Path safeTemplateFile;
+        try {
+            safeTemplateFile = SecurePathUtils.requireReadableRegularFile(templateFilePath, "Rule chain template");
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        JsonNode ruleChainJson = JacksonUtil.toJsonNode(safeTemplateFile.toFile());
 
         RuleChain ruleChain = JacksonUtil.treeToValue(ruleChainJson.get("ruleChain"), RuleChain.class);
         ruleChain.setTenantId(tenantId);

@@ -23,7 +23,6 @@ import org.thingsboard.server.dao.cassandra.CassandraInstallCluster;
 import org.thingsboard.server.service.install.cql.CQLStatementsParser;
 
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 
 @Slf4j
@@ -56,7 +55,7 @@ public abstract class CassandraAbstractDatabaseSchemaService implements Database
     @Override
     public void createDatabaseSchema(boolean createIndexes) throws Exception {
         log.info("Installing Cassandra DataBase schema part: " + schemaCql);
-        Path schemaFile = Paths.get(installScripts.getDataDir(), CASSANDRA_DIR, schemaCql);
+        Path schemaFile = installScripts.resolveDataFile(CASSANDRA_DIR, schemaCql);
         loadCql(schemaFile);
     }
 

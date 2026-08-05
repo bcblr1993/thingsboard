@@ -28,7 +28,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.sql.SQLWarning;
 import java.util.concurrent.TimeUnit;
 
@@ -58,7 +57,7 @@ public class SqlDatabaseUpgradeService implements DatabaseEntitiesUpgradeService
     }
 
     private Path getSchemaUpdateFile(String version) {
-        return Paths.get(installScripts.getDataDir(), "upgrade", version, SCHEMA_UPDATE_SQL);
+        return installScripts.resolveDataFile("upgrade", version, SCHEMA_UPDATE_SQL);
     }
 
     private void loadSql(Path sqlFile) {
