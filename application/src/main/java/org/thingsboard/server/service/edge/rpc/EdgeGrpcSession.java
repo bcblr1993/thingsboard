@@ -90,6 +90,7 @@ import org.thingsboard.server.gen.edge.v1.UserCredentialsRequestMsg;
 import org.thingsboard.server.gen.edge.v1.WidgetBundleTypesRequestMsg;
 import org.thingsboard.server.service.edge.EdgeContextComponent;
 import org.thingsboard.server.service.edge.EdgeMsgConstructorUtils;
+import org.thingsboard.server.service.edge.attributes.EdgeAttributeSyncUidUtils;
 import org.thingsboard.server.service.edge.rpc.fetch.EdgeEventFetcher;
 import org.thingsboard.server.service.edge.rpc.fetch.GeneralEdgeEventFetcher;
 import org.thingsboard.server.service.edge.rpc.utils.EdgeVersionUtils;
@@ -468,9 +469,7 @@ public abstract class EdgeGrpcSession implements Closeable {
         interruptPreviousSendDownlinkMsgsTask();
 
         sessionState.setSendDownlinkMsgsFuture(SettableFuture.create());
-        sessionState.getPendingMsgsMap().clear();
-
-        downlinkMsgsPack.forEach(msg -> sessionState.getPendingMsgsMap().put(msg.getDownlinkMsgId(), msg));
+        sessionState.replacePendingMsgs(downlinkMsgsPack);
         scheduleDownlinkMsgsPackSend(1);
 
         return sessionState.getSendDownlinkMsgsFuture();
@@ -547,6 +546,7 @@ public abstract class EdgeGrpcSession implements Closeable {
                             ctx.getRuleProcessor().process(EdgeCommunicationFailureTrigger.builder().tenantId(tenantId)
                                     .edgeId(edge.getId()).customerId(edge.getCustomerId()).edgeName(edge.getName()).failureMsg(message).error(error).build());
                             sessionState.getPendingMsgsMap().remove(downlinkMsg.getDownlinkMsgId());
+                            markAttributeSyncFailed(downlinkMsg, "DOWNLINK_MESSAGE_TOO_LARGE", message);
                         } else {
                             sendDownlinkMsg(ResponseMsg.newBuilder()
                                     .setDownlinkMsg(downlinkMsg)
@@ -562,6 +562,7 @@ public abstract class EdgeGrpcSession implements Closeable {
                         ctx.getRuleProcessor().process(EdgeCommunicationFailureTrigger.builder().tenantId(tenantId).edgeId(edge.getId())
                                 .customerId(edge.getCustomerId()).edgeName(edge.getName()).failureMsg(failureMsg)
                                 .error("Failed to deliver messages after " + MAX_DOWNLINK_ATTEMPTS + " attempts").build());
+                        copy.forEach(msg -> markAttributeSyncFailed(msg, "EDGE_DELIVERY_RETRIES_EXHAUSTED", failureMsg));
                         stopCurrentSendDownlinkMsgsTask(false);
                     }
                 } else {
@@ -599,15 +600,38 @@ public abstract class EdgeGrpcSession implements Closeable {
 
     private void onDownlinkResponse(DownlinkResponseMsg msg) {
         try {
+            UUID attributeSyncRequestId = sessionState.getAttributeSyncRequestId(msg.getDownlinkMsgId());
             if (msg.getSuccess()) {
-                sessionState.getPendingMsgsMap().remove(msg.getDownlinkMsgId());
+                if (attributeSyncRequestId != null) {
+                    log.info("[{}][{}][{}][{}] Received successful Edge attribute synchronization ACK, downlinkMsgId [{}]",
+                            tenantId, edge.getId(), sessionId, attributeSyncRequestId, msg.getDownlinkMsgId());
+                    executeAttributeSyncStateUpdate(attributeSyncRequestId,
+                            () -> ctx.getEdgeAttributeSyncStateService().markSuccess(
+                                    tenantId, attributeSyncRequestId, System.currentTimeMillis()),
+                            () -> {
+                                if (sessionState.completeAttributeSyncRequest(msg.getDownlinkMsgId())) {
+                                    stopCurrentSendDownlinkMsgsTask(false);
+                                }
+                            });
+                } else {
+                    sessionState.getPendingMsgsMap().remove(msg.getDownlinkMsgId());
+                }
                 log.debug("[{}][{}][{}] Msg has been processed successfully! Msg Id: [{}], Msg: {}", tenantId, edge.getId(), sessionId, msg.getDownlinkMsgId(), msg);
             } else {
                 log.debug("[{}][{}][{}] Msg processing failed! Msg Id: [{}], Error msg: {}", tenantId, edge.getId(), sessionId, msg.getDownlinkMsgId(), msg.getErrorMsg());
+                if (attributeSyncRequestId != null) {
+                    log.warn("[{}][{}][{}][{}] Received failed Edge attribute synchronization ACK, downlinkMsgId [{}], error [{}]",
+                            tenantId, edge.getId(), sessionId, attributeSyncRequestId, msg.getDownlinkMsgId(),
+                            StringUtils.truncate(msg.getErrorMsg(), 500));
+                    executeAttributeSyncStateUpdate(attributeSyncRequestId,
+                            () -> ctx.getEdgeAttributeSyncStateService().recordRetryFailure(
+                                    tenantId, attributeSyncRequestId, msg.getErrorMsg()));
+                }
                 DownlinkMsg downlinkMsg = sessionState.getPendingMsgsMap().get(msg.getDownlinkMsgId());
                 // if NOT timeseries or attributes failures - ack failed downlink
-                if (downlinkMsg.getEntityDataCount() == 0) {
+                if (downlinkMsg != null && downlinkMsg.getEntityDataCount() == 0) {
                     sessionState.getPendingMsgsMap().remove(msg.getDownlinkMsgId());
+                    sessionState.removeAttributeSyncRequest(msg.getDownlinkMsgId());
                 }
             }
             if (sessionState.getPendingMsgsMap().isEmpty()) {
@@ -616,6 +640,38 @@ public abstract class EdgeGrpcSession implements Closeable {
             }
         } catch (Exception e) {
             log.error("[{}][{}] Can't process downlink response message [{}]", tenantId, edge.getId(), msg, e);
+        }
+    }
+    private void markAttributeSyncFailed(DownlinkMsg downlinkMsg, String errorCode, String error) {
+        UUID requestId = sessionState.removeAttributeSyncRequest(downlinkMsg.getDownlinkMsgId());
+        if (requestId != null) {
+            log.warn("[{}][{}][{}] Edge attribute synchronization delivery failed, errorCode [{}], error [{}]",
+                    tenantId, edge.getId(), requestId, errorCode, StringUtils.truncate(error, 500));
+            executeAttributeSyncStateUpdate(requestId,
+                    () -> ctx.getEdgeAttributeSyncStateService().markFailed(
+                            tenantId, requestId, System.currentTimeMillis(), errorCode, error));
+        }
+    }
+
+    private void executeAttributeSyncStateUpdate(UUID requestId, Runnable update) {
+        executeAttributeSyncStateUpdate(requestId, update, null);
+    }
+    private void executeAttributeSyncStateUpdate(UUID requestId, Runnable update, Runnable onSuccess) {
+        try {
+            ctx.getGrpcCallbackExecutorService().execute(() -> {
+                try {
+                    update.run();
+                    if (onSuccess != null) {
+                        onSuccess.run();
+                    }
+                } catch (RuntimeException e) {
+                    log.warn("[{}][{}][{}] Failed to update Edge attribute synchronization state",
+                            tenantId, edge.getId(), requestId, e);
+                }
+            });
+        } catch (RuntimeException e) {
+            log.warn("[{}][{}][{}] Failed to schedule Edge attribute synchronization state update",
+                    tenantId, edge.getId(), requestId, e);
         }
     }
 
@@ -709,6 +765,11 @@ public abstract class EdgeGrpcSession implements Closeable {
         for (EdgeEvent edgeEvent : edgeEvents) {
             log.trace("[{}][{}] converting edge event to downlink msg [{}]", tenantId, edge.getId(), edgeEvent);
             DownlinkMsg downlinkMsg = null;
+            UUID attributeSyncRequestId = null;
+            if (ctx.getEdgeAttributeSyncStateService().isEnabled()) {
+                attributeSyncRequestId = EdgeAttributeSyncUidUtils.parse(
+                        ctx.getEdgeAttributeSyncSettings().getUidPrefix(), edgeEvent.getUid());
+            }
             try {
                 switch (edgeEvent.getAction()) {
                     case UPDATED, ADDED, DELETED, ASSIGNED_TO_EDGE, UNASSIGNED_FROM_EDGE, ALARM_ACK, ALARM_CLEAR,
@@ -728,7 +789,21 @@ public abstract class EdgeGrpcSession implements Closeable {
                 log.trace("[{}][{}] Exception during converting edge event to downlink msg", tenantId, edge.getId(), e);
             }
             if (downlinkMsg != null) {
+                if (attributeSyncRequestId != null) {
+                    sessionState.registerAttributeSyncRequest(downlinkMsg.getDownlinkMsgId(), attributeSyncRequestId);
+                    log.info("[{}][{}][{}][{}] Edge attribute synchronization event converted to downlink message [{}]",
+                            tenantId, edge.getId(), edgeEvent.getId(), attributeSyncRequestId,
+                            downlinkMsg.getDownlinkMsgId());
+                }
                 result.add(downlinkMsg);
+            } else if (attributeSyncRequestId != null) {
+                UUID requestId = attributeSyncRequestId;
+                log.warn("[{}][{}][{}][{}] Failed to convert Edge attribute synchronization event to downlink message",
+                        tenantId, edge.getId(), edgeEvent.getId(), requestId);
+                executeAttributeSyncStateUpdate(requestId,
+                        () -> ctx.getEdgeAttributeSyncStateService().markFailed(
+                                tenantId, requestId, System.currentTimeMillis(),
+                                "DOWNLINK_CONVERSION_FAILED", "Failed to convert EdgeEvent to DownlinkMsg"));
             }
         }
         return result;
@@ -1012,6 +1087,7 @@ public abstract class EdgeGrpcSession implements Closeable {
     public void close() {
         log.info("[{}][{}] Closing session, connected was: {}", tenantId, sessionId, connected);
         connected = false;
+        sessionState.clearAttributeSyncRequests();
         try {
             outputStream.onCompleted();
         } catch (Exception e) {
@@ -1025,6 +1101,7 @@ public abstract class EdgeGrpcSession implements Closeable {
     public void closeWithReason(String reason) {
         log.info("[{}][{}] Closing session with reason: {}", tenantId, sessionId, reason);
         connected = false;
+        sessionState.clearAttributeSyncRequests();
         try {
             outputStream.onNext(ResponseMsg.newBuilder()
                     .setConnectResponseMsg(ConnectResponseMsg.newBuilder()

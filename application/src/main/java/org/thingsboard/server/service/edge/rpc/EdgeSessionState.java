@@ -21,14 +21,48 @@ import org.thingsboard.server.gen.edge.v1.DownlinkMsg;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 
 @Data
 public class EdgeSessionState {
 
     private final Map<Integer, DownlinkMsg> pendingMsgsMap = Collections.synchronizedMap(new LinkedHashMap<>());
+    private final Map<Integer, UUID> attributeSyncRequestMap = new ConcurrentHashMap<>();
     private SettableFuture<Boolean> sendDownlinkMsgsFuture;
     private ScheduledFuture<?> scheduledSendDownlinkTask;
+
+    public void registerAttributeSyncRequest(int downlinkMsgId, UUID requestId) {
+        attributeSyncRequestMap.put(downlinkMsgId, requestId);
+    }
+
+    public UUID getAttributeSyncRequestId(int downlinkMsgId) {
+        return attributeSyncRequestMap.get(downlinkMsgId);
+    }
+
+    public UUID removeAttributeSyncRequest(int downlinkMsgId) {
+        return attributeSyncRequestMap.remove(downlinkMsgId);
+    }
+
+    public void clearAttributeSyncRequests() {
+        attributeSyncRequestMap.clear();
+    }
+
+    public void replacePendingMsgs(List<DownlinkMsg> downlinkMsgs) {
+        synchronized (pendingMsgsMap) {
+            pendingMsgsMap.keySet().forEach(attributeSyncRequestMap::remove);
+            pendingMsgsMap.clear();
+            downlinkMsgs.forEach(msg -> pendingMsgsMap.put(msg.getDownlinkMsgId(), msg));
+        }
+    }
+
+    public boolean completeAttributeSyncRequest(int downlinkMsgId) {
+        pendingMsgsMap.remove(downlinkMsgId);
+        attributeSyncRequestMap.remove(downlinkMsgId);
+        return pendingMsgsMap.isEmpty();
+    }
 
 }
