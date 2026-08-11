@@ -53,7 +53,7 @@ public interface TbTelemetryService {
 
     /**
      * 获取实体从{@code startTs}（含）到{@code endTs}（不含）的每个{@code interval}内的第一个遥测值。
-     * 单次查询最多支持31天、200个原始key项和1,000,000个潜在key/时间桶组合。
+     * 单次查询最多支持31天、200个原始key项和500,000个潜在key/时间桶组合。
      *
      * @param entityId the entity ID
      * @param keys the time series keys; duplicate entries count towards the request limit and are queried once

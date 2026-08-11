@@ -56,6 +56,7 @@ import org.thingsboard.server.service.security.exception.UserPasswordExpiredExce
 import org.thingsboard.server.service.security.exception.UserPasswordNotValidException;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -122,7 +123,7 @@ public class ThingsboardErrorResponseHandler extends ResponseEntityExceptionHand
                        AccessDeniedException accessDeniedException) throws IOException,
             ServletException {
         if (!response.isCommitted()) {
-            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            prepareJsonResponse(response);
             response.setStatus(HttpStatus.FORBIDDEN.value());
             JacksonUtil.writeValue(response.getWriter(),
                     ThingsboardErrorResponse.of("You don't have permission to perform this operation!",
@@ -135,9 +136,7 @@ public class ThingsboardErrorResponseHandler extends ResponseEntityExceptionHand
         log.debug("Processing exception {}", exception.getMessage(), exception);
         if (!response.isCommitted()) {
             try {
-                //设置统一异常处理响应编码格式为utf-8
-                //response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-                response.setContentType(MediaType.APPLICATION_JSON_UTF8_VALUE);
+                prepareJsonResponse(response);
 
                 if (exception instanceof ThingsboardException) {
                     ThingsboardException thingsboardException = (ThingsboardException) exception;
@@ -254,9 +253,14 @@ public class ThingsboardErrorResponseHandler extends ResponseEntityExceptionHand
 
     // TODO: refactor this class to use this method instead of boilerplate JacksonUtil.writeValue(response.getWriter(), ...
     private void writeResponse(ThingsboardErrorResponse errorResponse, HttpServletResponse response) throws IOException {
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        prepareJsonResponse(response);
         response.setStatus(errorResponse.getStatus());
         JacksonUtil.writeValue(response.getWriter(), errorResponse);
+    }
+
+    private void prepareJsonResponse(HttpServletResponse response) {
+        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
     }
 
 }
