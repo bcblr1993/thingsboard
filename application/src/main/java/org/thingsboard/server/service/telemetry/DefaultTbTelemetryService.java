@@ -57,7 +57,7 @@ public class DefaultTbTelemetryService implements TbTelemetryService {
     private static final long MAX_TIME_RANGE = TimeUnit.DAYS.toMillis(31);
     private static final String DATA_LIMIT_EXCEEDED_MESSAGE = "请求数据量过大";
     private static final int FIRST_VALUE_MAX_KEYS = 200;
-    private static final int FIRST_VALUE_MAX_DATA_POINTS = 1_000_000;
+    private static final int FIRST_VALUE_MAX_DATA_POINTS = 500_000;
     private static final int FIRST_VALUE_QUERY_BATCH_SIZE = 256;
     private static final long FIRST_VALUE_MIN_INTERVAL = TimeUnit.MINUTES.toMillis(1);
     private static final long FIRST_VALUE_MAX_TIME_RANGE = TimeUnit.DAYS.toMillis(31);
@@ -287,30 +287,30 @@ public class DefaultTbTelemetryService implements TbTelemetryService {
 
     private long validateTimeseriesFirstValueRequest(List<String> keys, Long startTs, Long endTs, Long interval) throws ThingsboardException {
         if (keys == null || keys.isEmpty()) {
-            throw badRequest("keys can't be empty");
+            throw badRequest("keys不能为空");
         }
         if (keys.size() > FIRST_VALUE_MAX_KEYS) {
-            throw badRequest("keys can't be more than " + FIRST_VALUE_MAX_KEYS);
+            throw badRequest("keys数量不能超过" + FIRST_VALUE_MAX_KEYS);
         }
         if (keys.stream().anyMatch(key -> key == null || key.isEmpty())) {
-            throw badRequest("keys can't contain empty values");
+            throw badRequest("keys不能包含空值");
         }
         if (startTs == null || endTs == null || startTs < 0 || endTs <= startTs) {
-            throw badRequest("endTs must be greater than startTs");
+            throw badRequest("startTs必须大于等于0，且endTs必须大于startTs");
         }
         long timeRange = endTs - startTs;
         if (timeRange > FIRST_VALUE_MAX_TIME_RANGE) {
-            throw badRequest("Time range can't be more than 31 days");
+            throw badRequest("查询时间范围不能超过31天");
         }
         if (interval == null || interval < FIRST_VALUE_MIN_INTERVAL) {
-            throw badRequest("interval can't be less than 60000");
+            throw badRequest("interval不能小于60000");
         }
         long bucketCount = timeRange / interval;
         if (timeRange % interval != 0) {
             bucketCount++;
         }
         if (bucketCount > FIRST_VALUE_MAX_DATA_POINTS / keys.size()) {
-            throw badRequest("Requested time buckets can't be more than " + FIRST_VALUE_MAX_DATA_POINTS);
+            throw badRequest("请求的潜在返回桶位不能超过" + FIRST_VALUE_MAX_DATA_POINTS);
         }
         return bucketCount;
     }

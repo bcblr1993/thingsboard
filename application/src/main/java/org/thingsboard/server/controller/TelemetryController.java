@@ -378,12 +378,13 @@ public class TelemetryController extends BaseController {
             notes = "Returns the first value of time series data for each interval within the specified time range. " +
                     "Unlike aggregation functions, this returns the actual first value in each time bucket. " +
                     "The time range may span multiple days but cannot exceed 31 days. The request accepts up to 200 keys " +
-                    "and up to 1,000,000 potential key/bucket result slots. " +
+                    "and up to 600,000 potential key/bucket result slots. Use the POST variant when the keys query " +
+                    "parameter may exceed the request URI length limit. " +
                     "\n\n" + INVALID_ENTITY_ID_OR_ENTITY_TYPE_DESCRIPTION + TENANT_OR_CUSTOMER_AUTHORITY_PARAGRAPH)
     @PreAuthorize("hasAnyAuthority('SYS_ADMIN', 'TENANT_ADMIN', 'CUSTOMER_USER')")
     @RequestMapping(value = "/{entityType}/{entityId}/values/timeseries/firstOfInterval", method = RequestMethod.GET)
     @ResponseBody
-    public DeferredResult<ResponseEntity> getTimeseriesFirstOfIntervale(
+    public DeferredResult<ResponseEntity> getTimeseriesFirstOfInterval(
             @Parameter(description = ENTITY_TYPE_PARAM_DESCRIPTION, required = true) @PathVariable("entityType") String entityType,
             @Parameter(description = ENTITY_ID_PARAM_DESCRIPTION, required = true) @PathVariable("entityId") String entityIdStr,
             @Parameter(description = TELEMETRY_KEYS_BASE_DESCRIPTION + " The request accepts up to 200 comma-separated key entries.", required = true)
@@ -397,7 +398,35 @@ public class TelemetryController extends BaseController {
             @Parameter(description = STRICT_DATA_TYPES_DESCRIPTION)
             @RequestParam(name = "useStrictDataTypes", required = false, defaultValue = "false") Boolean useStrictDataTypes) throws ThingsboardException {
 
-        List<String> keyList = toKeysListPreservingEmptyItems(keys);
+        return getTimeseriesFirstOfInterval(entityType, entityIdStr, toKeysListPreservingEmptyItems(keys),
+                startTs, endTs, interval, useStrictDataTypes);
+    }
+
+    @ApiOperation(value = "Get first time series value in each interval using a request body",
+            notes = "POST alternative to the GET endpoint for requests whose keys may exceed the request URI length limit. " +
+                    "The time range may span multiple days but cannot exceed 31 days. The request accepts up to 200 keys " +
+                    "and up to 600,000 potential key/bucket result slots. " +
+                    "\n\n" + INVALID_ENTITY_ID_OR_ENTITY_TYPE_DESCRIPTION + TENANT_OR_CUSTOMER_AUTHORITY_PARAGRAPH)
+    @PreAuthorize("hasAnyAuthority('SYS_ADMIN', 'TENANT_ADMIN', 'CUSTOMER_USER')")
+    @RequestMapping(value = "/{entityType}/{entityId}/values/timeseries/firstOfInterval", method = RequestMethod.POST)
+    @ResponseBody
+    public DeferredResult<ResponseEntity> postTimeseriesFirstOfInterval(
+            @Parameter(description = ENTITY_TYPE_PARAM_DESCRIPTION, required = true) @PathVariable("entityType") String entityType,
+            @Parameter(description = ENTITY_ID_PARAM_DESCRIPTION, required = true) @PathVariable("entityId") String entityIdStr,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true,
+                    description = "Time series first-value query. Put keys in the JSON body to avoid request URI length limits.")
+            @RequestBody TimeseriesFirstOfIntervalRequest request) throws ThingsboardException {
+
+        if (request == null) {
+            throw new ThingsboardException("请求体不能为空", ThingsboardErrorCode.BAD_REQUEST_PARAMS);
+        }
+        return getTimeseriesFirstOfInterval(entityType, entityIdStr, request.keys(), request.startTs(), request.endTs(),
+                request.interval(), request.useStrictDataTypes());
+    }
+
+    private DeferredResult<ResponseEntity> getTimeseriesFirstOfInterval(String entityType, String entityIdStr,
+                                                                         List<String> keyList, Long startTs, Long endTs,
+                                                                         Long interval, Boolean useStrictDataTypes) throws ThingsboardException {
         DeferredResult<ResponseEntity> response = new DeferredResult<>();
         EntityId entityId = EntityIdFactory.getByTypeAndId(entityType, entityIdStr);
         log.debug("Created EntityId - type: {}, id: {}", entityType, entityIdStr);
@@ -424,6 +453,22 @@ public class TelemetryController extends BaseController {
 
         return response;
     }
+
+    public record TimeseriesFirstOfIntervalRequest(
+            @Schema(description = "Telemetry keys. The request accepts up to 200 entries.", requiredMode = Schema.RequiredMode.REQUIRED)
+            List<String> keys,
+            @Schema(description = "Start timestamp of the time range in milliseconds, UTC. The boundary is inclusive.",
+                    requiredMode = Schema.RequiredMode.REQUIRED)
+            Long startTs,
+            @Schema(description = "End timestamp of the time range in milliseconds, UTC. The boundary is exclusive.",
+                    requiredMode = Schema.RequiredMode.REQUIRED)
+            Long endTs,
+            @Schema(description = "Fixed interval size in milliseconds. The minimum value is 60000.", requiredMode = Schema.RequiredMode.REQUIRED)
+            Long interval,
+            @Schema(description = STRICT_DATA_TYPES_DESCRIPTION, defaultValue = "false")
+            Boolean useStrictDataTypes) {
+    }
+
 
     @ApiOperation(value = "Save device attributes (saveDeviceAttributes)",
             notes = "Creates or updates the device attributes based on device id and specified attribute scope. " +
