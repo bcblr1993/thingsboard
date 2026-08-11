@@ -377,6 +377,8 @@ public class TelemetryController extends BaseController {
     @ApiOperation(value = "Get first time series value in each interval (getTimeseriesFirstValue)",
             notes = "Returns the first value of time series data for each interval within the specified time range. " +
                     "Unlike aggregation functions, this returns the actual first value in each time bucket. " +
+                    "The time range may span multiple days but cannot exceed 31 days. The request accepts up to 200 keys " +
+                    "and up to 1,000,000 potential key/bucket result slots. " +
                     "\n\n" + INVALID_ENTITY_ID_OR_ENTITY_TYPE_DESCRIPTION + TENANT_OR_CUSTOMER_AUTHORITY_PARAGRAPH)
     @PreAuthorize("hasAnyAuthority('SYS_ADMIN', 'TENANT_ADMIN', 'CUSTOMER_USER')")
     @RequestMapping(value = "/{entityType}/{entityId}/values/timeseries/firstOfInterval", method = RequestMethod.GET)
@@ -384,41 +386,18 @@ public class TelemetryController extends BaseController {
     public DeferredResult<ResponseEntity> getTimeseriesFirstOfIntervale(
             @Parameter(description = ENTITY_TYPE_PARAM_DESCRIPTION, required = true) @PathVariable("entityType") String entityType,
             @Parameter(description = ENTITY_ID_PARAM_DESCRIPTION, required = true) @PathVariable("entityId") String entityIdStr,
-            @Parameter(description = TELEMETRY_KEYS_BASE_DESCRIPTION, required = true) @RequestParam(name = "keys") String keys,
-            @Parameter(description = "A long value representing the start timestamp of the time range in milliseconds, UTC.")
+            @Parameter(description = TELEMETRY_KEYS_BASE_DESCRIPTION + " The request accepts up to 200 comma-separated key entries.", required = true)
+            @RequestParam(name = "keys") String keys,
+            @Parameter(description = "Start timestamp of the time range in milliseconds, UTC. The boundary is inclusive.")
             @RequestParam(name = "startTs") Long startTs,
-            @Parameter(description = "A long value representing the end timestamp of the time range in milliseconds, UTC.")
+            @Parameter(description = "End timestamp of the time range in milliseconds, UTC. The boundary is exclusive.")
             @RequestParam(name = "endTs") Long endTs,
-            @Parameter(description = "A long value representing the interval range in milliseconds.")
+            @Parameter(description = "Fixed interval size in milliseconds. The minimum value is 60000.")
             @RequestParam(name = "interval") Long interval,
             @Parameter(description = STRICT_DATA_TYPES_DESCRIPTION)
             @RequestParam(name = "useStrictDataTypes", required = false, defaultValue = "false") Boolean useStrictDataTypes) throws ThingsboardException {
 
-        log.info("Starting getTimeseriesFirstOfIntervale - entityType: {}, entityId: {}, keys: {}, startTs: {}, endTs: {}, interval: {}, useStrictDataTypes: {}",
-                entityType, entityIdStr, keys, startTs, endTs, interval, useStrictDataTypes);
-
-        // 参数校验
-        // 1. 校验时间间隔必须在一天以内（24小时 = 86400000毫秒）
-        long timeDiff = endTs - startTs;
-        log.debug("Time difference calculation - startTs: {}, endTs: {}, timeDiff: {}", startTs, endTs, timeDiff);
-        if (timeDiff > 86400000L) {
-            log.warn("Time range validation failed - time difference {} exceeds 24 hours limit", timeDiff);
-            throw new ThingsboardException("Time range must be within 24 hours", ThingsboardErrorCode.BAD_REQUEST_PARAMS);
-        }
-
-        // 2. 校验interval不得少于一分钟
-        if (interval < 60000L) {
-            log.warn("Interval validation failed - interval {} is less than minimum 60000", interval);
-            throw new ThingsboardException("Interval can't less than 60000", ThingsboardErrorCode.BAD_REQUEST_PARAMS);
-        }
-
-        List<String> keyList = toKeysList(keys);
-        log.debug("Parsed keys list - original keys: {}, parsed list size: {}", keys, keyList.size());
-        if (keyList.size() > 10) {
-            log.warn("Keys validation failed - number of keys {} exceeds maximum limit of 10", keyList.size());
-            throw new ThingsboardException("keys can't more than 10", ThingsboardErrorCode.BAD_REQUEST_PARAMS);
-
-        }
+        List<String> keyList = toKeysListPreservingEmptyItems(keys);
         DeferredResult<ResponseEntity> response = new DeferredResult<>();
         EntityId entityId = EntityIdFactory.getByTypeAndId(entityType, entityIdStr);
         log.debug("Created EntityId - type: {}, id: {}", entityType, entityIdStr);
@@ -1029,6 +1008,10 @@ public class TelemetryController extends BaseController {
             keyList = Arrays.asList(keys.split(","));
         }
         return keyList;
+    }
+
+    private List<String> toKeysListPreservingEmptyItems(String keys) {
+        return StringUtils.isEmpty(keys) ? null : Arrays.asList(keys.split(",", -1));
     }
 
     private DeferredResult<ResponseEntity> getImmediateDeferredResult(String message, HttpStatus status) {

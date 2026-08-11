@@ -33,6 +33,7 @@ import org.thingsboard.server.common.data.id.TenantId;
 import org.thingsboard.server.common.data.kv.*;
 import org.thingsboard.server.dao.timeseries.TimeseriesService;
 import org.thingsboard.server.exception.InvalidParametersException;
+import org.thingsboard.server.service.executors.DbCallbackExecutorService;
 import org.thingsboard.server.service.security.AccessValidator;
 import org.thingsboard.server.service.security.ValidationCallback;
 import org.thingsboard.server.service.security.ValidationResult;
@@ -55,9 +56,15 @@ public class DefaultTbTelemetryService implements TbTelemetryService {
     private static final long MIN_INTERVAL = TimeUnit.SECONDS.toMillis(1);
     private static final long MAX_TIME_RANGE = TimeUnit.DAYS.toMillis(31);
     private static final String DATA_LIMIT_EXCEEDED_MESSAGE = "请求数据量过大";
+    private static final int FIRST_VALUE_MAX_KEYS = 200;
+    private static final int FIRST_VALUE_MAX_DATA_POINTS = 1_000_000;
+    private static final int FIRST_VALUE_QUERY_BATCH_SIZE = 256;
+    private static final long FIRST_VALUE_MIN_INTERVAL = TimeUnit.MINUTES.toMillis(1);
+    private static final long FIRST_VALUE_MAX_TIME_RANGE = TimeUnit.DAYS.toMillis(31);
 
     private final TimeseriesService tsService;
     private final AccessValidator accessValidator;
+    private final DbCallbackExecutorService dbCallbackExecutorService;
 
     @Override
     public ListenableFuture<List<TsKvEntry>> getTimeseries(EntityId entityId, List<String> keys, Long startTs, Long endTs, IntervalType intervalType,
@@ -253,211 +260,164 @@ public class DefaultTbTelemetryService implements TbTelemetryService {
 
     @Override
     public ListenableFuture<Map<String, List<FormattedTsData>>> getTimeseriesFirstValue(EntityId entityId, List<String> keys, Long startTs,
-                                                                     Long endTs, Long interval, Boolean useStrictDataTypes,
-                                                                     SecurityUser currentUser) {
-        ListenableFuture<Map<String, List<FormattedTsData>>> timeseriesFirstValueQuery = null;
-        // 临界值：60000ms
-        if (interval == 60000) {
-            //单次查询，内存分桶  预估扫描86,400条记录
-            timeseriesFirstValueQuery = getTimeseriesFirstValueSingleQuery(entityId, keys, startTs, endTs, interval, useStrictDataTypes, currentUser);
-        } else {
-            //批量limit 1查询，减轻带宽压力。15分钟时 96条记录
-            timeseriesFirstValueQuery =  getTimeseriesFirstValueBatchQuery(entityId, keys, startTs, endTs, interval, useStrictDataTypes, currentUser);
-        }
-        return timeseriesFirstValueQuery;
-
-    }
-
-    private ListenableFuture<Map<String, List<FormattedTsData>>> getTimeseriesFirstValueSingleQuery(EntityId entityId, List<String> keys,
-                                                                                 Long startTs, Long endTs, Long interval,
-                                                                                 Boolean useStrictDataTypes, SecurityUser currentUser) {
+                                                                                        Long endTs, Long interval, Boolean useStrictDataTypes,
+                                                                                        SecurityUser currentUser) throws ThingsboardException {
+        long bucketCount = validateTimeseriesFirstValueRequest(keys, startTs, endTs, interval);
+        List<String> distinctKeys = new ArrayList<>(new LinkedHashSet<>(keys));
         SettableFuture<Map<String, List<FormattedTsData>>> future = SettableFuture.create();
-        log.info("Entering getTimeseriesFirstValueSingleQuery - entityId: {}, keys: {}, startTs: {}, endTs: {}, interval: {}, useStrictDataTypes: {}",
-                entityId, keys, startTs, endTs, interval, useStrictDataTypes);
-
         accessValidator.validate(currentUser, Operation.READ_TELEMETRY, entityId, new FutureCallback<>() {
             @Override
             public void onSuccess(ValidationResult validationResult) {
-                try {
-                    // 使用NONE聚合类型查询所有原始数据
-                    List<ReadTsKvQuery> queries = keys.stream()
-                            .map(key -> new BaseReadTsKvQuery(key, startTs, endTs, AggregationParams.none(), 86400, "ASC"))
-                            .collect(Collectors.toList());
-                    log.debug("Created queries for single query approach - query count: {}, limit per query: {}", queries.size(), 86400);
-
-                    Futures.addCallback(tsService.findAll(currentUser.getTenantId(), entityId, queries),
-                            new FutureCallback<List<TsKvEntry>>() {
-                                @Override
-                                public void onSuccess(List<TsKvEntry> allData) {
-                                    log.info("Single query returned data - record count: {}, key count: {}", allData.size(),
-                                            allData.stream().map(TsKvEntry::getKey).distinct().count());
-                                    // 内存分桶处理，返回每个间隔的第一个值
-                                    Map<String, List<FormattedTsData>> firstValues = extractFirstValuesFromBuckets(allData, startTs, endTs, interval, useStrictDataTypes);
-                                    log.info("Extracted first values from buckets - result key count: {}, total data points: {}",
-                                            firstValues.size(), firstValues.values().stream().mapToInt(List::size).sum());
-                                    future.set(firstValues);
-                                }
-
-                                @Override
-                                public void onFailure(Throwable t) {
-                                    log.error("Single query failed for entityId: {}, error: {}", entityId, t.getMessage(), t);
-                                    future.setException(t);
-                                }
-                            }, MoreExecutors.directExecutor());
-                } catch (Throwable e) {
-                    log.error("Exception in getTimeseriesFirstValueSingleQuery for entityId: {}, error: {}", entityId, e.getMessage(), e);
-                    future.setException(e);
+                if (validationResult.getResultCode() != ValidationResultCode.OK) {
+                    future.setException(ValidationCallback.getException(validationResult));
+                    return;
                 }
+                TimeseriesFirstValueQueryContext context = new TimeseriesFirstValueQueryContext(
+                        distinctKeys, startTs, endTs, interval, bucketCount, Boolean.TRUE.equals(useStrictDataTypes));
+                queryNextFirstValueBatch(currentUser.getTenantId(), entityId, context, future);
             }
 
             @Override
             public void onFailure(Throwable t) {
-                log.error("Access validation failed in getTimeseriesFirstValueSingleQuery for entityId: {}, error: {}", entityId, t.getMessage(), t);
                 future.setException(t);
             }
         });
-
         return future;
     }
 
-    private ListenableFuture<Map<String, List<FormattedTsData>>> getTimeseriesFirstValueBatchQuery(EntityId entityId, List<String> keys,
-                                                                                Long startTs, Long endTs, Long interval,
-                                                                                Boolean useStrictDataTypes, SecurityUser currentUser) {
-        SettableFuture<Map<String, List<FormattedTsData>>> future = SettableFuture.create();
-        log.info("Entering getTimeseriesFirstValueBatchQuery - entityId: {}, keys: {}, startTs: {}, endTs: {}, interval: {}, useStrictDataTypes: {}",
-                entityId, keys, startTs, endTs, interval, useStrictDataTypes);
+    private long validateTimeseriesFirstValueRequest(List<String> keys, Long startTs, Long endTs, Long interval) throws ThingsboardException {
+        if (keys == null || keys.isEmpty()) {
+            throw badRequest("keys can't be empty");
+        }
+        if (keys.size() > FIRST_VALUE_MAX_KEYS) {
+            throw badRequest("keys can't be more than " + FIRST_VALUE_MAX_KEYS);
+        }
+        if (keys.stream().anyMatch(key -> key == null || key.isEmpty())) {
+            throw badRequest("keys can't contain empty values");
+        }
+        if (startTs == null || endTs == null || startTs < 0 || endTs <= startTs) {
+            throw badRequest("endTs must be greater than startTs");
+        }
+        long timeRange = endTs - startTs;
+        if (timeRange > FIRST_VALUE_MAX_TIME_RANGE) {
+            throw badRequest("Time range can't be more than 31 days");
+        }
+        if (interval == null || interval < FIRST_VALUE_MIN_INTERVAL) {
+            throw badRequest("interval can't be less than 60000");
+        }
+        long bucketCount = timeRange / interval;
+        if (timeRange % interval != 0) {
+            bucketCount++;
+        }
+        if (bucketCount > FIRST_VALUE_MAX_DATA_POINTS / keys.size()) {
+            throw badRequest("Requested time buckets can't be more than " + FIRST_VALUE_MAX_DATA_POINTS);
+        }
+        return bucketCount;
+    }
 
-        accessValidator.validate(currentUser, Operation.READ_TELEMETRY, entityId, new FutureCallback<>() {
+    private void queryNextFirstValueBatch(TenantId tenantId, EntityId entityId,
+                                          TimeseriesFirstValueQueryContext context,
+                                          SettableFuture<Map<String, List<FormattedTsData>>> future) {
+        if (future.isDone()) {
+            return;
+        }
+        List<ReadTsKvQuery> queries = context.nextBatch();
+        if (queries.isEmpty()) {
+            context.result.values().forEach(Collections::sort);
+            future.set(context.result);
+            return;
+        }
+        ListenableFuture<List<TsKvEntry>> batchFuture;
+        try {
+            batchFuture = tsService.findAll(tenantId, entityId, queries);
+        } catch (Throwable t) {
+            future.setException(t);
+            return;
+        }
+        Futures.addCallback(batchFuture, new FutureCallback<>() {
             @Override
-            public void onSuccess(ValidationResult validationResult) {
+            public void onSuccess(List<TsKvEntry> entries) {
+                if (future.isDone()) {
+                    return;
+                }
                 try {
-                    // 计算bucket数量
-                    long bucketCount = (endTs - startTs) / interval + 1;
-                    log.debug("Calculated bucket count - startTs: {}, endTs: {}, interval: {}, bucketCount: {}", startTs, endTs, interval, bucketCount);
-
-                    // 为每个key和每个bucket创建一个查询
-                    List<ListenableFuture<List<TsKvEntry>>> futures = new ArrayList<>();
-                    log.info("Creating batch queries - key count: {}, bucket count: {}, total queries: {}", keys.size(), bucketCount, keys.size() * bucketCount);
-
-                    for (String key : keys) {
-                        for (int i = 0; i < bucketCount; i++) {
-                            long bucketStart = startTs + i * interval;
-                            long bucketEnd = Math.min(bucketStart + interval, endTs);
-
-                            // 查询每个bucket的第一个值（limit=1）
-                            ReadTsKvQuery query = new BaseReadTsKvQuery(key, bucketStart, bucketEnd, 0, 1, Aggregation.NONE, "ASC");
-                            futures.add(tsService.findAll(currentUser.getTenantId(), entityId, List.of(query)));
-                        }
+                    if (entries != null) {
+                        entries.forEach(context::addResult);
                     }
-                    log.debug("Created all {} batch queries", futures.size());
-
-                    // 合并所有结果
-                    Futures.addCallback(Futures.allAsList(futures),
-                            new FutureCallback<List<List<TsKvEntry>>>() {
-                                @Override
-                                public void onSuccess(List<List<TsKvEntry>> results) {
-                                    log.info("Batch queries completed successfully - total results: {}, non-empty results: {}",
-                                            results.size(), results.stream().filter(list -> !list.isEmpty()).count());
-
-                                    Map<String, List<FormattedTsData>> keys2ListData = new HashMap<>();
-                                    int validDataCount = 0;
-                                    for (List<TsKvEntry> bucketData : results) {
-                                        if (!bucketData.isEmpty()) {
-                                            TsKvEntry entry = bucketData.get(0);
-                                            long timestamp = entry.getTs();
-                                            //计算所属的bucket
-                                            long bucketStartTs = (timestamp - startTs) / interval * interval + startTs;
-                                            Object value = useStrictDataTypes ? getKvValue(entry) : entry.getValueAsString();
-                                            keys2ListData.computeIfAbsent(entry.getKey(), k -> new ArrayList<>())
-                                                            .add(FormattedTsData
-                                                                    .builder()
-                                                                    .ts(bucketStartTs)
-                                                                    .originalTs(timestamp)
-                                                                    .value(value).build());
-                                            validDataCount++;
-                                        }
-                                    }
-
-                                    log.info("Processed batch query results - result keys: {}, total valid data points: {}",
-                                            keys2ListData.size(), validDataCount);
-                                    future.set(keys2ListData);
-                                }
-
-                                @Override
-                                public void onFailure(Throwable t) {
-                                    log.error("Batch queries failed for entityId: {}, error: {}", entityId, t.getMessage(), t);
-                                    future.setException(t);
-                                }
-                            }, MoreExecutors.directExecutor());
-
-                } catch (Throwable e) {
-                    log.error("Exception in getTimeseriesFirstValueBatchQuery for entityId: {}, error: {}", entityId, e.getMessage(), e);
-                    future.setException(e);
+                    queryNextFirstValueBatch(tenantId, entityId, context, future);
+                } catch (Throwable t) {
+                    future.setException(t);
                 }
             }
 
             @Override
             public void onFailure(Throwable t) {
-                log.error("Access validation failed in getTimeseriesFirstValueBatchQuery for entityId: {}, error: {}", entityId, t.getMessage(), t);
                 future.setException(t);
             }
-        });
-
-        return future;
+        }, dbCallbackExecutorService);
     }
 
-    /**
-     * 提取每个interval内的第一条记录
-     *
-     * @param allData
-     * @param startTs
-     * @param endTs
-     * @param interval
-     * @param useStrictDataTypes
-     * @return
-     */
-    private Map<String, List<FormattedTsData>> extractFirstValuesFromBuckets(List<TsKvEntry> allData, Long startTs, Long endTs, Long interval, Boolean useStrictDataTypes) {
-        log.debug("Entering extractFirstValuesFromBuckets - data size: {}, time range: {} to {}, interval: {}",
-                allData.size(), startTs, endTs, interval);
+    private final class TimeseriesFirstValueQueryContext {
+        private final List<String> keys;
+        private final long startTs;
+        private final long endTs;
+        private final long interval;
+        private final long bucketCount;
+        private final boolean useStrictDataTypes;
+        private final Map<String, List<FormattedTsData>> result = new LinkedHashMap<>();
+        private final Map<String, Map<Long, Integer>> resultIndexes = new HashMap<>();
+        private int keyIndex;
+        private long bucketIndex;
 
-        Map<String, List<FormattedTsData>> result = new HashMap<>();
-        Map<String, Set<Long>> bucketFirstSeen = new java.util.HashMap<>();
-        int processedRecords = 0;
-        int addedRecords = 0;
-
-        for (TsKvEntry entry : allData) {
-            long timestamp = entry.getTs();
-
-            // 计算所属的bucket
-            long bucketStart = (timestamp - startTs) / interval * interval + startTs;
-
-            String key = entry.getKey();
-            Set<Long> seenBuckets = bucketFirstSeen.computeIfAbsent(key, k -> new java.util.HashSet<>());
-
-            // 如果这个bucket还没找到第一个值，添加它
-            if (!seenBuckets.contains(bucketStart)) {
-                Object value = useStrictDataTypes ? getKvValue(entry) : entry.getValueAsString();
-                result.computeIfAbsent(key, k -> new ArrayList<>())
-                        .add(FormattedTsData
-                                .builder()
-                                .ts(bucketStart)
-                                .originalTs(timestamp)
-                                .value(value).build());
-
-                seenBuckets.add(bucketStart);
-                addedRecords++;
-            }
-            processedRecords++;
-
-            if (processedRecords % 10000 == 0) {
-                log.debug("Processing progress - processed: {} records, added: {} first values", processedRecords, addedRecords);
-            }
+        private TimeseriesFirstValueQueryContext(List<String> keys, long startTs, long endTs, long interval,
+                                                 long bucketCount, boolean useStrictDataTypes) {
+            this.keys = keys;
+            this.startTs = startTs;
+            this.endTs = endTs;
+            this.interval = interval;
+            this.bucketCount = bucketCount;
+            this.useStrictDataTypes = useStrictDataTypes;
         }
 
-        log.info("Completed extractFirstValuesFromBuckets - processed records: {}, unique keys: {}, first values extracted: {}",
-                processedRecords, result.size(), addedRecords);
-        return result;
+        private List<ReadTsKvQuery> nextBatch() {
+            List<ReadTsKvQuery> queries = new ArrayList<>(FIRST_VALUE_QUERY_BATCH_SIZE);
+            while (queries.size() < FIRST_VALUE_QUERY_BATCH_SIZE && keyIndex < keys.size()) {
+                long bucketStart = startTs + bucketIndex * interval;
+                long remaining = endTs - bucketStart;
+                long bucketEnd = interval >= remaining ? endTs : bucketStart + interval;
+                queries.add(new BaseReadTsKvQuery(keys.get(keyIndex), bucketStart, bucketEnd,
+                        AggregationParams.none(), 1, "ASC"));
+                bucketIndex++;
+                if (bucketIndex == bucketCount) {
+                    bucketIndex = 0;
+                    keyIndex++;
+                }
+            }
+            return queries;
+        }
+
+        private void addResult(TsKvEntry entry) {
+            long timestamp = entry.getTs();
+            if (timestamp < startTs || timestamp >= endTs) {
+                return;
+            }
+            long bucketStart = startTs + ((timestamp - startTs) / interval) * interval;
+            Object value = useStrictDataTypes ? getKvValue(entry) : entry.getValueAsString();
+            List<FormattedTsData> keyResult = result.computeIfAbsent(entry.getKey(), ignored -> new ArrayList<>());
+            Map<Long, Integer> keyResultIndexes = resultIndexes.computeIfAbsent(entry.getKey(), ignored -> new HashMap<>());
+            Integer existingIndex = keyResultIndexes.get(bucketStart);
+            if (existingIndex != null) {
+                FormattedTsData existing = keyResult.get(existingIndex);
+                if (timestamp < existing.getOriginalTs()) {
+                    keyResult.set(existingIndex, new FormattedTsData(bucketStart, timestamp, value));
+                }
+                return;
+            }
+            keyResultIndexes.put(bucketStart, keyResult.size());
+            keyResult.add(new FormattedTsData(bucketStart, timestamp, value));
+        }
     }
+
     private Object getKvValue(KvEntry entry) {
         if (entry.getDataType() == DataType.JSON) {
             return toJsonNode(entry.getJsonValue().get());

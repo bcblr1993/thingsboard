@@ -35,6 +35,7 @@ import org.thingsboard.server.dao.timeseries.TimeseriesService;
 import org.thingsboard.server.exception.AccessDeniedException;
 import org.thingsboard.server.exception.EntityNotFoundException;
 import org.thingsboard.server.exception.InvalidParametersException;
+import org.thingsboard.server.service.executors.DbCallbackExecutorService;
 import org.thingsboard.server.service.security.AccessValidator;
 import org.thingsboard.server.service.security.ValidationResult;
 import org.thingsboard.server.service.security.model.SecurityUser;
@@ -61,6 +62,8 @@ public class DefaultTbTelemetryServiceFillTest {
     private TimeseriesService tsService;
     @Mock
     private AccessValidator accessValidator;
+    @Mock
+    private DbCallbackExecutorService dbCallbackExecutorService;
 
     private DefaultTbTelemetryService service;
     private TenantId tenantId;
@@ -70,7 +73,7 @@ public class DefaultTbTelemetryServiceFillTest {
     @Before
     @SuppressWarnings("unchecked")
     public void setUp() {
-        service = new DefaultTbTelemetryService(tsService, accessValidator);
+        service = new DefaultTbTelemetryService(tsService, accessValidator, dbCallbackExecutorService);
         tenantId = TenantId.fromUUID(UUID.randomUUID());
         deviceId = new DeviceId(UUID.randomUUID());
         user = new SecurityUser();
