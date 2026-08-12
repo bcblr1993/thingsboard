@@ -39,7 +39,7 @@ import java.util.concurrent.Callable;
 @Component
 @Slf4j
 @RedisTsLatestDao
-public class RedisTimeseriesLatestDao implements TimeseriesLatestDao {
+public class RedisTimeseriesLatestDao implements TimeseriesLatestDao, BatchedTimeseriesLatestWriteDao {
 
     private static final String REDIS_KEY_PREFIX = "ts:latest:";
     private static final String REDIS_TS_KEY_PREFIX = "ts:ts:";

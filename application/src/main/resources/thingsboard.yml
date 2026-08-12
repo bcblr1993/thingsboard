@@ -229,7 +229,7 @@ database:
   ts:
     type: "${DATABASE_TS_TYPE:cassandra}" # cassandra, sql, timescale, or iotdb (for hybrid mode, DATABASE_TS_TYPE value should be cassandra, or timescale)
   ts_latest:
-    # redis, redis-cluster, cassandra, sql, timescale, or iotdb.
+    # redis, redis-cluster, redis-cluster-fast, valkey-cluster-fast, cassandra, sql, timescale, or iotdb.
     # Production guard: latest=iotdb requires TB_EDQS_SYNC_ENABLED=false and
     # TB_EDQS_API_SUPPORTED=false because EDQS initial sync reads the SQL latest table.
     type: "${DATABASE_TS_LATEST_TYPE:redis}"

@@ -34,6 +34,8 @@ import org.thingsboard.server.common.data.kv.TsKvEntry;
 import org.thingsboard.server.common.msg.edqs.EdqsService;
 import org.thingsboard.server.dao.entityview.EntityViewService;
 import org.thingsboard.server.dao.sqlts.SqlTimeseriesLatestDao;
+import org.thingsboard.server.dao.timeseries.fast.RedisClusterFastTimeseriesLatestDao;
+import org.thingsboard.server.dao.timeseries.fast.ValkeyClusterFastTimeseriesLatestDao;
 
 import java.util.List;
 import java.util.UUID;
@@ -87,8 +89,8 @@ class BaseTimeseriesServiceEdqsTest {
                 .thenReturn(Futures.immediateFuture(1));
         when(timeseriesDao.save(any(), any(), any(), any(long.class)))
                 .thenReturn(Futures.immediateFuture(1));
-        when(redisLatestDao.saveLatest(eq(TENANT_ID), eq(DEVICE_ID), any(List.class)))
-                .thenReturn(Futures.immediateFuture(42L));
+        when(redisLatestDao.saveLatestBatch(eq(TENANT_ID), eq(DEVICE_ID), any(List.class)))
+                .thenReturn(Futures.immediateFuture(List.of(tsEntry1.getTs(), tsEntry2.getTs())));
 
         timeseriesService.save(TENANT_ID, DEVICE_ID, List.of(tsEntry1, tsEntry2), 0L);
 
@@ -110,11 +112,39 @@ class BaseTimeseriesServiceEdqsTest {
                 .thenReturn(Futures.immediateFuture(1));
         when(timeseriesDao.save(any(), any(), any(), any(long.class)))
                 .thenReturn(Futures.immediateFuture(1));
-        when(redisClusterLatestDao.saveLatest(eq(TENANT_ID), eq(DEVICE_ID), any(List.class)))
-                .thenReturn(Futures.immediateFuture(99L));
+        when(redisClusterLatestDao.saveLatestBatch(eq(TENANT_ID), eq(DEVICE_ID), any(List.class)))
+                .thenReturn(Futures.immediateFuture(List.of(tsEntry1.getTs(), tsEntry2.getTs())));
 
         timeseriesService.save(TENANT_ID, DEVICE_ID, List.of(tsEntry1, tsEntry2), 0L);
 
+        verify(edqsService, times(2)).onUpdate(
+                eq(TENANT_ID), eq(ObjectType.LATEST_TS_KV), any(LatestTsKv.class));
+    }
+
+    @Test
+    void saveLatest_withRedisClusterFastTimeseriesLatestDao_shouldUseBatchCapability() {
+        RedisClusterFastTimeseriesLatestDao fastLatestDao = mock(RedisClusterFastTimeseriesLatestDao.class);
+        ReflectionTestUtils.setField(timeseriesService, "timeseriesLatestDao", fastLatestDao);
+        when(fastLatestDao.saveLatestBatch(eq(TENANT_ID), eq(DEVICE_ID), any(List.class)))
+                .thenReturn(Futures.immediateFuture(List.of(tsEntry1.getTs(), tsEntry2.getTs())));
+
+        timeseriesService.saveLatest(TENANT_ID, DEVICE_ID, List.of(tsEntry1, tsEntry2));
+
+        verify(fastLatestDao).saveLatestBatch(eq(TENANT_ID), eq(DEVICE_ID), any(List.class));
+        verify(edqsService, times(2)).onUpdate(
+                eq(TENANT_ID), eq(ObjectType.LATEST_TS_KV), any(LatestTsKv.class));
+    }
+
+    @Test
+    void saveLatest_withValkeyClusterFastTimeseriesLatestDao_shouldUseBatchCapability() {
+        ValkeyClusterFastTimeseriesLatestDao fastLatestDao = mock(ValkeyClusterFastTimeseriesLatestDao.class);
+        ReflectionTestUtils.setField(timeseriesService, "timeseriesLatestDao", fastLatestDao);
+        when(fastLatestDao.saveLatestBatch(eq(TENANT_ID), eq(DEVICE_ID), any(List.class)))
+                .thenReturn(Futures.immediateFuture(List.of(tsEntry1.getTs(), tsEntry2.getTs())));
+
+        timeseriesService.saveLatest(TENANT_ID, DEVICE_ID, List.of(tsEntry1, tsEntry2));
+
+        verify(fastLatestDao).saveLatestBatch(eq(TENANT_ID), eq(DEVICE_ID), any(List.class));
         verify(edqsService, times(2)).onUpdate(
                 eq(TENANT_ID), eq(ObjectType.LATEST_TS_KV), any(LatestTsKv.class));
     }
@@ -143,8 +173,8 @@ class BaseTimeseriesServiceEdqsTest {
         RedisTimeseriesLatestDao redisLatestDao = mock(RedisTimeseriesLatestDao.class);
         ReflectionTestUtils.setField(timeseriesService, "timeseriesLatestDao", redisLatestDao);
 
-        when(redisLatestDao.saveLatest(eq(TENANT_ID), eq(DEVICE_ID), any(List.class)))
-                .thenReturn(Futures.immediateFuture(42L));
+        when(redisLatestDao.saveLatestBatch(eq(TENANT_ID), eq(DEVICE_ID), any(List.class)))
+                .thenReturn(Futures.immediateFuture(List.of(tsEntry1.getTs(), tsEntry2.getTs())));
 
         timeseriesService.saveLatest(TENANT_ID, DEVICE_ID, List.of(tsEntry1, tsEntry2));
 

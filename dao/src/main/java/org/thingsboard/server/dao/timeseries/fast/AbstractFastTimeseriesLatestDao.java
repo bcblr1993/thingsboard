@@ -43,6 +43,7 @@ import org.thingsboard.server.common.data.kv.TsKvLatestRemovingResult;
 import org.thingsboard.server.dao.cache.CacheExecutorService;
 import org.thingsboard.server.dao.sqlts.AggregationTimeseriesDao;
 import org.thingsboard.server.dao.timeseries.BatchedTimeseriesLatestDao;
+import org.thingsboard.server.dao.timeseries.BatchedTimeseriesLatestWriteDao;
 import org.thingsboard.server.dao.timeseries.TimeseriesLatestDao;
 
 import java.util.ArrayList;
@@ -85,7 +86,8 @@ import java.util.Optional;
  * 冗余的 ts 哈希（其残留不影响读取，可自然过期或手工清理）。
  */
 @Slf4j
-public abstract class AbstractFastTimeseriesLatestDao implements TimeseriesLatestDao, BatchedTimeseriesLatestDao {
+public abstract class AbstractFastTimeseriesLatestDao implements TimeseriesLatestDao, BatchedTimeseriesLatestDao,
+        BatchedTimeseriesLatestWriteDao {
 
     // ── 值编码（与现网实现保持一致，保证可读旧数据）──────────────────────────────
     private static final char FIELD_DELIMITER = '|';
@@ -171,7 +173,7 @@ public abstract class AbstractFastTimeseriesLatestDao implements TimeseriesLates
     @Override
     public ListenableFuture<Long> saveLatest(TenantId tenantId, EntityId entityId, List<TsKvEntry> tsKvEntries) {
         if (tsKvEntries == null || tsKvEntries.isEmpty()) {
-            return Futures.immediateFuture(null);
+            return Futures.immediateFuture(0L);
         }
         return cacheExecutorService.submit(() -> {
             List<String> argv = new ArrayList<>(tsKvEntries.size() * 2);
@@ -179,9 +181,9 @@ public abstract class AbstractFastTimeseriesLatestDao implements TimeseriesLates
                 argv.add(e.getKey());
                 argv.add(serialize(e));
             }
-            redisTemplate.execute(saveLatestBatchScript, Collections.singletonList(buildKey(entityId)),
+            Long saved = redisTemplate.execute(saveLatestBatchScript, Collections.singletonList(buildKey(entityId)),
                     argv.toArray());
-            return null;
+            return saved != null ? saved : 0L;
         });
     }
 

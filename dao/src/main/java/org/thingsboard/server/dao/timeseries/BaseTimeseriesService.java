@@ -205,15 +205,40 @@ public class BaseTimeseriesService implements TimeseriesService {
         // Skip it here (still performed for latest-only calls where saveTs=false).
         boolean skipRedundantIotdbLatest = saveTs && timeseriesLatestDao instanceof IotdbTimeseriesLatestDao
                 && "iotdb".equalsIgnoreCase(tsType);
+        boolean batchLatestSave = saveLatest && !skipRedundantIotdbLatest
+                && timeseriesLatestDao instanceof BatchedTimeseriesLatestWriteDao;
+        ListenableFuture<List<Long>> batchLatestFuture = null;
         if (batchTimeseriesSave) {
             tsFutures.add(((BatchedTimeseriesDao) timeseriesDao).saveBatch(tenantId, entityId, tsKvEntries, ttl));
+        }
+        if (batchLatestSave) {
+            batchLatestFuture = Futures.transform(
+                    ((BatchedTimeseriesLatestWriteDao) timeseriesLatestDao)
+                            .saveLatestBatch(tenantId, entityId, tsKvEntries),
+                    versions -> {
+                        if (versions == null || versions.size() != tsKvEntries.size()) {
+                            throw new IllegalStateException("Latest batch result size does not match telemetry entries");
+                        }
+                        for (int i = 0; i < tsKvEntries.size(); i++) {
+                            Long version = versions.get(i);
+                            if (version != null) {
+                                edqsService.onUpdate(tenantId, ObjectType.LATEST_TS_KV,
+                                        new LatestTsKv(entityId, tsKvEntries.get(i), version));
+                            }
+                        }
+                        return versions;
+                    }, MoreExecutors.directExecutor());
         }
         for (TsKvEntry tsKvEntry : tsKvEntries) {
             if (saveTs && !batchTimeseriesSave) {
                 tsFutures.add(timeseriesDao.savePartition(tenantId, entityId, tsKvEntry.getTs(), tsKvEntry.getKey()));
                 tsFutures.add(timeseriesDao.save(tenantId, entityId, tsKvEntry, ttl));
             }
-            if (saveLatest && !skipRedundantIotdbLatest && (timeseriesLatestDao instanceof  CassandraBaseTimeseriesLatestDao || timeseriesLatestDao instanceof SqlTimeseriesLatestDao || timeseriesLatestDao instanceof CachedRedisSqlTimeseriesLatestDao || timeseriesLatestDao instanceof IotdbTimeseriesLatestDao)) {
+            if (saveLatest && !skipRedundantIotdbLatest && !batchLatestSave
+                    && (timeseriesLatestDao instanceof CassandraBaseTimeseriesLatestDao
+                    || timeseriesLatestDao instanceof SqlTimeseriesLatestDao
+                    || timeseriesLatestDao instanceof CachedRedisSqlTimeseriesLatestDao
+                    || timeseriesLatestDao instanceof IotdbTimeseriesLatestDao)) {
                 latestFutures.add(Futures.transform(timeseriesLatestDao.saveLatest(tenantId, entityId, tsKvEntry), version -> {
                     if (version != null) {
                         edqsService.onUpdate(tenantId, ObjectType.LATEST_TS_KV, new LatestTsKv(entityId, tsKvEntry, version));
@@ -222,16 +247,10 @@ public class BaseTimeseriesService implements TimeseriesService {
                 }, MoreExecutors.directExecutor()));
             }
         }
-        if(saveLatest &&  (timeseriesLatestDao instanceof RedisTimeseriesLatestDao || timeseriesLatestDao instanceof RedisClusterTimeseriesLatestDao)){
-            latestFutures.add(Futures.transform(timeseriesLatestDao.saveLatest(tenantId, entityId, tsKvEntries), version -> {
-                for (TsKvEntry entry : tsKvEntries) {
-                    edqsService.onUpdate(tenantId, ObjectType.LATEST_TS_KV, new LatestTsKv(entityId, entry, version));
-                }
-                return version;
-            }, MoreExecutors.directExecutor()));
-        }
         ListenableFuture<Integer> dpsFuture = saveTs ? Futures.transform(Futures.allAsList(tsFutures), SUM_ALL_INTEGERS, MoreExecutors.directExecutor()) : Futures.immediateFuture(0);
-        ListenableFuture<List<Long>> versionsFuture = saveLatest ? Futures.allAsList(latestFutures) : Futures.immediateFuture(null);
+        ListenableFuture<List<Long>> versionsFuture = !saveLatest
+                ? Futures.immediateFuture(null)
+                : batchLatestSave ? batchLatestFuture : Futures.allAsList(latestFutures);
         return Futures.whenAllComplete(dpsFuture, versionsFuture).call(() -> {
             Integer dataPoints = Futures.getUnchecked(dpsFuture);
             List<Long> versions = Futures.getUnchecked(versionsFuture);

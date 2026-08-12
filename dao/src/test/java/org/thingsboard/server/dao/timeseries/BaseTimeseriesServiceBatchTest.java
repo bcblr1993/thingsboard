@@ -18,25 +18,44 @@ package org.thingsboard.server.dao.timeseries;
 import com.google.common.util.concurrent.Futures;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.thingsboard.server.common.data.ObjectType;
+import org.thingsboard.server.common.data.edqs.LatestTsKv;
 import org.thingsboard.server.common.data.id.DeviceId;
 import org.thingsboard.server.common.data.id.TenantId;
 import org.thingsboard.server.common.data.kv.BasicTsKvEntry;
 import org.thingsboard.server.common.data.kv.DoubleDataEntry;
 import org.thingsboard.server.common.data.kv.LongDataEntry;
 import org.thingsboard.server.common.data.kv.TsKvEntry;
+import org.thingsboard.server.common.msg.edqs.EdqsService;
 
 import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
 
 class BaseTimeseriesServiceBatchTest {
+
+    @Test
+    void batchWriteCapabilityReturnsOneVersionPerEntry() throws Exception {
+        TenantId tenantId = TenantId.fromUUID(UUID.randomUUID());
+        DeviceId deviceId = new DeviceId(UUID.randomUUID());
+        List<TsKvEntry> entries = List.of(
+                new BasicTsKvEntry(100L, new DoubleDataEntry("temperature", 25.5)),
+                new BasicTsKvEntry(200L, new LongDataEntry("pressure", 1000L)));
+        BatchedTimeseriesLatestWriteDao batchDao = (ignoredTenantId, ignoredEntityId, ignoredEntries) ->
+                Futures.immediateFuture((long) ignoredEntries.size());
+
+        assertThat(batchDao.saveLatestBatch(tenantId, deviceId, entries).get())
+                .containsExactly(100L, 200L);
+    }
 
     @Test
     void saveWithoutLatestUsesOneBackendBatchInsteadOfPerEntryFutures() throws Exception {
@@ -79,6 +98,32 @@ class BaseTimeseriesServiceBatchTest {
         assertThat(service.findLatest(tenantId, deviceId, keys).get()).isEqualTo(entries);
         verify(batchLatestDao).findLatest(tenantId, deviceId, keys);
         verify(latestDao, never()).findLatest(any(), any(), any(String.class));
+    }
+
+    @Test
+    void saveLatestUsesBackendBatchWriteCapability() throws Exception {
+        TenantId tenantId = TenantId.fromUUID(UUID.randomUUID());
+        DeviceId deviceId = new DeviceId(UUID.randomUUID());
+        List<TsKvEntry> entries = List.of(
+                new BasicTsKvEntry(100L, new DoubleDataEntry("temperature", 25.5)),
+                new BasicTsKvEntry(200L, new LongDataEntry("pressure", 1000L)));
+        List<Long> versions = List.of(100L, 200L);
+        TimeseriesLatestDao latestDao = mock(TimeseriesLatestDao.class,
+                withSettings().extraInterfaces(BatchedTimeseriesLatestWriteDao.class));
+        BatchedTimeseriesLatestWriteDao batchLatestDao = (BatchedTimeseriesLatestWriteDao) latestDao;
+        EdqsService edqsService = mock(EdqsService.class);
+        when(batchLatestDao.saveLatestBatch(tenantId, deviceId, entries))
+                .thenReturn(Futures.immediateFuture(versions));
+        BaseTimeseriesService service = new BaseTimeseriesService();
+        ReflectionTestUtils.setField(service, "timeseriesLatestDao", latestDao);
+        ReflectionTestUtils.setField(service, "edqsService", edqsService);
+
+        assertThat(service.saveLatest(tenantId, deviceId, entries).get().getVersions())
+                .containsExactlyElementsOf(versions);
+        verify(batchLatestDao).saveLatestBatch(tenantId, deviceId, entries);
+        verify(latestDao, never()).saveLatest(any(), any(), any(TsKvEntry.class));
+        verify(edqsService, times(entries.size())).onUpdate(
+                eq(tenantId), eq(ObjectType.LATEST_TS_KV), any(LatestTsKv.class));
     }
 
 }
