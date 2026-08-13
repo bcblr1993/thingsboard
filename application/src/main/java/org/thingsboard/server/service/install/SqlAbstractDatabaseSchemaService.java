@@ -18,12 +18,9 @@ package org.thingsboard.server.service.install;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.support.EncodedResource;
-import org.springframework.jdbc.datasource.init.ScriptUtils;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -80,11 +77,9 @@ public abstract class SqlAbstractDatabaseSchemaService implements DatabaseSchema
 
     void executeQueryFromFile(String schemaIdxSql) throws SQLException, IOException {
         Path schemaIdxFile = installScripts.resolveDataFile(SQL_DIR, schemaIdxSql);
+        String sql = Files.readString(schemaIdxFile);
         try (Connection conn = DriverManager.getConnection(dbUrl, dbUserName, dbPassword)) {
-            ScriptUtils.executeSqlScript(conn,
-                    new EncodedResource(new FileSystemResource(schemaIdxFile), StandardCharsets.UTF_8),
-                    false, false, ScriptUtils.DEFAULT_COMMENT_PREFIXES, ScriptUtils.EOF_STATEMENT_SEPARATOR,
-                    ScriptUtils.DEFAULT_BLOCK_COMMENT_START_DELIMITER, ScriptUtils.DEFAULT_BLOCK_COMMENT_END_DELIMITER);
+            conn.createStatement().execute(sql); //NOSONAR, ignoring because method used to load initial thingsboard database schema
         }
     }
 
