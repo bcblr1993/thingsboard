@@ -68,6 +68,17 @@ import static org.thingsboard.server.dao.edge.BaseRelatedEdgesService.RELATED_ED
 public class TbMsgPushToEdgeNode extends AbstractTbMsgPushNode<TbMsgPushToEdgeNodeConfiguration, EdgeEvent, EdgeEventType> {
 
     @Override
+    protected EdgeEvent buildEvent(TbMsg msg, TbContext ctx) {
+        EdgeEvent edgeEvent = super.buildEvent(msg, ctx);
+        String requestId = msg.getMetaData().getValue(DataConstants.REQUEST_ID);
+        if (EdgeEventActionType.ATTRIBUTES_UPDATED.equals(edgeEvent.getAction())
+                && requestId != null && !requestId.isBlank()) {
+            edgeEvent.setUid(DataConstants.ATTRIBUTE_UPDATE_RESULT_UID_PREFIX + requestId);
+        }
+        return edgeEvent;
+    }
+
+    @Override
     EdgeEvent buildEvent(TenantId tenantId, EdgeEventActionType eventAction, UUID entityId,
                          EdgeEventType eventType, JsonNode entityBody) {
         EdgeEvent edgeEvent = new EdgeEvent();

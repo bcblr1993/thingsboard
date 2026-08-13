@@ -76,6 +76,8 @@ public class DataConstants {
     public static final String ENTITY_ASSIGNED = "ENTITY_ASSIGNED";
     public static final String ENTITY_UNASSIGNED = "ENTITY_UNASSIGNED";
     public static final String ATTRIBUTES_UPDATED = "ATTRIBUTES_UPDATED";
+    public static final String REQUEST_ID = "requestId";
+    public static final String ATTRIBUTE_UPDATE_RESULT_UID_PREFIX = "attributeUpdateResult:";
     public static final String ATTRIBUTES_DELETED = "ATTRIBUTES_DELETED";
     public static final String TIMESERIES_UPDATED = "TIMESERIES_UPDATED";
     public static final String TIMESERIES_DELETED = "TIMESERIES_DELETED";

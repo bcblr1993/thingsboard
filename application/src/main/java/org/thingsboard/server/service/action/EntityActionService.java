@@ -131,6 +131,10 @@ public class EntityActionService {
                         AttributeScope scope = extractParameter(AttributeScope.class, 0, additionalInfo);
                         @SuppressWarnings("unchecked")
                         List<AttributeKvEntry> attributes = extractParameter(List.class, 1, additionalInfo);
+                        String requestId = extractParameter(String.class, 2, additionalInfo);
+                        if (requestId != null) {
+                            metaData.putValue(DataConstants.REQUEST_ID, requestId);
+                        }
                         metaData.putValue(DataConstants.SCOPE, scope.name());
                         if (attributes != null) {
                             for (AttributeKvEntry attr : attributes) {

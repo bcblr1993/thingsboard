@@ -54,6 +54,7 @@ import org.thingsboard.rule.engine.api.TimeseriesDeleteRequest;
 import org.thingsboard.rule.engine.api.TimeseriesSaveRequest;
 import org.thingsboard.server.common.adaptor.JsonConverter;
 import org.thingsboard.server.common.data.AttributeScope;
+import org.thingsboard.server.common.data.DataConstants;
 import org.thingsboard.server.common.data.EntityType;
 import org.thingsboard.server.common.data.StringUtils;
 import org.thingsboard.server.common.data.TenantProfile;
@@ -89,6 +90,8 @@ import org.thingsboard.server.exception.ThingsboardErrorResponse;
 import org.thingsboard.server.exception.ToErrorResponseEntity;
 import org.thingsboard.server.exception.UncheckedApiException;
 import org.thingsboard.server.queue.util.TbCoreComponent;
+import org.thingsboard.server.service.edge.attributes.AttributeUpdateRequest;
+import org.thingsboard.server.service.edge.attributes.AttributeUpdateResultTrackingService;
 import org.thingsboard.server.service.security.AccessValidator;
 import org.thingsboard.server.service.security.model.SecurityUser;
 import org.thingsboard.server.service.security.permission.Operation;
@@ -157,6 +160,9 @@ public class TelemetryController extends BaseController {
 
     @Autowired
     private AccessValidator accessValidator;
+
+    @Autowired
+    private AttributeUpdateResultTrackingService attributeUpdateResultTrackingService;
 
     @Autowired
     private TbTelemetryService tbTelemetryService;
@@ -497,7 +503,10 @@ public class TelemetryController extends BaseController {
     @ApiOperation(value = "Save entity attributes (saveEntityAttributesV2)",
             notes = "Creates or updates the entity attributes based on Entity Id and the specified attribute scope. " +
                     ENTITY_SAVE_ATTRIBUTE_SCOPES +
-                    SAVE_ATTRIBUTES_REQUEST_PAYLOAD
+                    SAVE_ATTRIBUTES_REQUEST_PAYLOAD +
+                    "\n\nThe optional 'requestId' control field must be a canonical UUID string, for example " +
+                    "'93990080-a8be-47b5-bae7-52ce1f389847'. It is not stored as an entity attribute; " +
+                    "when the entity is assigned to an Edge it is propagated for final ACK result tracking."
                     + INVALID_ENTITY_ID_OR_ENTITY_TYPE_DESCRIPTION + TENANT_OR_CUSTOMER_AUTHORITY_PARAGRAPH)
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = SAVE_ATTIRIBUTES_STATUS_OK + SAVE_ENTITY_ATTRIBUTES_STATUS_OK),
@@ -737,7 +746,14 @@ public class TelemetryController extends BaseController {
             return getImmediateDeferredResult("Invalid scope: " + scope, HttpStatus.BAD_REQUEST);
         }
         if (json.isObject()) {
+            AttributeUpdateRequest attributeUpdateRequest;
+            try {
+                attributeUpdateRequest = extractAttributeUpdateRequest(json);
+            } catch (IllegalArgumentException e) {
+                return getImmediateDeferredResult(e.getMessage(), HttpStatus.BAD_REQUEST);
+            }
             List<AttributeKvEntry> attributes = extractRequestAttributes(json);
+            attributes.removeIf(attribute -> DataConstants.REQUEST_ID.equals(attribute.getKey()));
             if (attributes.isEmpty()) {
                 return getImmediateDeferredResult("No attributes data found in request body!", HttpStatus.BAD_REQUEST);
             }
@@ -748,6 +764,9 @@ public class TelemetryController extends BaseController {
             }
             SecurityUser user = getCurrentUser();
             return accessValidator.validateEntityAndCallback(getCurrentUser(), Operation.WRITE_ATTRIBUTES, entityIdSrc, (result, tenantId, entityId) -> {
+                if (attributeUpdateRequest != null) {
+                    attributeUpdateResultTrackingService.clearPreviousResult(tenantId, attributeUpdateRequest);
+                }
                 tsSubService.saveAttributes(AttributesSaveRequest.builder()
                         .tenantId(tenantId)
                         .entityId(entityId)
@@ -756,13 +775,20 @@ public class TelemetryController extends BaseController {
                         .callback(new FutureCallback<>() {
                             @Override
                             public void onSuccess(@Nullable Void tmp) {
-                                logAttributesUpdated(user, entityId, scope, attributes, null);
+                                String requestId = null;
+                                if (attributeUpdateRequest != null && attributeUpdateResultTrackingService.shouldTrackEdgeResult(tenantId, entityId, attributeUpdateRequest)) {
+                                    requestId = attributeUpdateRequest.encode();
+                                }
+                                logAttributesUpdated(user, entityId, scope, attributes, requestId, null);
                                 result.setResult(new ResponseEntity(HttpStatus.OK));
                             }
 
                             @Override
                             public void onFailure(Throwable t) {
-                                logAttributesUpdated(user, entityId, scope, attributes, t);
+                                if (attributeUpdateRequest != null) {
+                                    attributeUpdateResultTrackingService.saveResult(tenantId, attributeUpdateRequest, false);
+                                }
+                                logAttributesUpdated(user, entityId, scope, attributes, attributeUpdateRequest == null ? null : attributeUpdateRequest.encode(), t);
                                 AccessValidator.handleError(t, result, HttpStatus.INTERNAL_SERVER_ERROR);
                             }
                         })
@@ -1002,9 +1028,21 @@ public class TelemetryController extends BaseController {
                 ActionType.ATTRIBUTES_DELETED, user, toException(e), scope, keys);
     }
 
-    private void logAttributesUpdated(SecurityUser user, EntityId entityId, AttributeScope scope, List<AttributeKvEntry> attributes, Throwable e) {
+    private void logAttributesUpdated(SecurityUser user, EntityId entityId, AttributeScope scope,
+                                      List<AttributeKvEntry> attributes, String requestId, Throwable e) {
         logEntityActionService.logEntityAction(user.getTenantId(), entityId, ActionType.ATTRIBUTES_UPDATED, user,
-                toException(e), scope, attributes);
+                toException(e), scope, attributes, requestId);
+    }
+
+    private AttributeUpdateRequest extractAttributeUpdateRequest(JsonNode json) {
+        JsonNode requestIdNode = json.get(DataConstants.REQUEST_ID);
+        if (requestIdNode == null) {
+            return null;
+        }
+        if (!requestIdNode.isTextual()) {
+            throw new IllegalArgumentException("requestId must be a canonical UUID string");
+        }
+        return AttributeUpdateRequest.parse(requestIdNode.textValue());
     }
 
 
