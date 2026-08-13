@@ -228,6 +228,71 @@ public class TelemetryControllerTest extends AbstractControllerTest {
     }
 
     @Test
+    public void testTimeseriesFirstOfIntervalSupportsCrossDayRange() throws Exception {
+        loginTenantAdmin();
+        Device device = createDevice();
+        long startTs = 1_700_000_000_000L;
+        long interval = TimeUnit.HOURS.toMillis(12);
+        long endTs = startTs + TimeUnit.HOURS.toMillis(26);
+
+        tsService.save(tenantId, device.getId(),
+                new BasicTsKvEntry(startTs + TimeUnit.HOURS.toMillis(1), new LongDataEntry("temperature", 10L))).get();
+        tsService.save(tenantId, device.getId(),
+                new BasicTsKvEntry(startTs + TimeUnit.HOURS.toMillis(25), new LongDataEntry("temperature", 20L))).get();
+
+        ObjectNode result = doGetAsync("/api/plugins/telemetry/DEVICE/" + device.getId() +
+                        "/values/timeseries/firstOfInterval?keys=temperature&startTs={startTs}&endTs={endTs}" +
+                        "&interval={interval}&useStrictDataTypes=true",
+                ObjectNode.class, startTs, endTs, interval);
+
+        Assert.assertEquals(2, result.get("temperature").size());
+        Assert.assertEquals(startTs, result.get("temperature").get(0).get("ts").asLong());
+        Assert.assertEquals(startTs + TimeUnit.HOURS.toMillis(1),
+                result.get("temperature").get(0).get("originalTs").asLong());
+        Assert.assertEquals(startTs + TimeUnit.HOURS.toMillis(24),
+                result.get("temperature").get(1).get("ts").asLong());
+        Assert.assertEquals(startTs + TimeUnit.HOURS.toMillis(25),
+                result.get("temperature").get(1).get("originalTs").asLong());
+    }
+
+    @Test
+    public void testTimeseriesFirstOfIntervalPostUsesJsonBody() throws Exception {
+        loginTenantAdmin();
+        Device device = createDevice();
+        long startTs = 1_700_100_000_000L;
+        long interval = TimeUnit.MINUTES.toMillis(10);
+        long endTs = startTs + interval;
+
+        tsService.save(tenantId, device.getId(),
+                new BasicTsKvEntry(startTs + 1, new LongDataEntry("temperature", 21L))).get();
+        tsService.save(tenantId, device.getId(),
+                new BasicTsKvEntry(startTs + 2, new LongDataEntry("pressure", 101L))).get();
+
+        var request = new TelemetryController.TimeseriesFirstOfIntervalRequest(
+                List.of("temperature", "pressure"), startTs, endTs, interval, true);
+        ObjectNode result = doPostAsync("/api/plugins/telemetry/DEVICE/" + device.getId() +
+                        "/values/timeseries/firstOfInterval",
+                request, ObjectNode.class, status().isOk());
+
+        Assert.assertEquals(21L, result.get("temperature").get(0).get("value").asLong());
+        Assert.assertEquals(101L, result.get("pressure").get(0).get("value").asLong());
+    }
+
+    @Test
+    public void testTimeseriesFirstOfIntervalPostReturnsChineseValidationError() throws Exception {
+        loginTenantAdmin();
+        Device device = createDevice();
+        long startTs = 1_700_100_000_000L;
+        var request = new TelemetryController.TimeseriesFirstOfIntervalRequest(
+                List.of("temperature"), startTs, startTs, TimeUnit.MINUTES.toMillis(1), false);
+
+        doPost("/api/plugins/telemetry/DEVICE/" + device.getId() +
+                        "/values/timeseries/firstOfInterval", request)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("startTs必须大于等于0，且endTs必须大于startTs"));
+    }
+
+    @Test
     public void testDeleteAllTelemetryWithLatest() throws Exception {
         loginTenantAdmin();
         Device device = createDevice();
