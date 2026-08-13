@@ -36,7 +36,7 @@
           <ng-template matTabContent>
             <div class="tb-form-panel no-padding no-border">
               <div class="tb-form-panel no-padding stroked">
-                <tb-markdown [data]='contentData.ubuntu'></tb-markdown>
+                <tb-markdown [data]='contentData.ubuntu' sanitizeHtml></tb-markdown>
               </div>
             </div>
           </ng-template>
@@ -49,7 +49,7 @@
           <ng-template matTabContent>
             <div class="tb-form-panel no-padding no-border">
               <div class="tb-form-panel no-padding stroked">
-                <tb-markdown [data]='contentData.centos'></tb-markdown>
+                <tb-markdown [data]='contentData.centos' sanitizeHtml></tb-markdown>
               </div>
             </div>
           </ng-template>
@@ -62,7 +62,7 @@
           <ng-template matTabContent>
             <div class="tb-form-panel no-padding no-border">
               <div class="tb-form-panel no-padding stroked">
-                <tb-markdown [data]='contentData.docker'></tb-markdown>
+                <tb-markdown [data]='contentData.docker' sanitizeHtml></tb-markdown>
               </div>
             </div>
           </ng-template>

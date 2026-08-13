@@ -26,11 +26,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
 import org.thingsboard.server.common.data.StringUtils;
+import org.thingsboard.server.common.data.util.SecurePathUtils;
 import org.thingsboard.server.dao.cassandra.guava.GuavaSession;
 import org.thingsboard.server.dao.cassandra.guava.GuavaSessionBuilder;
 import org.thingsboard.server.dao.cassandra.guava.GuavaSessionUtils;
 
-import java.nio.file.Paths;
+import java.io.IOException;
 
 @Slf4j
 public abstract class AbstractCassandraCluster {
@@ -97,7 +98,12 @@ public abstract class AbstractCassandraCluster {
         this.sessionBuilder.withLocalDatacenter(localDatacenter);
 
         if (StringUtils.isNotBlank(cloudSecureConnectBundlePath)) {
-            this.sessionBuilder.withCloudSecureConnectBundle(Paths.get(cloudSecureConnectBundlePath));
+            try {
+                this.sessionBuilder.withCloudSecureConnectBundle(SecurePathUtils.requireReadableRegularFile(
+                        cloudSecureConnectBundlePath, "Cassandra secure connect bundle"));
+            } catch (IOException e) {
+                throw new IllegalArgumentException("Invalid Cassandra secure connect bundle path", e);
+            }
             this.sessionBuilder.withAuthCredentials(cloudClientId, cloudClientSecret);
         }
 

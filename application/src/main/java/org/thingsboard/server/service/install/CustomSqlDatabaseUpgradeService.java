@@ -23,12 +23,12 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.jdbc.core.StatementCallback;
+import org.thingsboard.server.common.data.util.SecurePathUtils;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.sql.SQLWarning;
 import java.util.Comparator;
 import java.util.List;
@@ -81,7 +81,7 @@ public class CustomSqlDatabaseUpgradeService {
         long targetVersionDate = extractDateFromVersion(targetVersion);
 
         // 构建自定义脚本目录路径：data/upgrade/custom/
-        Path customUpgradeDir = Paths.get(installScripts.getDataDir(), "upgrade", CUSTOM_UPGRADE_DIR);
+        Path customUpgradeDir = installScripts.resolveDataPath("upgrade", CUSTOM_UPGRADE_DIR);
         if (!Files.exists(customUpgradeDir)) {
             log.info("No custom upgrade directory found at {}. Skipping custom scripts.", customUpgradeDir);
             return;
@@ -90,6 +90,7 @@ public class CustomSqlDatabaseUpgradeService {
         try (Stream<Path> files = Files.list(customUpgradeDir)) {
             // 筛选出符合命名规范的脚本文件，并按文件名中的日期排序
             List<Path> upgradeScripts = files
+                    .map(path -> SecurePathUtils.resolveUnderRoot(customUpgradeDir, path.getFileName().toString()))
                     .filter(path -> path.getFileName().toString().startsWith(UPGRADE_FILE_PREFIX)
                             && path.getFileName().toString().endsWith(UPGRADE_FILE_SUFFIX))
                     .sorted(Comparator.comparing(this::extractDateFromFileName))
@@ -175,7 +176,7 @@ public class CustomSqlDatabaseUpgradeService {
     private void loadSql(Path sqlFile) {
         String sql;
         try {
-            sql = Files.readString(sqlFile);
+            sql = Files.readString(SecurePathUtils.requireReadableRegularFile(sqlFile, "custom database upgrade script"));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

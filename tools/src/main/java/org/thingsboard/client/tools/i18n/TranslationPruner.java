@@ -21,13 +21,16 @@ import com.fasterxml.jackson.core.util.Separators.Spacing;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.thingsboard.server.common.data.util.SecurePathUtils;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
 
 
 public class TranslationPruner {
@@ -76,25 +79,31 @@ public class TranslationPruner {
             System.exit(1);
         }
         try {
-            File sourceFolder = new File(args[0]);
-            File destFolder = new File(args[1]);
+            Path sourceFolder = SecurePathUtils.requireDirectory(args[0], "Source translation directory");
+            Path destFolder = SecurePathUtils.requireDirectory(args[1], "Destination translation directory");
 
-            File referenceFile = new File(destFolder, "locale.constant-en_US.json");
+            Path referenceFile = SecurePathUtils.requireReadableRegularFile(
+                    SecurePathUtils.resolveUnderRoot(destFolder, "locale.constant-en_US.json"),
+                    "Reference translation file");
             ObjectMapper mapper = new ObjectMapper();
-            JsonNode usRoot = mapper.readTree(referenceFile);
+            JsonNode usRoot = mapper.readTree(referenceFile.toFile());
             Set<String> validKeys = new HashSet<>();
             collectKeys(usRoot, "", validKeys);
-            for (File sourceFile : sourceFolder.listFiles()) {
-                File destFile = new File(destFolder, sourceFile.getName());
-                JsonNode sourceRoot = mapper.readTree(sourceFile);
-                if (!sourceRoot.isObject()) {
-                    throw new IllegalArgumentException("Source JSON must be an object at root");
+            try (Stream<Path> sourceFiles = Files.list(sourceFolder)) {
+                for (Path sourceFile : sourceFiles.filter(Files::isRegularFile).toList()) {
+                    sourceFile = SecurePathUtils.resolveUnderRoot(sourceFolder, sourceFile.getFileName().toString());
+                    sourceFile = SecurePathUtils.requireReadableRegularFile(sourceFile, "Source translation file");
+                    Path destFile = SecurePathUtils.resolveUnderRoot(destFolder, sourceFile.getFileName().toString());
+                    JsonNode sourceRoot = mapper.readTree(sourceFile.toFile());
+                    if (!sourceRoot.isObject()) {
+                        throw new IllegalArgumentException("Source JSON must be an object at root");
+                    }
+                    ObjectNode pruned = pruneNode((ObjectNode) sourceRoot, validKeys, "", mapper);
+                    Separators seps = Separators.createDefaultInstance()
+                            .withObjectFieldValueSpacing(Spacing.AFTER);
+                    mapper.writer(new DefaultPrettyPrinter().withSeparators(seps)).writeValue(destFile.toFile(), pruned);
+                    System.out.println("Pruned translation written to " + destFile);
                 }
-                ObjectNode pruned = pruneNode((ObjectNode) sourceRoot, validKeys, "", mapper);
-                Separators seps = Separators.createDefaultInstance()
-                        .withObjectFieldValueSpacing(Spacing.AFTER);
-                mapper.writer(new DefaultPrettyPrinter().withSeparators(seps)).writeValue(destFile, pruned);
-                System.out.println("Pruned translation written to " + destFile.getPath());
             }
         } catch (IOException e) {
             e.printStackTrace();

@@ -30,8 +30,12 @@ import org.thingsboard.server.queue.util.TbCoreComponent;
 import org.thingsboard.server.service.install.InstallScripts;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 
 @Service
 @Slf4j
@@ -39,7 +43,11 @@ import java.util.Optional;
 @TbCoreComponent
 public class DefaultEdgeUpgradeInstructionsService extends BaseEdgeInstallUpgradeInstructionsService implements EdgeUpgradeInstructionsService {
 
-    private static final Map<String, EdgeUpgradeInfo> upgradeVersionHashMap = new HashMap<>();
+    private static final int MAX_UPGRADE_VERSIONS = 1000;
+    private static final Pattern EDGE_ATTRIBUTE_VERSION_PATTERN = Pattern.compile("^V_\\d+(?:_\\d+){1,3}$");
+    private static final Pattern EDGE_VERSION_PATTERN = Pattern.compile("^\\d+(?:\\.\\d+){1,3}$");
+
+    private final Map<String, EdgeUpgradeInfo> upgradeVersionHashMap = new ConcurrentHashMap<>();
 
     private static final String UPGRADE_DIR = "upgrade";
 
@@ -64,9 +72,23 @@ public class DefaultEdgeUpgradeInstructionsService extends BaseEdgeInstallUpgrad
 
     @Override
     public void updateInstructionMap(Map<String, EdgeUpgradeInfo> map) {
-        for (String key : map.keySet()) {
-            upgradeVersionHashMap.put(key, map.get(key));
+        if (map == null || map.size() > MAX_UPGRADE_VERSIONS) {
+            throw new IllegalArgumentException("Invalid Edge upgrade version mapping");
         }
+        Map<String, EdgeUpgradeInfo> validatedMap = new HashMap<>();
+        for (Map.Entry<String, EdgeUpgradeInfo> entry : map.entrySet()) {
+            validateDocsVersion(entry.getKey());
+            EdgeUpgradeInfo info = entry.getValue();
+            if (info == null) {
+                throw new IllegalArgumentException("Edge upgrade information must not be null");
+            }
+            if (info.getNextEdgeVersion() != null) {
+                validateDocsVersion(info.getNextEdgeVersion());
+            }
+            validatedMap.put(entry.getKey(), info);
+        }
+        upgradeVersionHashMap.clear();
+        upgradeVersionHashMap.putAll(validatedMap);
     }
 
     @Override
@@ -104,7 +126,9 @@ public class DefaultEdgeUpgradeInstructionsService extends BaseEdgeInstallUpgrad
             return new EdgeInstructions("Edge upgrade instruction for " + currentEdgeVersion + "EDGE is not available.");
         }
         StringBuilder result = new StringBuilder(readFile(resolveFile("docker", "upgrade_preparing.md")));
+        Set<String> visitedVersions = new HashSet<>();
         while (edgeUpgradeInfo.getNextEdgeVersion() != null && !tbVersion.equals(currentEdgeVersion)) {
+            ensureNoUpgradeCycle(visitedVersions, currentEdgeVersion);
             String edgeVersion = edgeUpgradeInfo.getNextEdgeVersion();
             String dockerUpgradeInstructions = readFile(resolveFile("docker", "instructions.md"));
             if (edgeUpgradeInfo.isRequiresUpdateDb()) {
@@ -116,8 +140,14 @@ public class DefaultEdgeUpgradeInstructionsService extends BaseEdgeInstallUpgrad
             dockerUpgradeInstructions = dockerUpgradeInstructions.replace("${TB_EDGE_VERSION}", edgeVersion + "EDGE");
             dockerUpgradeInstructions = dockerUpgradeInstructions.replace("${FROM_TB_EDGE_VERSION}", currentEdgeVersion + "EDGE");
             currentEdgeVersion = edgeVersion;
-            edgeUpgradeInfo = upgradeVersionHashMap.get(edgeUpgradeInfo.getNextEdgeVersion());
             result.append(dockerUpgradeInstructions);
+            if (tbVersion.equals(currentEdgeVersion)) {
+                break;
+            }
+            edgeUpgradeInfo = upgradeVersionHashMap.get(currentEdgeVersion);
+            if (edgeUpgradeInfo == null) {
+                throw new IllegalStateException("Incomplete Edge upgrade version mapping");
+            }
         }
         String startService = readFile(resolveFile("docker", "start_service.md"));
         startService = startService.replace("${TB_EDGE_VERSION}", currentEdgeVersion + "EDGE");
@@ -133,7 +163,9 @@ public class DefaultEdgeUpgradeInstructionsService extends BaseEdgeInstallUpgrad
         String upgrade_preparing = readFile(resolveFile("upgrade_preparing.md"));
         upgrade_preparing = upgrade_preparing.replace("${OS}", os.equals("centos") ? "RHEL/CentOS 7/8" : "Ubuntu");
         StringBuilder result = new StringBuilder(upgrade_preparing);
+        Set<String> visitedVersions = new HashSet<>();
         while (edgeUpgradeInfo.getNextEdgeVersion() != null && !tbVersion.equals(currentEdgeVersion)) {
+            ensureNoUpgradeCycle(visitedVersions, currentEdgeVersion);
             String edgeVersion = edgeUpgradeInfo.getNextEdgeVersion();
             String linuxUpgradeInstructions = readFile(resolveFile(os, "instructions.md"));
             if (edgeUpgradeInfo.isRequiresUpdateDb()) {
@@ -147,8 +179,14 @@ public class DefaultEdgeUpgradeInstructionsService extends BaseEdgeInstallUpgrad
             linuxUpgradeInstructions = linuxUpgradeInstructions.replace("${TB_EDGE_VERSION}", edgeVersion);
             linuxUpgradeInstructions = linuxUpgradeInstructions.replace("${FROM_TB_EDGE_VERSION}", currentEdgeVersion);
             currentEdgeVersion = edgeVersion;
-            edgeUpgradeInfo = upgradeVersionHashMap.get(edgeUpgradeInfo.getNextEdgeVersion());
             result.append(linuxUpgradeInstructions);
+            if (tbVersion.equals(currentEdgeVersion)) {
+                break;
+            }
+            edgeUpgradeInfo = upgradeVersionHashMap.get(currentEdgeVersion);
+            if (edgeUpgradeInfo == null) {
+                throw new IllegalStateException("Incomplete Edge upgrade version mapping");
+            }
         }
         String startService = readFile(resolveFile("start_service.md"));
         result.append(startService);
@@ -156,7 +194,22 @@ public class DefaultEdgeUpgradeInstructionsService extends BaseEdgeInstallUpgrad
     }
 
     private String convertEdgeVersionToDocsFormat(String edgeVersion) {
-        return edgeVersion.replace("_", ".").substring(2);
+        if (edgeVersion == null || !EDGE_ATTRIBUTE_VERSION_PATTERN.matcher(edgeVersion).matches()) {
+            throw new IllegalArgumentException("Invalid Edge version");
+        }
+        return edgeVersion.substring(2).replace("_", ".");
+    }
+
+    private void validateDocsVersion(String version) {
+        if (version == null || !EDGE_VERSION_PATTERN.matcher(version).matches()) {
+            throw new IllegalArgumentException("Invalid Edge upgrade version mapping");
+        }
+    }
+
+    private void ensureNoUpgradeCycle(Set<String> visitedVersions, String currentEdgeVersion) {
+        if (!visitedVersions.add(currentEdgeVersion) || visitedVersions.size() > MAX_UPGRADE_VERSIONS) {
+            throw new IllegalStateException("Cyclic Edge upgrade version mapping");
+        }
     }
 
     @Override

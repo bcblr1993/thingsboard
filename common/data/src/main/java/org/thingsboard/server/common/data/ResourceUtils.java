@@ -17,12 +17,13 @@ package org.thingsboard.server.common.data;
 
 import com.google.common.io.Resources;
 import lombok.extern.slf4j.Slf4j;
+import org.thingsboard.server.common.data.util.SecurePathUtils;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 @Slf4j
 public class ResourceUtils {
@@ -38,12 +39,18 @@ public class ResourceUtils {
         String path = filePath;
         if (path.startsWith(CLASSPATH_URL_PREFIX)) {
             path = path.substring(CLASSPATH_URL_PREFIX.length());
+            SecurePathUtils.validateClasspathResource(path);
             classPathResource = true;
         }
         if (!classPathResource) {
-            File resourceFile = new File(path);
-            if (resourceFile.exists()) {
-                return true;
+            try {
+                Path resourceFile = SecurePathUtils.normalizeConfiguredPath(path, "Resource path");
+                if (Files.isRegularFile(resourceFile) && Files.isReadable(resourceFile)) {
+                    return true;
+                }
+            } catch (IllegalArgumentException e) {
+                log.debug("Invalid resource path: {}", filePath, e);
+                return false;
             }
         }
         InputStream classPathStream = classLoader.getResourceAsStream(path);
@@ -69,14 +76,16 @@ public class ResourceUtils {
         String path = filePath;
         if (path.startsWith(CLASSPATH_URL_PREFIX)) {
             path = path.substring(CLASSPATH_URL_PREFIX.length());
+            SecurePathUtils.validateClasspathResource(path);
             classPathResource = true;
         }
         try {
             if (!classPathResource) {
-                File resourceFile = new File(path);
-                if (resourceFile.exists()) {
+                Path resourceFile = SecurePathUtils.normalizeConfiguredPath(path, "Resource path");
+                if (Files.exists(resourceFile)) {
+                    resourceFile = SecurePathUtils.requireReadableRegularFile(resourceFile, "Resource path");
                     log.info("Reading resource data from file {}", filePath);
-                    return new FileInputStream(resourceFile);
+                    return Files.newInputStream(resourceFile);
                 }
             }
             InputStream classPathStream = classLoader.getResourceAsStream(path);
@@ -88,7 +97,8 @@ public class ResourceUtils {
                 if (url != null) {
                     URI uri = url.toURI();
                     log.info("Reading resource data from URI {}", filePath);
-                    return new FileInputStream(new File(uri));
+                    Path resourceFile = SecurePathUtils.requireReadableRegularFile(Path.of(uri), "Classpath resource");
+                    return Files.newInputStream(resourceFile);
                 }
             }
         } catch (Exception e) {
@@ -107,11 +117,13 @@ public class ResourceUtils {
 
     public static String getUri(ClassLoader classLoader, String filePath) {
         try {
-            File resourceFile = new File(filePath);
-            if (resourceFile.exists()) {
+            Path resourceFile = SecurePathUtils.normalizeConfiguredPath(filePath, "Resource path");
+            if (Files.exists(resourceFile)) {
+                resourceFile = SecurePathUtils.requireReadableRegularFile(resourceFile, "Resource path");
                 log.info("Reading resource data from file {}", filePath);
-                return resourceFile.getAbsolutePath();
+                return resourceFile.toString();
             } else {
+                SecurePathUtils.validateClasspathResource(filePath);
                 URL url = classLoader.getResource(filePath);
                 return url.toURI().toString();
             }

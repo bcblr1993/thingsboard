@@ -37,7 +37,9 @@ public class TimescaleTsDatabaseSchemaService extends SqlAbstractDatabaseSchemaS
     @Override
     public void createDatabaseSchema() throws Exception {
         super.createDatabaseSchema();
-        executeQuery("SELECT create_hypertable('ts_kv', 'ts', chunk_time_interval => " + chunkTimeInterval + ", if_not_exists => true);");
+        executeQuery("SELECT create_hypertable('ts_kv', 'ts', chunk_time_interval => ?, if_not_exists => true);",
+                chunkTimeInterval,
+                "SELECT create_hypertable('ts_kv', 'ts', chunk_time_interval => [configured interval], if_not_exists => true);");
     }
 
 }

@@ -20,6 +20,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -94,7 +95,7 @@ import static org.thingsboard.server.service.security.permission.Resource.NOTIFI
 
 @RestController
 @TbCoreComponent
-@RequestMapping("/api")
+@RequestMapping(value = "/api", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Slf4j
 public class NotificationController extends BaseController {
@@ -458,7 +459,7 @@ public class NotificationController extends BaseController {
         accessControlService.checkPermission(user, Resource.ADMIN_SETTINGS, Operation.WRITE);
         TenantId tenantId = user.isSystemAdmin() ? TenantId.SYS_TENANT_ID : user.getTenantId();
         notificationSettingsService.saveNotificationSettings(tenantId, notificationSettings);
-        return notificationSettings;
+        return notificationSettingsService.findNotificationSettings(tenantId);
     }
 
     @ApiOperation(value = "Get notification settings (getNotificationSettings)",
@@ -486,7 +487,8 @@ public class NotificationController extends BaseController {
     @PreAuthorize("hasAnyAuthority('SYS_ADMIN', 'TENANT_ADMIN', 'CUSTOMER_USER')")
     public UserNotificationSettings saveUserNotificationSettings(@RequestBody @Valid UserNotificationSettings settings,
                                                                  @AuthenticationPrincipal SecurityUser user) {
-        return notificationSettingsService.saveUserNotificationSettings(user.getTenantId(), user.getId(), settings);
+        notificationSettingsService.saveUserNotificationSettings(user.getTenantId(), user.getId(), settings);
+        return notificationSettingsService.getUserNotificationSettings(user.getTenantId(), user.getId(), true);
     }
 
     @GetMapping("/notification/settings/user")

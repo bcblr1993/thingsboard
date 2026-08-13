@@ -35,6 +35,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -147,7 +148,7 @@ import static org.thingsboard.server.controller.ControllerConstants.TS_STRICT_DA
  */
 @RestController
 @TbCoreComponent
-@RequestMapping(TbUrlConstants.TELEMETRY_URL_PREFIX)
+@RequestMapping(value = TbUrlConstants.TELEMETRY_URL_PREFIX, produces = MediaType.APPLICATION_JSON_VALUE)
 @Slf4j
 public class TelemetryController extends BaseController {
 

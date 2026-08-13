@@ -36,7 +36,6 @@ import org.thingsboard.server.service.install.InstallScripts;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.util.Arrays;
@@ -95,7 +94,7 @@ public class CassandraTsLatestToSqlMigrateService implements TsLatestMigrateServ
     public void migrate() throws Exception {
         log.info("Performing migration of latest timeseries data from cassandra to SQL database ...");
         try (Connection conn = DriverManager.getConnection(dbUrl, dbUserName, dbPassword)) {
-            Path schemaUpdateFile = Paths.get(installScripts.getDataDir(), SQL_DIR, "schema-ts-latest-psql.sql");
+            Path schemaUpdateFile = installScripts.resolveDataFile(SQL_DIR, "schema-ts-latest-psql.sql");
             loadSql(schemaUpdateFile, conn);
             conn.setAutoCommit(false);
             for (CassandraToSqlTable table : tables) {

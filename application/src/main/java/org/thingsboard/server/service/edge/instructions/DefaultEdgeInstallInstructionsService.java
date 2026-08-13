@@ -15,6 +15,7 @@
  */
 package org.thingsboard.server.service.edge.instructions;
 
+import com.google.common.net.InetAddresses;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,6 +26,8 @@ import org.thingsboard.server.common.data.edge.EdgeInstructions;
 import org.thingsboard.server.dao.util.DeviceConnectivityUtil;
 import org.thingsboard.server.queue.util.TbCoreComponent;
 import org.thingsboard.server.service.install.InstallScripts;
+
+import java.net.IDN;
 
 @Service
 @Slf4j
@@ -56,7 +59,7 @@ public class DefaultEdgeInstallInstructionsService extends BaseEdgeInstallUpgrad
 
     private EdgeInstructions getDockerInstallInstructions(Edge edge, HttpServletRequest request) {
         String dockerInstallInstructions = readFile(resolveFile("docker", "instructions.md"));
-        String baseUrl = request.getServerName();
+        String baseUrl = getValidatedServerName(request);
 
         if (DeviceConnectivityUtil.isLocalhost(baseUrl)) {
             dockerInstallInstructions = dockerInstallInstructions.replace("${EXTRA_HOSTS}", "extra_hosts:\n      - \"host.docker.internal:host-gateway\"\n");
@@ -75,7 +78,7 @@ public class DefaultEdgeInstallInstructionsService extends BaseEdgeInstallUpgrad
     private EdgeInstructions getLinuxInstallInstructions(Edge edge, HttpServletRequest request, String os) {
         String ubuntuInstallInstructions = readFile(resolveFile(os, "instructions.md"));
         ubuntuInstallInstructions = replacePlaceholders(ubuntuInstallInstructions, edge);
-        ubuntuInstallInstructions = ubuntuInstallInstructions.replace("${BASE_URL}", request.getServerName());
+        ubuntuInstallInstructions = ubuntuInstallInstructions.replace("${BASE_URL}", getValidatedServerName(request));
         String edgeVersion = appVersion.replace("-SNAPSHOT", "");
         ubuntuInstallInstructions = ubuntuInstallInstructions.replace("${TB_EDGE_VERSION}", edgeVersion);
         ubuntuInstallInstructions = ubuntuInstallInstructions.replace("${TB_EDGE_TAG}", getTagVersion(edgeVersion));
@@ -88,6 +91,31 @@ public class DefaultEdgeInstallInstructionsService extends BaseEdgeInstallUpgrad
         instructions = instructions.replace("${CLOUD_RPC_PORT}", Integer.toString(rpcPort));
         instructions = instructions.replace("${CLOUD_RPC_SSL_ENABLED}", Boolean.toString(sslEnabled));
         return instructions;
+    }
+
+    private String getValidatedServerName(HttpServletRequest request) {
+        String serverName = request.getServerName();
+        if (serverName == null || serverName.isBlank() || serverName.length() > 253) {
+            throw new IllegalArgumentException("Invalid server name");
+        }
+        if (InetAddresses.isInetAddress(serverName)) {
+            return serverName;
+        }
+        final String asciiName;
+        try {
+            asciiName = IDN.toASCII(serverName, IDN.USE_STD3_ASCII_RULES);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid server name", e);
+        }
+        if (asciiName.length() > 253 || asciiName.startsWith(".") || asciiName.endsWith(".")) {
+            throw new IllegalArgumentException("Invalid server name");
+        }
+        for (String label : asciiName.split("\\.")) {
+            if (label.isEmpty() || label.length() > 63 || label.startsWith("-") || label.endsWith("-")) {
+                throw new IllegalArgumentException("Invalid server name");
+            }
+        }
+        return asciiName;
     }
 
     @Override

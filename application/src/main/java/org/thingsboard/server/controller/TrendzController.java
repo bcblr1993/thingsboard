@@ -15,7 +15,9 @@
  */
 package org.thingsboard.server.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -42,7 +44,7 @@ import static org.thingsboard.server.controller.ControllerConstants.TENANT_OR_CU
 @RestController
 @TbCoreComponent
 @RequiredArgsConstructor
-@RequestMapping("/api")
+@RequestMapping(value = "/api", produces = MediaType.APPLICATION_JSON_VALUE)
 public class TrendzController extends BaseController {
 
     private final TrendzSettingsService trendzSettingsService;
@@ -59,12 +61,12 @@ public class TrendzController extends BaseController {
                     TENANT_AUTHORITY_PARAGRAPH)
     @PostMapping("/trendz/settings")
     @PreAuthorize("hasAnyAuthority('TENANT_ADMIN')")
-    public TrendzSettings saveTrendzSettings(@RequestBody TrendzSettings trendzSettings,
+    public TrendzSettings saveTrendzSettings(@RequestBody @Valid TrendzSettings trendzSettings,
                                              @AuthenticationPrincipal SecurityUser user) throws ThingsboardException {
         accessControlService.checkPermission(user, Resource.ADMIN_SETTINGS, Operation.WRITE);
         TenantId tenantId = user.getTenantId();
         trendzSettingsService.saveTrendzSettings(tenantId, trendzSettings);
-        return trendzSettings;
+        return trendzSettingsService.findTrendzSettings(tenantId);
     }
 
     @ApiOperation(value = "Get Trendz Settings (getTrendzSettings)",

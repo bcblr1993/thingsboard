@@ -206,7 +206,7 @@ public class ImageController extends BaseController {
     }
 
     @PreAuthorize("hasAnyAuthority('SYS_ADMIN', 'TENANT_ADMIN')")
-    @PutMapping("/api/image/import")
+    @PutMapping(value = "/api/image/import", produces = MediaType.APPLICATION_JSON_VALUE)
     public TbResourceInfo importImage(@RequestBody ResourceExportData imageData) throws Exception {
         SecurityUser user = getCurrentUser();
         return tbImageService.importImage(imageData, false, user);
