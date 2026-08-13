@@ -16,23 +16,18 @@
 package org.thingsboard.server.service.edge.attributes;
 
 import lombok.experimental.UtilityClass;
+import org.thingsboard.server.common.data.DataConstants;
 import org.thingsboard.server.common.data.StringUtils;
 
-import java.util.UUID;
-
 @UtilityClass
-public class EdgeAttributeSyncUidUtils {
+public class AttributeUpdateResultUidUtils {
 
-    public String build(String prefix, UUID requestId) {
-        return prefix + requestId;
-    }
-
-    public UUID parse(String prefix, String uid) {
-        if (StringUtils.isEmpty(prefix) || StringUtils.isEmpty(uid) || !uid.startsWith(prefix)) {
+    public AttributeUpdateRequest parse(String uid) {
+        if (StringUtils.isEmpty(uid) || !uid.startsWith(DataConstants.ATTRIBUTE_UPDATE_RESULT_UID_PREFIX)) {
             return null;
         }
         try {
-            return UUID.fromString(uid.substring(prefix.length()));
+            return AttributeUpdateRequest.parse(uid.substring(DataConstants.ATTRIBUTE_UPDATE_RESULT_UID_PREFIX.length()));
         } catch (IllegalArgumentException e) {
             return null;
         }

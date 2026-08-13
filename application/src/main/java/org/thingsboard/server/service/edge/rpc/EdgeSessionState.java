@@ -18,12 +18,12 @@ package org.thingsboard.server.service.edge.rpc;
 import com.google.common.util.concurrent.SettableFuture;
 import lombok.Data;
 import org.thingsboard.server.gen.edge.v1.DownlinkMsg;
+import org.thingsboard.server.service.edge.attributes.AttributeUpdateResultKey;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 
@@ -31,37 +31,37 @@ import java.util.concurrent.ScheduledFuture;
 public class EdgeSessionState {
 
     private final Map<Integer, DownlinkMsg> pendingMsgsMap = Collections.synchronizedMap(new LinkedHashMap<>());
-    private final Map<Integer, UUID> attributeSyncRequestMap = new ConcurrentHashMap<>();
+    private final Map<Integer, AttributeUpdateResultKey> attributeUpdateResultMap = new ConcurrentHashMap<>();
     private SettableFuture<Boolean> sendDownlinkMsgsFuture;
     private ScheduledFuture<?> scheduledSendDownlinkTask;
 
-    public void registerAttributeSyncRequest(int downlinkMsgId, UUID requestId) {
-        attributeSyncRequestMap.put(downlinkMsgId, requestId);
+    public void registerAttributeUpdateResult(int downlinkMsgId, AttributeUpdateResultKey resultKey) {
+        attributeUpdateResultMap.put(downlinkMsgId, resultKey);
     }
 
-    public UUID getAttributeSyncRequestId(int downlinkMsgId) {
-        return attributeSyncRequestMap.get(downlinkMsgId);
+    public AttributeUpdateResultKey getAttributeUpdateResult(int downlinkMsgId) {
+        return attributeUpdateResultMap.get(downlinkMsgId);
     }
 
-    public UUID removeAttributeSyncRequest(int downlinkMsgId) {
-        return attributeSyncRequestMap.remove(downlinkMsgId);
+    public AttributeUpdateResultKey removeAttributeUpdateResult(int downlinkMsgId) {
+        return attributeUpdateResultMap.remove(downlinkMsgId);
     }
 
-    public void clearAttributeSyncRequests() {
-        attributeSyncRequestMap.clear();
+    public void clearAttributeUpdateResults() {
+        attributeUpdateResultMap.clear();
     }
 
     public void replacePendingMsgs(List<DownlinkMsg> downlinkMsgs) {
         synchronized (pendingMsgsMap) {
-            pendingMsgsMap.keySet().forEach(attributeSyncRequestMap::remove);
+            pendingMsgsMap.keySet().forEach(attributeUpdateResultMap::remove);
             pendingMsgsMap.clear();
             downlinkMsgs.forEach(msg -> pendingMsgsMap.put(msg.getDownlinkMsgId(), msg));
         }
     }
 
-    public boolean completeAttributeSyncRequest(int downlinkMsgId) {
+    public boolean completeAttributeUpdateResult(int downlinkMsgId) {
         pendingMsgsMap.remove(downlinkMsgId);
-        attributeSyncRequestMap.remove(downlinkMsgId);
+        attributeUpdateResultMap.remove(downlinkMsgId);
         return pendingMsgsMap.isEmpty();
     }
 

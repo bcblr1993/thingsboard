@@ -15,25 +15,15 @@
  */
 package org.thingsboard.server.service.edge.attributes;
 
-import lombok.Getter;
-import org.springframework.http.HttpStatus;
+import org.thingsboard.server.common.data.id.EntityId;
+import org.thingsboard.server.common.data.id.TenantId;
 
-@Getter
-public class EdgeAttributeSyncException extends RuntimeException {
+public interface AttributeUpdateResultTrackingService {
 
-    private final HttpStatus status;
-    private final String errorCode;
+    void clearPreviousResult(TenantId tenantId, AttributeUpdateRequest request);
 
-    public EdgeAttributeSyncException(HttpStatus status, String errorCode, String message) {
-        super(message);
-        this.status = status;
-        this.errorCode = errorCode;
-    }
+    boolean shouldTrackEdgeResult(TenantId tenantId, EntityId entityId, AttributeUpdateRequest request);
 
-    public EdgeAttributeSyncException(HttpStatus status, String errorCode, String message, Throwable cause) {
-        super(message, cause);
-        this.status = status;
-        this.errorCode = errorCode;
-    }
+    void saveResult(TenantId tenantId, AttributeUpdateRequest request, boolean success);
 
 }

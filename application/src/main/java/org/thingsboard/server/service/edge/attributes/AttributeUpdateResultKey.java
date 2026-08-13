@@ -15,20 +15,29 @@
  */
 package org.thingsboard.server.service.edge.attributes;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.google.common.util.concurrent.ListenableFuture;
-import org.thingsboard.server.common.data.AttributeScope;
-import org.thingsboard.server.common.data.edge.attributes.EdgeAttributeSyncResponse;
-import org.thingsboard.server.common.data.id.EntityId;
 import org.thingsboard.server.common.data.id.TenantId;
 
+import java.io.Serializable;
 import java.util.UUID;
 
-public interface EdgeAttributeSyncService {
+public record AttributeUpdateResultKey(TenantId tenantId, UUID requestId) implements Serializable {
 
-    ListenableFuture<EdgeAttributeSyncResponse> submit(TenantId tenantId, EntityId entityId, AttributeScope scope,
-                                                       Long resultTtlSeconds, JsonNode attributes);
+    public AttributeUpdateResultKey {
+        if (tenantId == null || tenantId.isNullUid()) {
+            throw new IllegalArgumentException("tenantId must be specified");
+        }
+        if (requestId == null) {
+            throw new IllegalArgumentException("requestId must be specified");
+        }
+    }
 
-    EdgeAttributeSyncResponse getResult(TenantId tenantId, UUID requestId);
+    public static AttributeUpdateResultKey from(TenantId tenantId, AttributeUpdateRequest request) {
+        return new AttributeUpdateResultKey(tenantId, request.requestId());
+    }
+
+    @Override
+    public String toString() {
+        return ":" + tenantId + ":" + requestId;
+    }
 
 }

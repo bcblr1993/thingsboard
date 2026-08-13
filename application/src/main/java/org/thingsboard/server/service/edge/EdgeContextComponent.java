@@ -73,8 +73,7 @@ import org.thingsboard.server.service.edge.rpc.processor.rule.RuleChainEdgeProce
 import org.thingsboard.server.service.edge.rpc.processor.rule.RuleChainMetadataEdgeProcessor;
 import org.thingsboard.server.service.edge.rpc.processor.telemetry.TelemetryEdgeProcessor;
 import org.thingsboard.server.service.edge.rpc.sync.EdgeRequestsService;
-import org.thingsboard.server.service.edge.attributes.EdgeAttributeSyncSettings;
-import org.thingsboard.server.service.edge.attributes.EdgeAttributeSyncStateService;
+import org.thingsboard.server.service.edge.attributes.AttributeUpdateResultService;
 import org.thingsboard.server.service.executors.GrpcCallbackExecutorService;
 
 import java.util.EnumMap;
@@ -150,10 +149,7 @@ public class EdgeContextComponent {
     private EdgeService edgeService;
 
     @Autowired
-    private EdgeAttributeSyncStateService edgeAttributeSyncStateService;
-
-    @Autowired
-    private EdgeAttributeSyncSettings edgeAttributeSyncSettings;
+    private AttributeUpdateResultService attributeUpdateResultService;
 
     @Autowired
     private EntityViewService entityViewService;

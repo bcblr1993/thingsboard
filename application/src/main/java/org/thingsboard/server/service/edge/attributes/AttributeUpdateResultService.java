@@ -15,25 +15,14 @@
  */
 package org.thingsboard.server.service.edge.attributes;
 
-import org.thingsboard.server.common.data.edge.attributes.EdgeAttributeSyncState;
-import org.thingsboard.server.common.data.id.TenantId;
-
 import java.util.Optional;
-import java.util.UUID;
 
-public interface EdgeAttributeSyncStateService {
+public interface AttributeUpdateResultService {
 
-    boolean isEnabled();
+    void saveResult(AttributeUpdateResultKey key, boolean success);
 
-    void createPending(TenantId tenantId, EdgeAttributeSyncState state, long resultTtlSeconds);
+    Optional<Boolean> findResult(AttributeUpdateResultKey key);
 
-    Optional<EdgeAttributeSyncState> get(TenantId tenantId, UUID requestId);
-
-    void markSuccess(TenantId tenantId, UUID requestId, long now);
-
-    void recordRetryFailure(TenantId tenantId, UUID requestId, String error);
-
-    void markFailed(TenantId tenantId, UUID requestId, long now, String errorCode, String error);
-
+    void evictResult(AttributeUpdateResultKey key);
 
 }
