@@ -246,6 +246,9 @@ public class ProtoUtils {
         if (edgeEvent.getBody() != null) {
             builder.setBody(JacksonUtil.toString(edgeEvent.getBody()));
         }
+        if (!StringUtils.isEmpty(edgeEvent.getUid())) {
+            builder.setUid(edgeEvent.getUid());
+        }
 
         return builder.build();
     }
@@ -265,6 +268,9 @@ public class ProtoUtils {
         }
         if (proto.hasBody()) {
             edgeEvent.setBody(JacksonUtil.toJsonNode(proto.getBody()));
+        }
+        if (proto.hasUid()) {
+            edgeEvent.setUid(proto.getUid());
         }
 
         return edgeEvent;

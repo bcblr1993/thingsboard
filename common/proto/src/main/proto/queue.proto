@@ -1282,6 +1282,7 @@ message EdgeEventMsgProto {
   optional int64 entityIdMSB = 7;
   optional int64 entityIdLSB = 8;
   optional string body = 9;
+  optional string uid = 10;
 }
 
 message EdgeNotificationMsgProto {
