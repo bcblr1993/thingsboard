@@ -39,6 +39,7 @@ import org.thingsboard.server.common.data.query.EntityCountQuery;
 import org.thingsboard.server.common.data.query.EntityData;
 import org.thingsboard.server.common.data.query.EntityDataPageLink;
 import org.thingsboard.server.common.data.query.EntityDataQuery;
+import org.thingsboard.server.common.data.query.EntityDataSortOrder;
 import org.thingsboard.server.common.data.EntityType;
 import org.thingsboard.server.common.data.query.EntityKey;
 import org.thingsboard.server.common.data.query.EntityKeyType;
@@ -699,6 +700,204 @@ class TsLatestAwareEntityQueryDaoTest {
         assertThat(result.getData()).hasSize(2);
         assertThat(result.getTotalElements()).isEqualTo(3);
         assertThat(result.hasNext()).isTrue();
+    }
+
+    // ==================== textSearch / sortOrder 保留测试 ====================
+
+    /**
+     * 带遥测过滤时, 原始 textSearch 与非遥测 sortOrder(按名称)必须下推给 delegate 扫描,
+     * 否则搜索框静默失效、排序丢失。验证传给 delegate 的扫描查询 pageLink 携带二者。
+     */
+    @Test
+    void findEntityDataByQuery_withTsFilter_shouldPushTextSearchAndNonTsSortToScan() {
+        TsKvEntry temp25 = new BasicTsKvEntry(System.currentTimeMillis(), new DoubleDataEntry("temperature", 25.0));
+        when(timeseriesLatestDao.findLatest(TENANT_ID, deviceId1, "temperature")).thenReturn(Futures.immediateFuture(temp25));
+
+        when(delegate.findEntityDataByQuery(eq(TENANT_ID), eq(CUSTOMER_ID), any(EntityDataQuery.class)))
+                .thenReturn(new PageData<>(List.of(buildEntityData(deviceId1)), 1, 1, false));
+
+        KeyFilter tsFilter = buildKeyFilter("temperature", EntityKeyType.TIME_SERIES, EntityKeyValueType.NUMERIC,
+                buildNumericPredicate(NumericFilterPredicate.NumericOperation.GREATER, 20.0));
+        EntityDataSortOrder nameSort = new EntityDataSortOrder(
+                new EntityKey(EntityKeyType.ENTITY_FIELD, "name"), EntityDataSortOrder.Direction.ASC);
+        EntityDataQuery query = new EntityDataQuery(
+                buildEntityListFilter(),
+                new EntityDataPageLink(10, 0, "sensor-A", nameSort),
+                List.of(new EntityKey(EntityKeyType.ENTITY_FIELD, "name")),
+                Collections.emptyList(),
+                List.of(tsFilter)
+        );
+
+        tsLatestAwareEntityQueryDao.findEntityDataByQuery(TENANT_ID, CUSTOMER_ID, query);
+
+        org.mockito.ArgumentCaptor<EntityDataQuery> captor = org.mockito.ArgumentCaptor.forClass(EntityDataQuery.class);
+        verify(delegate).findEntityDataByQuery(eq(TENANT_ID), eq(CUSTOMER_ID), captor.capture());
+        EntityDataPageLink scanLink = captor.getValue().getPageLink();
+        assertThat(scanLink.getTextSearch()).isEqualTo("sensor-A");
+        assertThat(scanLink.getSortOrder()).isNotNull();
+        assertThat(scanLink.getSortOrder().getKey().getKey()).isEqualTo("name");
+        assertThat(scanLink.getSortOrder().getDirection()).isEqualTo(EntityDataSortOrder.Direction.ASC);
+    }
+
+    /**
+     * 按遥测 latest 值排序时, delegate 无法排序(latest 在外部存储), 应在 Java 侧对匹配结果排序。
+     * 场景: d1=25, d2=35, d3=15, 过滤 temperature>0, 按 temperature DESC —— 预期顺序 d2,d1,d3;
+     * 同时验证下推给 delegate 的扫描 sortOrder 被剥离为 null(避免委托层对未知列排序报错)。
+     */
+    @Test
+    void findEntityDataByQuery_withTsValueSort_shouldSortInJavaDescending() {
+        TsKvEntry temp25 = new BasicTsKvEntry(System.currentTimeMillis(), new DoubleDataEntry("temperature", 25.0));
+        TsKvEntry temp35 = new BasicTsKvEntry(System.currentTimeMillis(), new DoubleDataEntry("temperature", 35.0));
+        TsKvEntry temp15 = new BasicTsKvEntry(System.currentTimeMillis(), new DoubleDataEntry("temperature", 15.0));
+
+        when(timeseriesLatestDao.findLatest(TENANT_ID, deviceId1, "temperature")).thenReturn(Futures.immediateFuture(temp25));
+        when(timeseriesLatestDao.findLatest(TENANT_ID, deviceId2, "temperature")).thenReturn(Futures.immediateFuture(temp35));
+        when(timeseriesLatestDao.findLatest(TENANT_ID, deviceId3, "temperature")).thenReturn(Futures.immediateFuture(temp15));
+
+        when(delegate.findEntityDataByQuery(eq(TENANT_ID), eq(CUSTOMER_ID), any(EntityDataQuery.class)))
+                .thenReturn(new PageData<>(
+                        List.of(buildEntityData(deviceId1), buildEntityData(deviceId2), buildEntityData(deviceId3)),
+                        1, 3, false));
+
+        KeyFilter tsFilter = buildKeyFilter("temperature", EntityKeyType.TIME_SERIES, EntityKeyValueType.NUMERIC,
+                buildNumericPredicate(NumericFilterPredicate.NumericOperation.GREATER, 0.0));
+        EntityDataSortOrder tsSort = new EntityDataSortOrder(
+                new EntityKey(EntityKeyType.TIME_SERIES, "temperature"), EntityDataSortOrder.Direction.DESC);
+        EntityDataQuery query = new EntityDataQuery(
+                buildEntityListFilter(),
+                new EntityDataPageLink(10, 0, null, tsSort),
+                List.of(new EntityKey(EntityKeyType.ENTITY_FIELD, "name")),
+                Collections.emptyList(),
+                List.of(tsFilter)
+        );
+
+        PageData<EntityData> result = tsLatestAwareEntityQueryDao.findEntityDataByQuery(TENANT_ID, CUSTOMER_ID, query);
+
+        assertThat(result.getData()).extracting(EntityData::getEntityId)
+                .containsExactly(deviceId2, deviceId1, deviceId3); // 35, 25, 15 降序
+
+        org.mockito.ArgumentCaptor<EntityDataQuery> captor = org.mockito.ArgumentCaptor.forClass(EntityDataQuery.class);
+        verify(delegate).findEntityDataByQuery(eq(TENANT_ID), eq(CUSTOMER_ID), captor.capture());
+        assertThat(captor.getValue().getPageLink().getSortOrder()).isNull(); // 遥测排序不下推
+    }
+
+    /**
+     * 只按遥测 latest 值排序、没有任何遥测过滤条件时, 也必须由本类接管为 Java 侧排序 —— delegate
+     * (SQL 层)排不了外部存储的 latest, 直接下推会得到不可靠顺序。
+     * 场景: d1=25, d2=35, d3=15, 无过滤, 按 temperature DESC, 预期 d2,d1,d3; 且下推的扫描
+     * sortOrder 被剥离为 null。
+     */
+    @Test
+    void findEntityDataByQuery_tsValueSortWithoutFilter_shouldTakeOverAndSort() {
+        TsKvEntry temp25 = new BasicTsKvEntry(System.currentTimeMillis(), new DoubleDataEntry("temperature", 25.0));
+        TsKvEntry temp35 = new BasicTsKvEntry(System.currentTimeMillis(), new DoubleDataEntry("temperature", 35.0));
+        TsKvEntry temp15 = new BasicTsKvEntry(System.currentTimeMillis(), new DoubleDataEntry("temperature", 15.0));
+
+        when(timeseriesLatestDao.findLatest(TENANT_ID, deviceId1, "temperature")).thenReturn(Futures.immediateFuture(temp25));
+        when(timeseriesLatestDao.findLatest(TENANT_ID, deviceId2, "temperature")).thenReturn(Futures.immediateFuture(temp35));
+        when(timeseriesLatestDao.findLatest(TENANT_ID, deviceId3, "temperature")).thenReturn(Futures.immediateFuture(temp15));
+
+        when(delegate.findEntityDataByQuery(eq(TENANT_ID), eq(CUSTOMER_ID), any(EntityDataQuery.class)))
+                .thenReturn(new PageData<>(
+                        List.of(buildEntityData(deviceId1), buildEntityData(deviceId2), buildEntityData(deviceId3)),
+                        1, 3, false));
+
+        EntityDataSortOrder tsSort = new EntityDataSortOrder(
+                new EntityKey(EntityKeyType.TIME_SERIES, "temperature"), EntityDataSortOrder.Direction.DESC);
+        // 无遥测过滤、无遥测 latest 输出, 仅按遥测值排序
+        EntityDataQuery query = new EntityDataQuery(
+                buildEntityListFilter(),
+                new EntityDataPageLink(10, 0, null, tsSort),
+                List.of(new EntityKey(EntityKeyType.ENTITY_FIELD, "name")),
+                Collections.emptyList(),
+                Collections.emptyList()
+        );
+
+        PageData<EntityData> result = tsLatestAwareEntityQueryDao.findEntityDataByQuery(TENANT_ID, CUSTOMER_ID, query);
+
+        assertThat(result.getData()).extracting(EntityData::getEntityId)
+                .containsExactly(deviceId2, deviceId1, deviceId3);
+
+        org.mockito.ArgumentCaptor<EntityDataQuery> captor = org.mockito.ArgumentCaptor.forClass(EntityDataQuery.class);
+        verify(delegate).findEntityDataByQuery(eq(TENANT_ID), eq(CUSTOMER_ID), captor.capture());
+        assertThat(captor.getValue().getPageLink().getSortOrder()).isNull(); // 遥测排序不下推给 SQL
+    }
+
+    /**
+     * 按遥测值排序时, 某设备该键"存在但值为 null"(latest DAO 可能返回 value 为 null 的条目),
+     * 不得抛 NPE —— 无值实体排在最后。回归 compareTsValues 对 getValueAsString()==null 的崩溃。
+     */
+    @Test
+    void findEntityDataByQuery_tsValueSort_nullValue_shouldNotThrowAndSortLast() {
+        TsKvEntry temp25 = new BasicTsKvEntry(System.currentTimeMillis(), new DoubleDataEntry("temperature", 25.0));
+        TsKvEntry tempNull = new BasicTsKvEntry(System.currentTimeMillis(), new StringDataEntry("temperature", null));
+        TsKvEntry temp15 = new BasicTsKvEntry(System.currentTimeMillis(), new DoubleDataEntry("temperature", 15.0));
+
+        when(timeseriesLatestDao.findLatest(TENANT_ID, deviceId1, "temperature")).thenReturn(Futures.immediateFuture(temp25));
+        when(timeseriesLatestDao.findLatest(TENANT_ID, deviceId2, "temperature")).thenReturn(Futures.immediateFuture(tempNull));
+        when(timeseriesLatestDao.findLatest(TENANT_ID, deviceId3, "temperature")).thenReturn(Futures.immediateFuture(temp15));
+
+        when(delegate.findEntityDataByQuery(eq(TENANT_ID), eq(CUSTOMER_ID), any(EntityDataQuery.class)))
+                .thenReturn(new PageData<>(
+                        List.of(buildEntityData(deviceId1), buildEntityData(deviceId2), buildEntityData(deviceId3)),
+                        1, 3, false));
+
+        EntityDataSortOrder tsSort = new EntityDataSortOrder(
+                new EntityKey(EntityKeyType.TIME_SERIES, "temperature"), EntityDataSortOrder.Direction.DESC);
+        EntityDataQuery query = new EntityDataQuery(
+                buildEntityListFilter(),
+                new EntityDataPageLink(10, 0, null, tsSort),
+                List.of(new EntityKey(EntityKeyType.ENTITY_FIELD, "name")),
+                Collections.emptyList(),
+                Collections.emptyList()
+        );
+
+        PageData<EntityData> result = tsLatestAwareEntityQueryDao.findEntityDataByQuery(TENANT_ID, CUSTOMER_ID, query);
+
+        // 25, 15 降序在前, 值为 null 的 d2 排最后 —— 且全程不抛异常
+        assertThat(result.getData()).extracting(EntityData::getEntityId)
+                .containsExactly(deviceId1, deviceId3, deviceId2);
+    }
+
+    /**
+     * 同一 key 在不同设备上混有数值与非数值时, 比较器必须是全序(可传递), 否则 TimSort 抛
+     * "Comparison method violates its general contract" 使整个查询崩溃。验证结果稳定有序:
+     * 数值(按值)整体排在非数值(按字符串)之前, 不出现比较环。
+     */
+    @Test
+    void findEntityDataByQuery_tsValueSort_mixedNumericAndString_totalOrderNoThrow() {
+        DeviceId d4 = new DeviceId(UUID.randomUUID());
+        TsKvEntry num2 = new BasicTsKvEntry(System.currentTimeMillis(), new DoubleDataEntry("temperature", 2.0));
+        TsKvEntry num10 = new BasicTsKvEntry(System.currentTimeMillis(), new DoubleDataEntry("temperature", 10.0));
+        TsKvEntry str15x = new BasicTsKvEntry(System.currentTimeMillis(), new StringDataEntry("temperature", "15x"));
+        TsKvEntry strAbc = new BasicTsKvEntry(System.currentTimeMillis(), new StringDataEntry("temperature", "abc"));
+
+        when(timeseriesLatestDao.findLatest(TENANT_ID, deviceId1, "temperature")).thenReturn(Futures.immediateFuture(num2));
+        when(timeseriesLatestDao.findLatest(TENANT_ID, deviceId2, "temperature")).thenReturn(Futures.immediateFuture(num10));
+        when(timeseriesLatestDao.findLatest(TENANT_ID, deviceId3, "temperature")).thenReturn(Futures.immediateFuture(str15x));
+        when(timeseriesLatestDao.findLatest(TENANT_ID, d4, "temperature")).thenReturn(Futures.immediateFuture(strAbc));
+
+        when(delegate.findEntityDataByQuery(eq(TENANT_ID), eq(CUSTOMER_ID), any(EntityDataQuery.class)))
+                .thenReturn(new PageData<>(
+                        List.of(buildEntityData(deviceId1), buildEntityData(deviceId2),
+                                buildEntityData(deviceId3), buildEntityData(d4)),
+                        1, 4, false));
+
+        EntityDataSortOrder tsSort = new EntityDataSortOrder(
+                new EntityKey(EntityKeyType.TIME_SERIES, "temperature"), EntityDataSortOrder.Direction.ASC);
+        EntityDataQuery query = new EntityDataQuery(
+                buildEntityListFilter(),
+                new EntityDataPageLink(10, 0, null, tsSort),
+                List.of(new EntityKey(EntityKeyType.ENTITY_FIELD, "name")),
+                Collections.emptyList(),
+                Collections.emptyList()
+        );
+
+        PageData<EntityData> result = tsLatestAwareEntityQueryDao.findEntityDataByQuery(TENANT_ID, CUSTOMER_ID, query);
+
+        // 数值(2,10 按值) 整体在前, 非数值(15x,abc 按字符串) 在后 —— 全序, 无异常
+        assertThat(result.getData()).extracting(EntityData::getEntityId)
+                .containsExactly(deviceId1, deviceId2, deviceId3, d4);
     }
 
     // ==================== 辅助方法 ====================

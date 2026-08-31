@@ -36,6 +36,7 @@ import org.thingsboard.server.common.data.query.EntityCountQuery;
 import org.thingsboard.server.common.data.query.EntityData;
 import org.thingsboard.server.common.data.query.EntityDataPageLink;
 import org.thingsboard.server.common.data.query.EntityDataQuery;
+import org.thingsboard.server.common.data.query.EntityDataSortOrder;
 import org.thingsboard.server.common.data.query.EntityKey;
 import org.thingsboard.server.common.data.query.EntityKeyType;
 import org.thingsboard.server.common.data.query.FilterPredicateType;
@@ -121,7 +122,14 @@ public class TsLatestAwareEntityQueryDao implements EntityQueryDao {
         List<KeyFilter> tsFilters = extractTsKeyFilters(query.getKeyFilters());
         boolean hasTsLatestValues = hasTimeseriesLatestValues(query);
 
-        if (tsFilters.isEmpty() && !hasTsLatestValues) {
+        // 是否按遥测 latest 值排序: 外部 latest 存储(IoTDB/Cassandra/Redis)的值不在 SQL 层,
+        // delegate 无法据此排序, 必须由本类接管为"扫描全部候选 → Java 排序 → 手工分页"。
+        // 因此即便没有遥测过滤条件、也没有遥测 latest 输出, 只要按遥测值排序就不能走 delegate 快路径。
+        EntityDataSortOrder sortOrder = query.getPageLink().getSortOrder();
+        boolean tsSort = sortOrder != null && sortOrder.getKey() != null
+                && sortOrder.getKey().getType() == EntityKeyType.TIME_SERIES;
+
+        if (tsFilters.isEmpty() && !hasTsLatestValues && !tsSort) {
             return delegate.findEntityDataByQuery(tenantId, customerId, query);
         }
 
@@ -158,14 +166,30 @@ public class TsLatestAwareEntityQueryDao implements EntityQueryDao {
                 nonTsFilters
         );
 
-        if (tsFilters.isEmpty()) {
-            // No TS filters, just need to fill TS latest values
+        if (tsFilters.isEmpty() && !tsSort) {
+            // 无遥测过滤且不按遥测值排序: 只需回填 latest 值, delegate 的分页/排序即最终结果
             return fillTsLatestValues(tenantId, delegate.findEntityDataByQuery(tenantId, customerId, candidateQuery), latestTsKeys);
         }
 
-        // Has TS filters: iterate all candidate pages, filter, then manually paginate
+        // 有遥测过滤条件, 或按遥测值排序: 扫描所有候选页, (过滤)、(排序), 再手工分页。
         int pageSize = query.getPageLink().getPageSize();
         int page = query.getPageLink().getPage();
+
+        // 保留原始 textSearch 与 sortOrder(否则搜索框静默失效、排序丢失导致手工分页翻页不稳定)。
+        //  - textSearch: 始终下推给 delegate(实体字段级过滤)。
+        //  - sortOrder 指向非遥测键(名称/属性): delegate 能排序, 下推后按扫描页顺序累积,
+        //    matched 天然保持全局有序, 手工分页正确。
+        //  - sortOrder 指向遥测 latest 值(tsSort): delegate 无法排序(latest 在外部存储),
+        //    扫描时旁路收集该键最新值, 全部匹配后在 Java 侧排序; 扫描 sortOrder 剥离为 null。
+        String textSearch = query.getPageLink().getTextSearch();
+        EntityDataSortOrder scanSort = tsSort ? null : sortOrder;
+        String tsSortKey = tsSort ? sortOrder.getKey().getKey() : null;
+        Set<String> fetchTsKeys = allTsKeys;
+        if (tsSort && !fetchTsKeys.contains(tsSortKey)) {
+            fetchTsKeys = new HashSet<>(allTsKeys);
+            fetchTsKeys.add(tsSortKey);
+        }
+        Map<EntityId, TsKvEntry> tsSortValues = new HashMap<>();
 
         List<EntityData> matched = new ArrayList<>();
         int scanPage = 0;
@@ -173,21 +197,28 @@ public class TsLatestAwareEntityQueryDao implements EntityQueryDao {
         do {
             EntityDataQuery scanQuery = new EntityDataQuery(
                     query.getEntityFilter(),
-                    new EntityDataPageLink(SCAN_PAGE_SIZE, scanPage, null, null),
+                    new EntityDataPageLink(SCAN_PAGE_SIZE, scanPage, textSearch, scanSort),
                     query.getEntityFields(),
                     candidateQuery.getLatestValues(),
                     nonTsFilters
             );
             candidates = delegate.findEntityDataByQuery(tenantId, customerId, scanQuery);
             for (EntityData entity : candidates.getData()) {
-                Map<String, TsKvEntry> latestMap = fetchLatestForKeys(tenantId, entity.getEntityId(), allTsKeys);
+                Map<String, TsKvEntry> latestMap = fetchLatestForKeys(tenantId, entity.getEntityId(), fetchTsKeys);
                 if (evaluateFilters(latestMap, tsFilters)) {
                     fillLatestValues(entity, latestMap, latestTsKeys);
+                    if (tsSort) {
+                        tsSortValues.put(entity.getEntityId(), latestMap.get(tsSortKey));
+                    }
                     matched.add(entity);
                 }
             }
             scanPage++;
         } while (candidates.hasNext());
+
+        if (tsSort) {
+            sortByTsValue(matched, tsSortValues, sortOrder.getDirection());
+        }
 
         // Manual pagination
         int totalElements = matched.size();
@@ -247,6 +278,72 @@ public class TsLatestAwareEntityQueryDao implements EntityQueryDao {
             }
         }
         return result;
+    }
+
+    /**
+     * 按遥测 latest 值对已匹配实体排序(delegate 无法排序外部存储的 latest)。数值优先按数值比较,
+     * 否则退化为字符串比较; 缺失该键的实体始终排在最后(与升降序无关)。
+     */
+    private void sortByTsValue(List<EntityData> matched, Map<EntityId, TsKvEntry> values,
+                               EntityDataSortOrder.Direction direction) {
+        boolean desc = direction == EntityDataSortOrder.Direction.DESC;
+        matched.sort((e1, e2) -> {
+            // "无值"包含两种情况: 该键缺失(map 无条目)或存在但 value 为 null
+            // (fetchLatestForKeys 只判 entry!=null, 会保留 value 为 null 的条目) —— 均排最后,
+            // 且不能进入 compareTsValues(否则 getValueAsString() 返回 null 会 NPE)。
+            boolean h1 = hasValue(values.get(e1.getEntityId()));
+            boolean h2 = hasValue(values.get(e2.getEntityId()));
+            if (!h1 && !h2) {
+                return 0;
+            }
+            if (!h1) {
+                return 1;   // nulls last, 与升降序无关
+            }
+            if (!h2) {
+                return -1;
+            }
+            int cmp = compareTsValues(values.get(e1.getEntityId()), values.get(e2.getEntityId()));
+            return desc ? -cmp : cmp;
+        });
+    }
+
+    private static boolean hasValue(TsKvEntry e) {
+        return e != null && e.getValue() != null;
+    }
+
+    /**
+     * 全序比较器(必须满足传递性, 否则 TimSort 会抛 "Comparison method violates its general
+     * contract" 使整个实体查询崩溃)。同一 key 在不同设备上可能混有数值与非数值(如个别设备
+     * 上报字符串哨兵值), 这里定义确定的全序: 所有"可转数值"归为一类按数值比较, 且**整体排在**
+     * 非数值之前; 非数值之间按字符串比较。这样避免"2<10、10<'15x'、'2'>'15x'"式的比较环。
+     */
+    private int compareTsValues(TsKvEntry a, TsKvEntry b) {
+        Double da = asDouble(a);
+        Double db = asDouble(b);
+        if (da != null && db != null) {
+            return Double.compare(da, db);
+        }
+        if (da != null) {
+            return -1;  // 数值整体排在非数值之前(固定, 保证传递性)
+        }
+        if (db != null) {
+            return 1;
+        }
+        return a.getValueAsString().compareTo(b.getValueAsString());
+    }
+
+    private Double asDouble(TsKvEntry e) {
+        if (e.getDoubleValue().isPresent()) {
+            return e.getDoubleValue().get();
+        }
+        if (e.getLongValue().isPresent()) {
+            return e.getLongValue().get().doubleValue();
+        }
+        try {
+            return Double.parseDouble(e.getValueAsString());
+        } catch (NumberFormatException | NullPointerException ex) {
+            return null;
+        }
     }
 
     private PageData<EntityData> fillTsLatestValues(TenantId tenantId, PageData<EntityData> result, Set<String> tsKeys) {
