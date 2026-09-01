@@ -17,23 +17,23 @@ package org.thingsboard.server.dao.timeseries.fast;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.thingsboard.server.dao.util.RedisClusterFastTsLatestDao;
+import org.thingsboard.server.dao.util.RedisFastTsLatestDao;
 
 /**
- * {@code database.ts_latest.type=redis-cluster-fast}
+ * {@code database.ts_latest.type=redis-fast}
  * <p>
- * Redis 集群的高吞吐 latest 实现。逻辑见 {@link AbstractFastTimeseriesLatestDao}：
+ * Redis 的 Lua 批处理优化 latest 实现。逻辑见 {@link AbstractFastTimeseriesLatestDao}：
  * 单哈希 + 整设备批读批写 + 多 key 批量读，<b>完整保留时间戳守卫等三条保证</b>。
  * <p>
  * 与现网 {@code RedisClusterTimeseriesLatestDao} 并存、互斥装配，不影响既有部署。
  */
 @Component
-@RedisClusterFastTsLatestDao
+@RedisFastTsLatestDao
 @Slf4j
-public class RedisClusterFastTimeseriesLatestDao extends AbstractFastTimeseriesLatestDao {
+public class RedisFastTimeseriesLatestDao extends AbstractFastTimeseriesLatestDao {
 
     @Override
     protected String backendName() {
-        return "redis-cluster-fast";
+        return "redis-fast";
     }
 }

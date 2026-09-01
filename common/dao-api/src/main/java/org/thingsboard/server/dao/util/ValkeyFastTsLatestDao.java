@@ -21,10 +21,11 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 /**
- * {@code database.ts_latest.type=redis-cluster-fast} —— Redis 集群的高吞吐 latest 实现。
- * 与 {@link RedisClusterTsLatestDao} 互斥，二者不会同时装配。
+ * {@code database.ts_latest.type=valkey-fast} —— Valkey 的 Lua 批处理优化 latest 实现。
+ * Valkey 与 Redis 协议兼容，实现逻辑共用 {@code AbstractFastTimeseriesLatestDao}，
+ * 仅装配条件与指标标签不同，便于 A/B 对比。
  */
 @Retention(RetentionPolicy.RUNTIME)
-@ConditionalOnProperty(prefix = "database.ts_latest", value = "type", havingValue = "redis-cluster-fast")
-public @interface RedisClusterFastTsLatestDao {
+@ConditionalOnProperty(prefix = "database.ts_latest", value = "type", havingValue = "valkey-fast")
+public @interface ValkeyFastTsLatestDao {
 }

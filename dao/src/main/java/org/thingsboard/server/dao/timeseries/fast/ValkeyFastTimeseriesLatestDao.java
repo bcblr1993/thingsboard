@@ -17,26 +17,26 @@ package org.thingsboard.server.dao.timeseries.fast;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.thingsboard.server.dao.util.ValkeyClusterFastTsLatestDao;
+import org.thingsboard.server.dao.util.ValkeyFastTsLatestDao;
 
 /**
- * {@code database.ts_latest.type=valkey-cluster-fast}
+ * {@code database.ts_latest.type=valkey-fast}
  * <p>
- * Valkey 集群的高吞吐 latest 实现。Valkey 与 Redis 协议完全兼容，故复用
+ * Valkey 的 Lua 批处理优化 latest 实现。Valkey 与 Redis 协议完全兼容，故复用
  * {@link AbstractFastTimeseriesLatestDao} 的全部逻辑；独立成类是为了：
  * <ul>
- *   <li>配置层面可一键 A/B 切换（{@code redis-cluster-fast} ↔ {@code valkey-cluster-fast}）</li>
+ *   <li>配置层面可一键 A/B 切换（{@code redis-fast} ↔ {@code valkey-fast}）</li>
  *   <li>日志与后续指标可按后端区分，便于对比</li>
  * </ul>
  * Valkey 采用 BSD 3-Clause（OSI 认证开源，Linux 基金会治理），无商用限制。
  */
 @Component
-@ValkeyClusterFastTsLatestDao
+@ValkeyFastTsLatestDao
 @Slf4j
-public class ValkeyClusterFastTimeseriesLatestDao extends AbstractFastTimeseriesLatestDao {
+public class ValkeyFastTimeseriesLatestDao extends AbstractFastTimeseriesLatestDao {
 
     @Override
     protected String backendName() {
-        return "valkey-cluster-fast";
+        return "valkey-fast";
     }
 }

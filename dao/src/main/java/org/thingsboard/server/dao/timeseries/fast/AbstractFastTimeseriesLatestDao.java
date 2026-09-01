@@ -55,9 +55,9 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * 高吞吐 latest 实现（{@code *-cluster-fast}）。与现网 {@code RedisTimeseriesLatestDao} /
+ * 高吞吐 latest 实现（{@code *-fast}）。与现网 {@code RedisTimeseriesLatestDao} /
  * {@code RedisClusterTimeseriesLatestDao} <b>完全独立并存</b>，通过 {@code database.ts_latest.type}
- * 二选一装配，互不影响。
+ * 按配置互斥装配。fast 表示 Lua 批处理优化，连接模式由 {@code redis.connection.type} 决定。
  *
  * <h3>相对现网实现的三点优化（压测 C 变体，实测 1.78x）</h3>
  * <ol>

@@ -34,8 +34,8 @@ import org.thingsboard.server.common.data.kv.TsKvEntry;
 import org.thingsboard.server.common.msg.edqs.EdqsService;
 import org.thingsboard.server.dao.entityview.EntityViewService;
 import org.thingsboard.server.dao.sqlts.SqlTimeseriesLatestDao;
-import org.thingsboard.server.dao.timeseries.fast.RedisClusterFastTimeseriesLatestDao;
-import org.thingsboard.server.dao.timeseries.fast.ValkeyClusterFastTimeseriesLatestDao;
+import org.thingsboard.server.dao.timeseries.fast.RedisFastTimeseriesLatestDao;
+import org.thingsboard.server.dao.timeseries.fast.ValkeyFastTimeseriesLatestDao;
 
 import java.util.List;
 import java.util.UUID;
@@ -122,8 +122,8 @@ class BaseTimeseriesServiceEdqsTest {
     }
 
     @Test
-    void saveLatest_withRedisClusterFastTimeseriesLatestDao_shouldUseBatchCapability() {
-        RedisClusterFastTimeseriesLatestDao fastLatestDao = mock(RedisClusterFastTimeseriesLatestDao.class);
+    void saveLatest_withRedisFastTimeseriesLatestDao_shouldUseBatchCapability() {
+        RedisFastTimeseriesLatestDao fastLatestDao = mock(RedisFastTimeseriesLatestDao.class);
         ReflectionTestUtils.setField(timeseriesService, "timeseriesLatestDao", fastLatestDao);
         when(fastLatestDao.saveLatestBatch(eq(TENANT_ID), eq(DEVICE_ID), any(List.class)))
                 .thenReturn(Futures.immediateFuture(List.of(tsEntry1.getTs(), tsEntry2.getTs())));
@@ -136,8 +136,8 @@ class BaseTimeseriesServiceEdqsTest {
     }
 
     @Test
-    void saveLatest_withValkeyClusterFastTimeseriesLatestDao_shouldUseBatchCapability() {
-        ValkeyClusterFastTimeseriesLatestDao fastLatestDao = mock(ValkeyClusterFastTimeseriesLatestDao.class);
+    void saveLatest_withValkeyFastTimeseriesLatestDao_shouldUseBatchCapability() {
+        ValkeyFastTimeseriesLatestDao fastLatestDao = mock(ValkeyFastTimeseriesLatestDao.class);
         ReflectionTestUtils.setField(timeseriesService, "timeseriesLatestDao", fastLatestDao);
         when(fastLatestDao.saveLatestBatch(eq(TENANT_ID), eq(DEVICE_ID), any(List.class)))
                 .thenReturn(Futures.immediateFuture(List.of(tsEntry1.getTs(), tsEntry2.getTs())));
