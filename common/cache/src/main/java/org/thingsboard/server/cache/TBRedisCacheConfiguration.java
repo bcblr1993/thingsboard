@@ -143,11 +143,11 @@ public abstract class TBRedisCacheConfiguration {
     public RedisTemplate<String, String> redisTemplateString() {
         RedisTemplate<String, String> template = new RedisTemplate<>();
         template.setConnectionFactory(redisConnectionFactory());
-        StringRedisSerializer stringSerializer = new StringRedisSerializer();
-        template.setKeySerializer(stringSerializer);
-        template.setValueSerializer(stringSerializer);
-        template.setHashKeySerializer(stringSerializer);
-        template.setHashValueSerializer(stringSerializer);
+        template.setKeySerializer(new StringRedisSerializer()); // 配置 Key 的序列化方式
+        template.setValueSerializer(new StringRedisSerializer()); // 配置 Value 的序列化方式
+        // Keep hash fields and values compatible with the strings written by Lua scripts.
+        template.setHashKeySerializer(new StringRedisSerializer());
+        template.setHashValueSerializer(new StringRedisSerializer());
         return template;
     }
 
