@@ -63,9 +63,9 @@ import java.util.Optional;
  * <ol>
  *   <li><b>单哈希</b>：现网写 data 与 ts 两个哈希；但值本身已是 {@code ts|type:value} 格式，
  *       ts 天然内嵌，独立 ts 哈希纯属冗余。去掉后<b>每点操作 3→2，内存省一半</b>。</li>
- *   <li><b>整设备批读批写</b>：一次 {@code HMGET} 读回本批全部 field 的现值，在 Lua 内逐个比较
- *       时间戳，再用<b>一次</b>多 field {@code HSET} 写回幸存者。命令数从"每点 1 次"降到
- *       "每设备 1 次"（实测降 200 倍）。</li>
+ *   <li><b>整设备批读批写</b>：每次 Lua 调用按最多 3000 个 field 分段，用 {@code HMGET}
+ *       读取现值，比较时间戳后用多 field {@code HSET} 写回。所有分段仍在同一次 Lua 执行中完成，
+ *       避免大批次 {@code unpack} 超限；3000 点以内只需一轮批读批写。</li>
  *   <li><b>多 key 批量读</b>：实现 {@link BatchedTimeseriesLatestDao}，{@code HMGET} 一次取多个
  *       测点，消除实体查询"设备数 × 测点数"的放大。</li>
  * </ol>
@@ -99,18 +99,22 @@ public abstract class AbstractFastTimeseriesLatestDao implements TimeseriesLates
     private static final char JSON_PREFIX = 'j';
 
     /**
-     * 批量写入：一次 HMGET 批读 + 一次多 field HSET 批写，Lua 内完成时间戳守卫。
+     * 批量写入：同一次 Lua 执行内按 3000 个 field 分段 HMGET/HSET，完成时间戳守卫。
+     * 每次 unpack 最多展开 3000 个读取字段或 6000 个写入参数。
      * ARGV 为 {@code [field1, value1, field2, value2, ...]}，value 形如 {@code ts|type:payload}。
      * 返回实际写入（通过守卫）的 field 数。
      */
     private static final String SAVE_LATEST_BATCH_SCRIPT =
             "local n = #ARGV / 2 " +
+            "local cnt = 0 " +
+            "for first = 1, n, 3000 do " +
+            "local last = math.min(first + 2999, n) " +
             "local fields = {} " +
-            "for i = 1, n do fields[i] = ARGV[i*2-1] end " +
+            "for i = first, last do fields[#fields+1] = ARGV[i*2-1] end " +
             "local cur = redis.call('hmget', KEYS[1], unpack(fields)) " +
-            "local out = {} local cnt = 0 " +
-            "for i = 1, n do " +
-            "    local newVal = ARGV[i*2] " +
+            "local out = {} " +
+            "for i = 1, #fields do " +
+            "    local newVal = ARGV[(first+i-1)*2] " +
             "    local sep = string.find(newVal, '|', 1, true) " +
             "    local newTs = tonumber(string.sub(newVal, 1, sep - 1)) " +
             "    local ok = true " +
@@ -125,11 +129,25 @@ public abstract class AbstractFastTimeseriesLatestDao implements TimeseriesLates
             "    if ok then out[#out+1] = fields[i] out[#out+1] = newVal cnt = cnt + 1 end " +
             "end " +
             "if #out > 0 then redis.call('hset', KEYS[1], unpack(out)) end " +
+            "end " +
             "return cnt";
 
     private static final String FIND_ALL_LATEST_SCRIPT = "return redis.call('hgetall', KEYS[1])";
 
-    private static final String REMOVE_LATEST_SCRIPT = "return redis.call('hdel', KEYS[1], unpack(ARGV))";
+    /** ARGV: field, startTs (inclusive), endTs (exclusive). Check and delete atomically. */
+    private static final String REMOVE_LATEST_SCRIPT =
+            "local cur = redis.call('hget', KEYS[1], ARGV[1]) " +
+            "if not cur then return 0 end " +
+            "local sep = string.find(cur, '|', 1, true) " +
+            "if not sep then return redis.error_reply('Invalid serialized latest value') end " +
+            "local ts = tonumber(string.sub(cur, 1, sep - 1)) " +
+            "if not ts then return redis.error_reply('Invalid serialized latest timestamp') end " +
+            // Preserve the existing behavior for stored null values (ts|).
+            "if sep == #cur then return 0 end " +
+            "if ts >= tonumber(ARGV[2]) and ts < tonumber(ARGV[3]) then " +
+            "    return redis.call('hdel', KEYS[1], ARGV[1]) " +
+            "end " +
+            "return 0";
 
     @Autowired
     protected RedisTemplate<String, String> redisTemplate;
@@ -267,18 +285,11 @@ public abstract class AbstractFastTimeseriesLatestDao implements TimeseriesLates
     @Override
     public ListenableFuture<TsKvLatestRemovingResult> removeLatest(TenantId tenantId, EntityId entityId,
                                                                    DeleteTsKvQuery query) {
-        ListenableFuture<Optional<TsKvEntry>> current = findLatestOpt(tenantId, entityId, query.getKey());
-        ListenableFuture<Boolean> removedFuture = Futures.transformAsync(current, opt -> {
-            if (opt.isPresent() && opt.get().getValue() != null) {
-                long ts = opt.get().getTs();
-                // 与删除语句一致的半开区间 [startTs, endTs)
-                if (ts >= query.getStartTs() && ts < query.getEndTs()) {
-                    return Futures.transform(deleteLatest(entityId, query.getKey()), v -> true,
-                            MoreExecutors.directExecutor());
-                }
-            }
-            return Futures.immediateFuture(false);
-        }, MoreExecutors.directExecutor());
+        ListenableFuture<Boolean> removedFuture = cacheExecutorService.submit(() -> {
+            Long removed = redisTemplate.execute(removeLatestScript, Collections.singletonList(buildKey(entityId)),
+                    query.getKey(), Long.toString(query.getStartTs()), Long.toString(query.getEndTs()));
+            return removed != null && removed > 0;
+        });
 
         return Futures.transformAsync(removedFuture, isRemoved -> {
             if (Boolean.TRUE.equals(isRemoved) && query.getRewriteLatestIfDeleted()) {
@@ -286,13 +297,6 @@ public abstract class AbstractFastTimeseriesLatestDao implements TimeseriesLates
             }
             return Futures.immediateFuture(new TsKvLatestRemovingResult(query.getKey(), Boolean.TRUE.equals(isRemoved)));
         }, MoreExecutors.directExecutor());
-    }
-
-    private ListenableFuture<Void> deleteLatest(EntityId entityId, String key) {
-        return cacheExecutorService.submit(() -> {
-            redisTemplate.execute(removeLatestScript, Collections.singletonList(buildKey(entityId)), key);
-            return null;
-        });
     }
 
     private ListenableFuture<TsKvLatestRemovingResult> rewriteLatest(TenantId tenantId, EntityId entityId,
