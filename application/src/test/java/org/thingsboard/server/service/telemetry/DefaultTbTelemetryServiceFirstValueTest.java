@@ -94,24 +94,24 @@ public class DefaultTbTelemetryServiceFirstValueTest {
 
     @Test
     public void testRequestValidationLimits() {
-        assertBadRequest("keys不能为空", Collections.emptyList(),
+        assertBadRequest("keys can't be empty", Collections.emptyList(),
                 START_TS, START_TS + MINUTE, MINUTE);
-        assertBadRequest("查询时间范围不能超过31天", List.of("temperature"),
+        assertBadRequest("Time range can't be more than 31 days", List.of("temperature"),
                 START_TS, START_TS + TimeUnit.DAYS.toMillis(31) + 1, TimeUnit.DAYS.toMillis(1));
-        assertBadRequest("keys数量不能超过200",
+        assertBadRequest("keys can't be more than 200",
                 IntStream.range(0, 201).mapToObj(i -> "key" + i).toList(),
                 START_TS, START_TS + MINUTE, MINUTE);
-        assertBadRequest("keys数量不能超过200",
+        assertBadRequest("keys can't be more than 200",
                 Collections.nCopies(201, "temperature"),
                 START_TS, START_TS + MINUTE, MINUTE);
-        assertBadRequest("keys不能包含空值", List.of("temperature", ""),
+        assertBadRequest("keys can't contain empty values", List.of("temperature", ""),
                 START_TS, START_TS + MINUTE, MINUTE);
-        assertBadRequest("请求的潜在返回桶位不能超过600000",
+        assertBadRequest("Requested time buckets can't be more than 500000",
                 IntStream.range(0, 200).mapToObj(i -> "key" + i).toList(),
                 START_TS, START_TS + 3001 * MINUTE, MINUTE);
-        assertBadRequest("interval不能小于60000", List.of("temperature"),
+        assertBadRequest("interval can't be less than 60000", List.of("temperature"),
                 START_TS, START_TS + MINUTE, MINUTE - 1);
-        assertBadRequest("startTs必须大于等于0，且endTs必须大于startTs", List.of("temperature"),
+        assertBadRequest("endTs must be greater than startTs", List.of("temperature"),
                 START_TS, START_TS, MINUTE);
         verifyNoInteractions(tsService);
     }

@@ -279,7 +279,7 @@ public class TelemetryControllerTest extends AbstractControllerTest {
     }
 
     @Test
-    public void testTimeseriesFirstOfIntervalPostReturnsChineseValidationError() throws Exception {
+    public void testTimeseriesFirstOfIntervalPostReturnsValidationError() throws Exception {
         loginTenantAdmin();
         Device device = createDevice();
         long startTs = 1_700_100_000_000L;
@@ -289,7 +289,7 @@ public class TelemetryControllerTest extends AbstractControllerTest {
         doPost("/api/plugins/telemetry/DEVICE/" + device.getId() +
                         "/values/timeseries/firstOfInterval", request)
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("startTs必须大于等于0，且endTs必须大于startTs"));
+                .andExpect(jsonPath("$.message").value("endTs must be greater than startTs"));
     }
 
     @Test

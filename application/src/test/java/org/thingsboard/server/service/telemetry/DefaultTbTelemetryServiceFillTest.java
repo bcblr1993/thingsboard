@@ -173,7 +173,7 @@ public class DefaultTbTelemetryServiceFillTest {
                         1_000L, Aggregation.NONE, false, "ASC", user).get());
 
         Assert.assertTrue(error.getCause() instanceof InvalidParametersException);
-        Assert.assertEquals("请求数据量过大", error.getCause().getMessage());
+        Assert.assertEquals("Too many data points", error.getCause().getMessage());
     }
 
     @Test

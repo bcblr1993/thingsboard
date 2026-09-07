@@ -425,7 +425,7 @@ public class TelemetryController extends BaseController {
             @RequestBody TimeseriesFirstOfIntervalRequest request) throws ThingsboardException {
 
         if (request == null) {
-            throw new ThingsboardException("请求体不能为空", ThingsboardErrorCode.BAD_REQUEST_PARAMS);
+            throw new ThingsboardException("Request body can't be empty", ThingsboardErrorCode.BAD_REQUEST_PARAMS);
         }
         return getTimeseriesFirstOfInterval(entityType, entityIdStr, request.keys(), request.startTs(), request.endTs(),
                 request.interval(), request.useStrictDataTypes());
