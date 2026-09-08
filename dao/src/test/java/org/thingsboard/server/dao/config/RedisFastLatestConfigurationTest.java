@@ -19,9 +19,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.beans.factory.support.BeanDefinitionRegistry;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.ClassPathBeanDefinitionScanner;
 import org.springframework.core.env.SystemEnvironmentPropertySource;
 import org.springframework.data.redis.connection.jedis.JedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -29,6 +32,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.thingsboard.server.cache.RedisSslCredentials;
 import org.thingsboard.server.cache.TBRedisCacheConfiguration;
+import org.thingsboard.server.cache.TBRedisStandaloneConfiguration;
 import org.thingsboard.server.dao.cache.CacheExecutorService;
 import org.thingsboard.server.dao.sqlts.AggregationTimeseriesDao;
 import org.thingsboard.server.dao.timeseries.RedisClusterTimeseriesLatestDao;
@@ -46,10 +50,39 @@ import static org.mockito.Mockito.mock;
 class RedisFastLatestConfigurationTest {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-            .withPropertyValues("cache.type=redis", "cache.maximumPoolSize=8")
+            .withPropertyValues("cache.type=redis", "cache.maximumPoolSize=8",
+                    "test.redis-fast-latest.mock-enabled=true")
             .withUserConfiguration(MockRedisConfiguration.class, RedisTimeseriesLatestDao.class,
                     RedisClusterTimeseriesLatestDao.class, RedisFastTimeseriesLatestDao.class,
                     ValkeyFastTimeseriesLatestDao.class);
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "false"})
+    void shouldNotLoadMockRedisConfigurationFromComponentScanUnlessExplicitlyEnabled(String mockEnabled) {
+        ApplicationContextRunner scanningContextRunner = new ApplicationContextRunner()
+                .withPropertyValues("cache.type=redis", "cache.maximumPoolSize=8", "redis.connection.type=standalone")
+                .withBean("testRedisSslCredentials", RedisSslCredentials.class, RedisSslCredentials::new,
+                        definition -> definition.setPrimary(true))
+                .withUserConfiguration(TBRedisStandaloneConfiguration.class)
+                // Use ordinary Spring scanning, without Spring Boot's test-component exclusion filters.
+                .withInitializer(context -> {
+                    ClassPathBeanDefinitionScanner scanner = new ClassPathBeanDefinitionScanner(
+                            (BeanDefinitionRegistry) context.getBeanFactory(), true, context.getEnvironment());
+                    // Limit this regression to the test fixture, avoiding unrelated database configurations.
+                    scanner.setResourcePattern("RedisFastLatestConfigurationTest$*.class");
+                    scanner.scan("org.thingsboard.server.dao.config");
+                });
+        if (!mockEnabled.isEmpty()) {
+            scanningContextRunner = scanningContextRunner.withPropertyValues(
+                    "test.redis-fast-latest.mock-enabled=" + mockEnabled);
+        }
+        scanningContextRunner.run(context -> {
+            assertThat(context).hasNotFailed();
+            assertThat(context.getBean(TBRedisCacheConfiguration.class))
+                    .isInstanceOf(TBRedisStandaloneConfiguration.class);
+            assertThat(context).doesNotHaveBean(MockRedisConfiguration.class);
+        });
+    }
 
     @ParameterizedTest
     @CsvSource({
@@ -140,7 +173,8 @@ class RedisFastLatestConfigurationTest {
         });
     }
 
-    @Configuration
+    @TestConfiguration
+    @ConditionalOnProperty(name = "test.redis-fast-latest.mock-enabled", havingValue = "true", matchIfMissing = false)
     static class MockRedisConfiguration extends TBRedisCacheConfiguration {
 
         @Override
