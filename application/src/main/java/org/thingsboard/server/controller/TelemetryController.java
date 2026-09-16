@@ -343,8 +343,11 @@ public class TelemetryController extends BaseController {
     }
 
     @ApiOperation(value = "Get time series data grouped into intervals with optional gap filling",
-            notes = "Returns time series data grouped into fixed millisecond intervals. " +
+            notes = "Returns timestamps from startTs through endTs, both inclusive, stepping by interval and appending endTs if unaligned. " +
+                    "Each timestamp t represents (t - interval, t], so the final window may overlap the preceding window. " +
+                    "Without gap filling, NONE returns only raw values exactly at the output timestamps. " +
                     "Supports NONE, AVG, MIN and MAX aggregations and optional previous-value gap filling. " +
+                    "Filled AVG is time-weighted; filled MIN/MAX exclude values with zero duration at the right endpoint. " +
                     "\n\n" + INVALID_ENTITY_ID_OR_ENTITY_TYPE_DESCRIPTION + TENANT_OR_CUSTOMER_AUTHORITY_PARAGRAPH)
     @PreAuthorize("hasAnyAuthority('SYS_ADMIN', 'TENANT_ADMIN', 'CUSTOMER_USER')")
     @RequestMapping(value = "/{entityType}/{entityId}/values/timeseries/fill", method = RequestMethod.GET)

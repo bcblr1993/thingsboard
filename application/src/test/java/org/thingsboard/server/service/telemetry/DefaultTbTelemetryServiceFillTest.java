@@ -185,7 +185,7 @@ public class DefaultTbTelemetryServiceFillTest {
             queryRanges.add(query.getStartTs() + "-" + query.getEndTs());
             if (query.getStartTs() == 0L) {
                 return Futures.immediateFuture(List.of(
-                        new BasicTsKvEntry(START_TS - 1, new LongDataEntry("temperature", 10L))));
+                        new BasicTsKvEntry(START_TS - 1_000, new LongDataEntry("temperature", 10L))));
             }
             return Futures.immediateFuture(Collections.emptyList());
         });
@@ -193,8 +193,49 @@ public class DefaultTbTelemetryServiceFillTest {
         List<TsKvEntry> result = service.getTimeseriesFill(deviceId, List.of("temperature"), START_TS, END_TS,
                 1_000L, Aggregation.NONE, true, "ASC", user).get();
 
-        Assert.assertEquals(List.of(START_TS + "-" + END_TS, "0-" + START_TS), queryRanges);
+        Assert.assertEquals(List.of((START_TS - 999) + "-" + (END_TS + 1), "0-" + (START_TS - 999)), queryRanges);
+        Assert.assertEquals(3, result.size());
+    }
+
+    @Test
+    public void testUnfilledNoneQueriesInclusiveRangeAndOnlyReturnsExactTimes() throws Exception {
+        when(tsService.findAll(eq(tenantId), eq(deviceId), any())).thenAnswer(invocation -> {
+            List<ReadTsKvQuery> queries = invocation.getArgument(2);
+            Assert.assertEquals(START_TS, queries.get(0).getStartTs());
+            Assert.assertEquals(END_TS + 1, queries.get(0).getEndTs());
+            return Futures.immediateFuture(List.of(
+                    new BasicTsKvEntry(START_TS, new LongDataEntry("temperature", 1L)),
+                    new BasicTsKvEntry(START_TS + 500, new LongDataEntry("temperature", 2L)),
+                    new BasicTsKvEntry(END_TS, new LongDataEntry("temperature", 3L))));
+        });
+        List<TsKvEntry> result = service.getTimeseriesFill(deviceId, List.of("temperature"), START_TS, END_TS,
+                1_000L, Aggregation.NONE, false, "ASC", user).get();
         Assert.assertEquals(2, result.size());
+        Assert.assertEquals(START_TS, result.get(0).getTs());
+        Assert.assertEquals(END_TS, result.get(1).getTs());
+    }
+
+    @Test
+    public void testEpochStartRetainsFillingWithoutSeedQuery() throws Exception {
+        when(tsService.findAll(eq(tenantId), eq(deviceId), any())).thenAnswer(invocation -> {
+            List<ReadTsKvQuery> queries = invocation.getArgument(2);
+            Assert.assertEquals(0L, queries.get(0).getStartTs());
+            Assert.assertEquals(2_001L, queries.get(0).getEndTs());
+            return Futures.immediateFuture(List.of(new BasicTsKvEntry(0, new LongDataEntry("temperature", 7L))));
+        });
+        List<TsKvEntry> result = service.getTimeseriesFill(deviceId, List.of("temperature"), 0L, 2_000L,
+                1_000L, Aggregation.AVG, true, "ASC", user).get();
+        Assert.assertEquals(2, result.size());
+        Assert.assertEquals(1_000L, result.get(0).getTs());
+        Assert.assertEquals(2_000L, result.get(1).getTs());
+    }
+
+    @Test
+    public void testEqualEndpointsAreAccepted() throws Exception {
+        when(tsService.findAll(eq(tenantId), eq(deviceId), any())).thenReturn(Futures.immediateFuture(List.of(
+                new BasicTsKvEntry(START_TS, new LongDataEntry("temperature", 7L)))));
+        Assert.assertEquals(1, service.getTimeseriesFill(deviceId, List.of("temperature"), START_TS, START_TS,
+                1_000L, Aggregation.NONE, false, "ASC", user).get().size());
     }
 
     @Test

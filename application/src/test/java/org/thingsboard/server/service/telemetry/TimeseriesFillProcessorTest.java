@@ -28,161 +28,138 @@ import java.util.Collections;
 import java.util.List;
 
 public class TimeseriesFillProcessorTest {
-
     private static final String KEY = "temperature";
-    private static final long START_TS = 1_700_000_000_000L;
-    private static final long INTERVAL = 60_000L;
+    private static final long START = 1_700_000_000_000L;
+    private static final long INTERVAL = 10_000L;
 
     @Test
-    public void testFilledAvgUsesTimeWeightedState() {
-        TsKvEntry seed = longEntry(START_TS - 1, 10);
-        TsKvEntry changedValue = longEntry(START_TS + INTERVAL + 30_000, 20);
-
-        List<TsKvEntry> result = process(seed, List.of(changedValue), Aggregation.AVG, true,
-                START_TS + 3 * INTERVAL, 10);
-
-        Assert.assertEquals(3, result.size());
-        assertDoubleEntry(result.get(0), START_TS, 10.0);
-        assertDoubleEntry(result.get(1), START_TS + INTERVAL, 15.0);
-        assertDoubleEntry(result.get(2), START_TS + 2 * INTERVAL, 20.0);
+    public void testUnfilledAggregationsIncludeFirstWindowAndOmitEmptyWindows() {
+        List<TsKvEntry> data = sample();
+        assertValues(process(null, data, Aggregation.AVG, false, 30), new long[]{0, 10, 30}, 15, 25, 60);
+        assertValues(process(null, data, Aggregation.MIN, false, 30), new long[]{0, 10, 30}, 10, 10, 60);
+        assertValues(process(null, data, Aggregation.MAX, false, 30), new long[]{0, 10, 30}, 20, 40, 60);
     }
 
     @Test
-    public void testFilledNoneReturnsLatestStateAtBucketEnd() {
-        TsKvEntry seed = longEntry(START_TS - 1, 7);
-        TsKvEntry changedValue = longEntry(START_TS + INTERVAL + 30_000, 8);
-
-        List<TsKvEntry> result = process(seed, List.of(changedValue), Aggregation.NONE, true,
-                START_TS + 3 * INTERVAL, 10);
-
-        Assert.assertEquals(3, result.size());
-        assertLongEntry(result.get(0), START_TS, 7);
-        assertLongEntry(result.get(1), START_TS + INTERVAL, 8);
-        assertLongEntry(result.get(2), START_TS + 2 * INTERVAL, 8);
+    public void testFilledAggregationsUseTimeWeightedState() {
+        TsKvEntry seed = point(-12, 4);
+        assertValues(process(seed, sample(), Aggregation.NONE, true, 30), new long[]{0, 10, 20, 30}, 20, 10, 10, 60);
+        assertValues(process(seed, sample(), Aggregation.AVG, true, 30), new long[]{0, 10, 20, 30}, 10.8, 30, 10, 50);
+        assertValues(process(seed, sample(), Aggregation.MIN, true, 30), new long[]{0, 10, 20, 30}, 4, 10, 10, 10);
+        assertValues(process(seed, sample(), Aggregation.MAX, true, 30), new long[]{0, 10, 20, 30}, 20, 40, 10, 60);
     }
 
     @Test
-    public void testUnfilledNoneReturnsLastRawPointAndOmitsEmptyBucket() {
-        List<TsKvEntry> data = List.of(
-                longEntry(START_TS + 1_000, 10),
-                longEntry(START_TS + 2_000, 20),
-                longEntry(START_TS + 2 * INTERVAL + 1_000, 30));
-
-        List<TsKvEntry> result = process(null, data, Aggregation.NONE, false,
-                START_TS + 3 * INTERVAL, 10);
-
-        Assert.assertEquals(2, result.size());
-        assertLongEntry(result.get(0), START_TS, 20);
-        assertLongEntry(result.get(1), START_TS + 2 * INTERVAL, 30);
+    public void testUnfilledNoneRequiresExactTimestampIncludingEnd() {
+        List<TsKvEntry> data = List.of(point(-1, 1), point(0, 2), point(9, 3), point(10, 4),
+                point(19, 5), point(24, 6), point(25, 7), point(26, 8));
+        assertValues(process(null, data, Aggregation.NONE, false, 25), new long[]{0, 10, 25}, 2, 4, 7);
+        Assert.assertTrue(process(null, sample(), Aggregation.NONE, false, 30).isEmpty());
     }
 
     @Test
-    public void testUnfilledAvgUsesOnlyRawPoints() {
-        List<TsKvEntry> data = List.of(
-                longEntry(START_TS + 1_000, 10),
-                longEntry(START_TS + 2_000, 20),
-                longEntry(START_TS + 2 * INTERVAL + 1_000, 30));
-
-        List<TsKvEntry> result = process(null, data, Aggregation.AVG, false,
-                START_TS + 3 * INTERVAL, 10);
-
-        Assert.assertEquals(2, result.size());
-        assertDoubleEntry(result.get(0), START_TS, 15.0);
-        assertDoubleEntry(result.get(1), START_TS + 2 * INTERVAL, 30.0);
+    public void testRightClosedRawWindowsExcludeLeftBoundary() {
+        List<TsKvEntry> data = List.of(point(-10, 100), point(0, 10), point(10, 20), point(20, 30), point(21, 999));
+        for (Aggregation agg : List.of(Aggregation.AVG, Aggregation.MIN, Aggregation.MAX)) {
+            assertValues(process(null, data, agg, false, 20), new long[]{0, 10, 20}, 10, 20, 30);
+        }
     }
 
     @Test
-    public void testFilledSeriesStartsAtFirstKnownValueWithoutSeed() {
-        TsKvEntry firstValue = longEntry(START_TS + 30_000, 20);
-
-        List<TsKvEntry> result = process(null, List.of(firstValue), Aggregation.AVG, true,
-                START_TS + 2 * INTERVAL, 10);
-
-        Assert.assertEquals(2, result.size());
-        assertDoubleEntry(result.get(0), START_TS, 20.0);
-        assertDoubleEntry(result.get(1), START_TS + INTERVAL, 20.0);
+    public void testRightEndpointHasZeroDurationForFilledAggregations() {
+        for (long endpointValue : new long[]{99, -99}) {
+            for (Aggregation agg : List.of(Aggregation.AVG, Aggregation.MIN, Aggregation.MAX)) {
+                assertValues(process(point(-10, 7), List.of(point(0, endpointValue)), agg, true, 10),
+                        new long[]{0, 10}, 7, endpointValue);
+            }
+            assertValues(process(point(-10, 7), List.of(point(0, endpointValue)), Aggregation.NONE, true, 0),
+                    new long[]{0}, endpointValue);
+        }
     }
 
     @Test
-    public void testMinAndMaxPreserveLongTypeForLongSeries() {
-        List<TsKvEntry> data = List.of(
-                longEntry(START_TS + 1_000, 12),
-                longEntry(START_TS + 2_000, 5),
-                longEntry(START_TS + 3_000, 18));
-
-        List<TsKvEntry> min = process(null, data, Aggregation.MIN, false, START_TS + INTERVAL, 10);
-        List<TsKvEntry> max = process(null, data, Aggregation.MAX, false, START_TS + INTERVAL, 10);
-
-        assertLongEntry(min.get(0), START_TS, 5);
-        assertLongEntry(max.get(0), START_TS, 18);
+    public void testFirstValueAtRightEndpointWithoutSeed() {
+        for (Aggregation agg : List.of(Aggregation.AVG, Aggregation.MIN, Aggregation.MAX)) {
+            assertValues(process(null, List.of(point(0, 99)), agg, true, 10), new long[]{10}, 99);
+        }
+        assertValues(process(null, List.of(point(0, 99)), Aggregation.NONE, true, 10), new long[]{0, 10}, 99, 99);
     }
 
     @Test
-    public void testNonNumericSeriesCanBeDetectedBeforeAggregation() {
-        TsKvEntry stringEntry = new BasicTsKvEntry(START_TS, new StringDataEntry(KEY, "warm"));
-
-        Assert.assertFalse(TimeseriesFillProcessor.isNumericSeries(null, List.of(stringEntry)));
-        Assert.assertTrue(TimeseriesFillProcessor.isNumericSeries(null, List.of(longEntry(START_TS, 1))));
+    public void testUnknownPrefixIsNotBackfilledOrCountedAsZero() {
+        assertValues(process(null, List.of(point(-2, 20)), Aggregation.AVG, true, 10), new long[]{0, 10}, 20, 20);
+        assertValues(process(null, List.of(point(12, 30)), Aggregation.AVG, true, 20), new long[]{20}, 30);
+        for (Aggregation agg : List.of(Aggregation.NONE, Aggregation.AVG, Aggregation.MIN, Aggregation.MAX)) {
+            Assert.assertTrue(process(null, Collections.emptyList(), agg, true, 20).isEmpty());
+            Assert.assertTrue(process(null, Collections.emptyList(), agg, false, 20).isEmpty());
+            assertValues(process(point(-12, 7), Collections.emptyList(), agg, true, 20), new long[]{0, 10, 20}, 7, 7, 7);
+        }
     }
 
     @Test
-    public void testResultLimitRejectsNextGeneratedPoint() {
-        TsKvEntry seed = longEntry(START_TS - 1, 10);
-
-        Assert.assertThrows(TimeseriesFillProcessor.ResultLimitExceededException.class,
-                () -> process(seed, Collections.emptyList(), Aggregation.NONE, true,
-                        START_TS + 3 * INTERVAL, 2));
+    public void testFinalUnalignedWindowIsFullWidthAndOverlaps() {
+        List<TsKvEntry> data = List.of(point(15, 100), point(16, 20), point(20, 40), point(25, 80));
+        assertValues(process(null, data, Aggregation.AVG, false, 25), new long[]{20, 25}, 160.0 / 3, 140.0 / 3);
+        assertValues(process(null, data, Aggregation.MIN, false, 25), new long[]{20, 25}, 20, 20);
+        assertValues(process(null, data, Aggregation.MAX, false, 25), new long[]{20, 25}, 100, 80);
+        assertValues(process(null, data, Aggregation.NONE, true, 25), new long[]{20, 25}, 40, 80);
+        assertValues(process(null, data, Aggregation.AVG, true, 25), new long[]{20, 25}, 36, 38);
+        assertValues(process(null, data, Aggregation.MIN, true, 25), new long[]{20, 25}, 20, 20);
+        assertValues(process(null, data, Aggregation.MAX, true, 25), new long[]{20, 25}, 100, 100);
     }
 
     @Test
-    public void testResultLimitAllowsExactNumberOfPoints() {
-        TsKvEntry seed = longEntry(START_TS - 1, 10);
-
-        List<TsKvEntry> result = process(seed, Collections.emptyList(), Aggregation.NONE, true,
-                START_TS + 2 * INTERVAL, 2);
-
-        Assert.assertEquals(2, result.size());
+    public void testRangeShorterThanIntervalStillReturnsBothEndpoints() {
+        assertValues(process(point(-12, 7), List.of(point(0, 17)), Aggregation.AVG, true, 5), new long[]{0, 5}, 7, 12);
     }
 
     @Test
-    public void testDescOrderIsAppliedPerKey() {
-        TsKvEntry seed = longEntry(START_TS - 1, 10);
-
-        List<TsKvEntry> result = TimeseriesFillProcessor.processKey(KEY, seed, Collections.emptyList(),
-                START_TS, START_TS + 2 * INTERVAL, INTERVAL, Aggregation.NONE, true, "DESC", 10);
-
-        Assert.assertEquals(START_TS + INTERVAL, result.get(0).getTs());
-        Assert.assertEquals(START_TS, result.get(1).getTs());
+    public void testEqualStartAndEndProducesOneTimestamp() {
+        assertValues(process(null, List.of(point(0, 9)), Aggregation.NONE, false, 0), new long[]{0}, 9);
+        assertValues(process(point(-12, 7), List.of(), Aggregation.AVG, true, 0), new long[]{0}, 7);
     }
 
     @Test
-    public void testMixedLongAndDoubleMinReturnsDouble() {
-        List<TsKvEntry> data = List.of(
-                longEntry(START_TS + 1_000, 10),
-                new BasicTsKvEntry(START_TS + 2_000, new DoubleDataEntry(KEY, 5.5)));
-
-        List<TsKvEntry> result = process(null, data, Aggregation.MIN, false, START_TS + INTERVAL, 10);
-
-        assertDoubleEntry(result.get(0), START_TS, 5.5);
+    public void testDescendingOrderAndInclusiveResultLimit() {
+        List<TsKvEntry> result = TimeseriesFillProcessor.processKey(KEY, point(-12, 7), List.of(),
+                START, START + 20_000, INTERVAL, Aggregation.NONE, true, "DESC", 3);
+        assertValues(result, new long[]{20, 10, 0}, 7, 7, 7);
+        Assert.assertThrows(TimeseriesFillProcessor.ResultLimitExceededException.class, () ->
+                TimeseriesFillProcessor.processKey(KEY, point(-12, 7), List.of(), START, START + 20_000,
+                        INTERVAL, Aggregation.NONE, true, "ASC", 2));
     }
 
-    private List<TsKvEntry> process(TsKvEntry seed, List<TsKvEntry> data, Aggregation aggregation,
-                                    boolean fillMissing, long endTs, int resultLimit) {
-        return TimeseriesFillProcessor.processKey(KEY, seed, data, START_TS, endTs, INTERVAL,
-                aggregation, fillMissing, "ASC", resultLimit);
+    @Test
+    public void testNumericTypesAndNonNumericNone() {
+        List<TsKvEntry> mixed = List.of(point(-5, 10), new BasicTsKvEntry(START, new DoubleDataEntry(KEY, 5.5)));
+        TsKvEntry min = process(null, mixed, Aggregation.MIN, false, 0).get(0);
+        Assert.assertEquals(5.5, min.getDoubleValue().orElseThrow(), 0.0001);
+        Assert.assertTrue(process(null, List.of(point(0, 10)), Aggregation.MAX, false, 0).get(0).getLongValue().isPresent());
+        TsKvEntry text = new BasicTsKvEntry(START, new StringDataEntry(KEY, "warm"));
+        Assert.assertFalse(TimeseriesFillProcessor.isNumericSeries(null, List.of(text)));
+        Assert.assertEquals("warm", process(null, List.of(text), Aggregation.NONE, false, 0).get(0).getStrValue().orElseThrow());
     }
 
-    private TsKvEntry longEntry(long ts, long value) {
-        return new BasicTsKvEntry(ts, new LongDataEntry(KEY, value));
+    private List<TsKvEntry> sample() {
+        return List.of(point(-8, 10), point(-2, 20), point(2, 40), point(8, 10), point(22, 60));
     }
 
-    private void assertLongEntry(TsKvEntry entry, long ts, long value) {
-        Assert.assertEquals(ts, entry.getTs());
-        Assert.assertEquals(value, entry.getLongValue().orElseThrow().longValue());
+    private List<TsKvEntry> process(TsKvEntry seed, List<TsKvEntry> data, Aggregation agg, boolean fill, long endSeconds) {
+        return TimeseriesFillProcessor.processKey(KEY, seed, data, START, START + endSeconds * 1000,
+                INTERVAL, agg, fill, "ASC", 100);
     }
 
-    private void assertDoubleEntry(TsKvEntry entry, long ts, double value) {
-        Assert.assertEquals(ts, entry.getTs());
-        Assert.assertEquals(value, entry.getDoubleValue().orElseThrow(), 0.0001);
+    private TsKvEntry point(long seconds, long value) {
+        return new BasicTsKvEntry(START + seconds * 1000, new LongDataEntry(KEY, value));
+    }
+
+    private void assertValues(List<TsKvEntry> result, long[] seconds, double... values) {
+        Assert.assertEquals(seconds.length, result.size());
+        for (int i = 0; i < seconds.length; i++) {
+            Assert.assertEquals(START + seconds[i] * 1000, result.get(i).getTs());
+            double actual = result.get(i).getLongValue().isPresent()
+                    ? result.get(i).getLongValue().get() : result.get(i).getDoubleValue().orElseThrow();
+            Assert.assertEquals(values[i], actual, 0.0001);
+        }
     }
 }

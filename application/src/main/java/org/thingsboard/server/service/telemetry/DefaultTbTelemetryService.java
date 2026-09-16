@@ -148,7 +148,11 @@ public class DefaultTbTelemetryService implements TbTelemetryService {
 
         String key = context.keys.get(context.keyIndex);
         int queryLimit = context.remainingRawPoints + 1;
-        ReadTsKvQuery dataQuery = new BaseReadTsKvQuery(key, startTs, endTs, AggregationParams.none(), queryLimit, "ASC");
+        long firstBucketStart = startTs - interval;
+        long dataStart = !fillMissing && Aggregation.NONE.equals(aggregation)
+                ? startTs : Math.max(0L, firstBucketStart + 1);
+        // Storage queries use [start, end); convert our inclusive millisecond endpoint.
+        ReadTsKvQuery dataQuery = new BaseReadTsKvQuery(key, dataStart, endTs + 1, AggregationParams.none(), queryLimit, "ASC");
         Futures.addCallback(tsService.findAll(tenantId, entityId, Collections.singletonList(dataQuery)), new FutureCallback<>() {
             @Override
             public void onSuccess(List<TsKvEntry> data) {
@@ -158,8 +162,8 @@ public class DefaultTbTelemetryService implements TbTelemetryService {
                     return;
                 }
                 context.remainingRawPoints -= keyData.size();
-                if (fillMissing && startTs > 0) {
-                    ReadTsKvQuery seedQuery = new BaseReadTsKvQuery(key, 0L, startTs, AggregationParams.none(), 1, "DESC");
+                if (fillMissing && firstBucketStart >= 0) {
+                    ReadTsKvQuery seedQuery = new BaseReadTsKvQuery(key, 0L, firstBucketStart + 1, AggregationParams.none(), 1, "DESC");
                     Futures.addCallback(tsService.findAll(tenantId, entityId, Collections.singletonList(seedQuery)), new FutureCallback<>() {
                         @Override
                         public void onSuccess(List<TsKvEntry> seedData) {
@@ -174,7 +178,7 @@ public class DefaultTbTelemetryService implements TbTelemetryService {
                         }
                     }, MoreExecutors.directExecutor());
                 } else {
-                    processFillKey(tenantId, entityId, startTs, endTs, interval, aggregation, false,
+                    processFillKey(tenantId, entityId, startTs, endTs, interval, aggregation, fillMissing,
                             orderBy, context, future, key, null, keyData);
                 }
             }
@@ -217,8 +221,11 @@ public class DefaultTbTelemetryService implements TbTelemetryService {
         if (keys.size() > MAX_KEYS) {
             throw badRequest("keys can't be more than " + MAX_KEYS);
         }
-        if (startTs == null || endTs == null || startTs < 0 || endTs <= startTs) {
-            throw badRequest("endTs must be greater than startTs");
+        if (startTs == null || endTs == null || startTs < 0 || endTs < startTs) {
+            throw badRequest("endTs must be greater than or equal to startTs");
+        }
+        if (endTs == Long.MAX_VALUE) {
+            throw badRequest("endTs must be less than Long.MAX_VALUE");
         }
         if (endTs - startTs > MAX_TIME_RANGE) {
             throw badRequest("Time range can't be more than 31 days");

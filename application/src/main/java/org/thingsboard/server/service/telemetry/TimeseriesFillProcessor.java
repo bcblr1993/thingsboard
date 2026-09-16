@@ -58,124 +58,96 @@ final class TimeseriesFillProcessor {
                                       boolean fillMissing,
                                       String orderBy,
                                       int resultLimit) {
-        List<TsKvEntry> data = filterAndSort(rawData, startTs, endTs);
-        List<TsKvEntry> result = fillMissing
-                ? processFilled(key, seed, data, startTs, endTs, interval, aggregation, resultLimit)
-                : processUnfilled(key, data, startTs, interval, aggregation, resultLimit);
+        List<TsKvEntry> data = filterAndSort(rawData, startTs - interval, endTs);
+        List<TsKvEntry> result = new ArrayList<>();
+        if (!fillMissing && Aggregation.NONE.equals(aggregation)) {
+            // NONE without filling is an exact-time lookup at each output timestamp.
+            for (TsKvEntry entry : data) {
+                long ts = entry.getTs();
+                if (ts >= startTs && (ts == endTs || (ts - startTs) % interval == 0)) {
+                    addResult(result, new BasicTsKvEntry(ts, copyKv(entry)), resultLimit);
+                }
+            }
+        } else if (seed != null || !data.isEmpty()) {
+            int leftIndex = 0;
+            TsKvEntry preceding = seed;
+            long bucketEnd = startTs;
+            while (true) {
+                long bucketStart = bucketEnd - interval;
+                // Keep the state at the left boundary. Re-evaluate the final full-width
+                // window independently because it may overlap the preceding window.
+                while (leftIndex < data.size() && data.get(leftIndex).getTs() <= bucketStart) {
+                    preceding = data.get(leftIndex++);
+                }
+                if (!fillMissing) {
+                    if (leftIndex == data.size()) {
+                        break;
+                    }
+                    long nextTs = data.get(leftIndex).getTs();
+                    if (nextTs > bucketEnd) {
+                        // Skip empty windows without scanning every output timestamp.
+                        long remainder = (nextTs - startTs) % interval;
+                        long advance = remainder == 0 ? 0 : interval - remainder;
+                        bucketEnd = advance >= endTs - nextTs ? endTs : nextTs + advance;
+                        continue;
+                    }
+                }
+                TsKvEntry entry = aggregateBucket(key, preceding, data, leftIndex,
+                        bucketStart, bucketEnd, aggregation, fillMissing);
+                if (entry != null) {
+                    addResult(result, entry, resultLimit);
+                }
+                if (bucketEnd == endTs) {
+                    break;
+                }
+                bucketEnd = interval >= endTs - bucketEnd ? endTs : bucketEnd + interval;
+            }
+        }
         if ("DESC".equalsIgnoreCase(orderBy)) {
             Collections.reverse(result);
         }
         return result;
     }
 
-    private static List<TsKvEntry> processUnfilled(String key,
-                                                   List<TsKvEntry> data,
-                                                   long startTs,
-                                                   long interval,
-                                                   Aggregation aggregation,
-                                                   int resultLimit) {
-        List<TsKvEntry> result = new ArrayList<>();
-        int index = 0;
-        while (index < data.size()) {
-            long bucketStart = bucketStart(data.get(index).getTs(), startTs, interval);
-            int bucketEndIndex = index + 1;
-            while (bucketEndIndex < data.size()
-                    && bucketStart(data.get(bucketEndIndex).getTs(), startTs, interval) == bucketStart) {
-                bucketEndIndex++;
-            }
-            TsKvEntry entry = aggregateRawBucket(key, data, index, bucketEndIndex, bucketStart, aggregation);
-            addResult(result, entry, resultLimit);
-            index = bucketEndIndex;
-        }
-        return result;
-    }
-
-    private static List<TsKvEntry> processFilled(String key,
-                                                 TsKvEntry seed,
-                                                 List<TsKvEntry> data,
-                                                 long startTs,
-                                                 long endTs,
-                                                 long interval,
-                                                 Aggregation aggregation,
-                                                 int resultLimit) {
-        if (seed == null && data.isEmpty()) {
-            return Collections.emptyList();
-        }
-        List<TsKvEntry> result = new ArrayList<>();
-        long currentBucketStart = seed == null ? bucketStart(data.get(0).getTs(), startTs, interval) : startTs;
-        TsKvEntry active = seed;
-        int index = 0;
-        while (currentBucketStart < endTs) {
-            long remaining = endTs - currentBucketStart;
-            long bucketEnd = interval >= remaining ? endTs : currentBucketStart + interval;
-            while (index < data.size() && data.get(index).getTs() <= currentBucketStart) {
-                active = data.get(index++);
-            }
-
-            if (Aggregation.NONE.equals(aggregation)) {
-                while (index < data.size() && data.get(index).getTs() < bucketEnd) {
-                    active = data.get(index++);
-                }
-                if (active != null) {
-                    addResult(result, new BasicTsKvEntry(currentBucketStart, copyKv(active)), resultLimit);
-                }
-            } else {
-                NumericAccumulator accumulator = new NumericAccumulator(key, aggregation, true);
-                long segmentStart = currentBucketStart;
-                if (active == null && index < data.size() && data.get(index).getTs() < bucketEnd) {
-                    active = data.get(index++);
-                    segmentStart = active.getTs();
-                }
-                while (active != null && index < data.size() && data.get(index).getTs() < bucketEnd) {
-                    TsKvEntry next = data.get(index++);
+    private static TsKvEntry aggregateBucket(String key, TsKvEntry preceding, List<TsKvEntry> data,
+                                              int index, long bucketStart, long bucketEnd,
+                                              Aggregation aggregation, boolean fillMissing) {
+        NumericAccumulator accumulator = new NumericAccumulator(key, aggregation, fillMissing);
+        TsKvEntry active = preceding;
+        long segmentStart = bucketStart;
+        while (index < data.size() && data.get(index).getTs() <= bucketEnd) {
+            TsKvEntry next = data.get(index++);
+            if (!Aggregation.NONE.equals(aggregation)) {
+                if (!fillMissing) {
+                    accumulator.add(next);
+                } else if (active != null) {
                     accumulator.add(active, segmentStart, next.getTs());
-                    active = next;
-                    segmentStart = next.getTs();
-                }
-                if (active != null) {
-                    accumulator.add(active, segmentStart, bucketEnd);
-                    TsKvEntry entry = accumulator.toEntry(currentBucketStart);
-                    if (entry != null) {
-                        addResult(result, entry, resultLimit);
-                    }
                 }
             }
-            currentBucketStart = bucketEnd;
+            active = next;
+            segmentStart = next.getTs();
         }
-        return result;
-    }
-
-    private static TsKvEntry aggregateRawBucket(String key,
-                                                List<TsKvEntry> data,
-                                                int fromIndex,
-                                                int toIndex,
-                                                long bucketStart,
-                                                Aggregation aggregation) {
         if (Aggregation.NONE.equals(aggregation)) {
-            return new BasicTsKvEntry(bucketStart, copyKv(data.get(toIndex - 1)));
+            return active == null ? null : new BasicTsKvEntry(bucketEnd, copyKv(active));
         }
-        NumericAccumulator accumulator = new NumericAccumulator(key, aggregation, false);
-        for (int i = fromIndex; i < toIndex; i++) {
-            accumulator.add(data.get(i));
+        if (fillMissing && active != null) {
+            // A new value exactly at bucketEnd has zero duration and is excluded.
+            accumulator.add(active, segmentStart, bucketEnd);
         }
-        return accumulator.toEntry(bucketStart);
+        return accumulator.toEntry(bucketEnd);
     }
 
-    private static List<TsKvEntry> filterAndSort(List<TsKvEntry> rawData, long startTs, long endTs) {
+    private static List<TsKvEntry> filterAndSort(List<TsKvEntry> rawData, long lowerExclusive, long endTs) {
         List<TsKvEntry> result = new ArrayList<>();
         if (rawData != null) {
             for (TsKvEntry entry : rawData) {
-                if (entry.getTs() >= startTs && entry.getTs() < endTs) {
+                if (entry.getTs() > lowerExclusive && entry.getTs() <= endTs) {
                     result.add(entry);
                 }
             }
         }
         result.sort(Comparator.comparingLong(TsKvEntry::getTs));
         return result;
-    }
-
-    private static long bucketStart(long ts, long startTs, long interval) {
-        return startTs + ((ts - startTs) / interval) * interval;
     }
 
     private static boolean isNumeric(TsKvEntry entry) {
