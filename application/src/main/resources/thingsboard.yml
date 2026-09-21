@@ -909,6 +909,25 @@ spring:
       # You can set a Hibernate feature that controls the DDL behavior in a more fine-grained way. The standard Hibernate property values are none, validate, update, create-drop. Spring Boot chooses a default value for you based on whether it thinks your database is embedded (default create-drop) or not (default none)
       ddl-auto: "none"
   datasource:
+    #
+    # KingbaseES(人大金仓) V8 部署时只需改环境变量，无需改动本文件与任何 SQL 脚本。
+    # 沿用 PostgreSQL 官方驱动（金仓内核为 PostgreSQL），方言也沿用 ThingsboardPostgreSQLDialect：
+    #
+    #   pg 兼容模式：
+    #     SPRING_DATASOURCE_URL=jdbc:postgresql://<host>:54321/<db>
+    #   oracle 兼容模式（必须带 ora_input_emptystr_isnull=off）：
+    #     SPRING_DATASOURCE_URL=jdbc:postgresql://<host>:54321/<db>?options=-c%20ora_input_emptystr_isnull%3Doff
+    #
+    # ora_input_emptystr_isnull=off 不可省略 —— 金仓 oracle 兼容模式默认把空串转为 NULL，
+    # 会导致空串写入 NOT NULL 列报错、唯一性判定失效、COALESCE 与 "= ''" 结果与 PostgreSQL 不一致。
+    #
+    # oracle 兼容模式还需要一个安装期补丁（schema-entities-kingbase-oracle-addon.sql），
+    # 安装程序会自动探测并执行，要求安装账号对 sys 模式有 CREATE 权限（DBA 账号天然满足，
+    # 普通账号需 DBA 预先执行 GRANT CREATE ON SCHEMA sys TO <应用账号>）。
+    # 权限不足时安装会直接中断并给出修复指引，不会静默跳过。
+    #
+    # mysql 兼容模式尚未支持，详见 docs/kingbase-pg-oracle.md。
+    #
     # Database driver for Spring JPA - org.postgresql.Driver
     driverClassName: "${SPRING_DRIVER_CLASS_NAME:org.postgresql.Driver}"
     # Database connection URL

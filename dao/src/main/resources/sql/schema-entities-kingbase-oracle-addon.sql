@@ -1,0 +1,43 @@
+--
+-- Copyright © 2016-2025 The Thingsboard Authors
+--
+-- Licensed under the Apache License, Version 2.0 (the "License");
+-- you may not use this file except in compliance with the License.
+-- You may obtain a copy of the License at
+--
+--     http://www.apache.org/licenses/LICENSE-2.0
+--
+-- Unless required by applicable law or agreed to in writing, software
+-- distributed under the License is distributed on an "AS IS" BASIS,
+-- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-- See the License for the specific language governing permissions and
+-- limitations under the License.
+--
+
+-- KingbaseES(人大金仓) oracle 兼容模式专用补丁，只在探测到 database_mode = 'oracle' 时执行
+-- （触发条件见 SqlEntityDatabaseSchemaService.applyKingbaseOracleAddonIfNeeded）。
+-- PostgreSQL 部署、以及金仓 pg / mysql 兼容模式都不会执行本文件。
+--
+-- 问题：oracle 兼容模式在 sys 模式下只注册了二元的 sys.concat(text, text)，
+-- 而 sys 在函数名解析时硬性优先于 pg_catalog（search_path 调整无效），
+-- 于是 TB 原生查询中的 concat(a, b, c) 被解析到 sys.concat 并报
+--   ERROR: function sys.concat(unknown, varchar, unknown) does not exist
+-- 实测该错误会在完整 dao 测试套件中出现 2740 次，导致 448 个用例失败。
+--
+-- 对照（V008R006C009B0014 实测）：
+--   兼容模式 | sys.concat            | pg_catalog.concat
+--   pg       | 不存在                | VARIADIC "any"
+--   oracle   | 仅 (text, text)       | VARIADIC "any"（存在，但被 sys 遮蔽）
+--
+-- 解法：oracle 模式下 PostgreSQL 原生的 pg_catalog.concat(VARIADIC "any") 依然存在，
+-- 只是被 sys 遮蔽。在 sys 下补一个 VARIADIC 重载转发给它即可，语义与 PostgreSQL 完全一致
+-- （含 NULL 参数被忽略的行为）。用 VARIADIC 而非固定三参，可覆盖任意参数个数，
+-- 上游将来新增四参 concat 时无需再改本文件。
+--
+-- 二元调用 concat(a, b) 仍精确匹配原有的 sys.concat(text, text)，不受本补丁影响。
+--
+-- 权限：创建 sys 模式下的函数需要 CREATE 权限。安装账号为金仓 DBA（如 system）时天然满足；
+-- 普通账号需由 DBA 预先执行：GRANT CREATE ON SCHEMA sys TO <应用账号>;
+CREATE OR REPLACE FUNCTION sys.concat(VARIADIC args text[]) RETURNS text AS $$
+  SELECT pg_catalog.concat(VARIADIC args);
+$$ LANGUAGE sql IMMUTABLE;
