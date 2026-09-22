@@ -1,0 +1,114 @@
+#
+# Copyright © 2016-2025 The Thingsboard Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+# KingbaseES V008R006C009B0014 单机（oracle 兼容模式），供 ThingsBoard 使用。
+#
+# 使用前：
+#   1. 当前目录放置 license.dat
+#   2. 若把本目录拷出仓库单独部署，同时拷走 oracle 补丁脚本，并设置
+#      KINGBASE_ORACLE_ADDON=./schema-entities-kingbase-oracle-addon.sql
+#
+# TB 连接串（oracle 模式必须带 ora_input_emptystr_isnull=off）：
+#   jdbc:postgresql://<host>:54321/thingsboard?options=-c%20ora_input_emptystr_isnull%3Doff
+#
+# 详见 docs/kingbase-pg-oracle.md
+
+version: '3.8'
+
+networks:
+  proxy:
+    external: true
+
+services:
+  # =====================================================================
+  # 1. 金仓主数据库服务
+  # =====================================================================
+  kingbase:
+    image: kingbase_v008r006c009b0014_single_x86:v1
+    container_name: kingbase
+    privileged: true              # 必须开启特权模式
+    command: /usr/sbin/init
+    ports:
+      - "54321:54321"
+    environment:
+      NEED_START: "yes"
+      DB_USER: "kingbase"         # 镜像中该账号即超级用户，也是 sys 模式的 owner
+      DB_PASSWORD: "JvUcMbDxjYY4M8sj"
+      ENCODING: "UTF8"
+      TZ: Asia/Shanghai
+
+      # 兼容模式：pg / oracle / mysql（mysql 模式 TB 暂不支持）
+      # 注意：DB_MODE、ENABLE_CI 只在 ./data 为空、首次初始化时生效，
+      # 之后修改并重建容器不会改变模式，换模式必须清空 ./data。
+      DB_MODE: "oracle"
+      ENABLE_CI: "no"
+    networks:
+      - proxy
+    volumes:
+      # 数据持久化目录（容器内必须挂载到 /home/kingbase/userdata）
+      - ./data:/home/kingbase/userdata
+      # 不加 :ro，启动脚本需要调整文件属主
+      - ./license.dat:/home/kingbase/userdata/etc/license.dat
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # =====================================================================
+  # 2. 初始化辅助服务（幂等，可重复执行）
+  # - 校验兼容模式确为 oracle，否则报错退出
+  # - 业务库 thingsboard 不存在时创建
+  # - 应用 oracle 模式 concat 补丁（CREATE OR REPLACE，重复执行无副作用）
+  # =====================================================================
+  kingbase-init-db:
+    image: kingbase_v008r006c009b0014_single_x86:v1
+    container_name: kingbase-init-db
+    depends_on:
+      - kingbase
+    networks:
+      - proxy
+    restart: "no"
+    volumes:
+      - ${KINGBASE_ORACLE_ADDON:-../../dao/src/main/resources/sql/schema-entities-kingbase-oracle-addon.sql}:/tmp/addon.sql:ro
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        export KINGBASE_PASSWORD=JvUcMbDxjYY4M8sj
+        KSQL="ksql -h kingbase -p 54321 -U kingbase"
+        echo ">> [Init-DB] 等待金仓数据库启动就绪..."
+        until $$KSQL -d test -c "SELECT 1;" > /dev/null 2>&1; do sleep 2; done
+
+        MODE=$$($$KSQL -d test -tAc "show database_mode;")
+        echo ">> [Init-DB] 当前兼容模式: $$MODE"
+        if [ "$$MODE" != "oracle" ]; then
+          echo ">> [Init-DB] 错误：不是 oracle 模式。DB_MODE 只在首次初始化生效，请清空 ./data 后重建"
+          exit 1
+        fi
+
+        DB_EXISTS=$$($$KSQL -d test -tAc "SELECT 1 FROM pg_database WHERE datname='thingsboard';")
+        if [ "$$DB_EXISTS" != "1" ]; then
+          echo ">> [Init-DB] 创建 thingsboard 数据库..."
+          $$KSQL -d test -c "CREATE DATABASE thingsboard WITH OWNER = kingbase ENCODING = 'UTF8';"
+        fi
+
+        echo ">> [Init-DB] 应用 oracle 模式 concat 补丁..."
+        $$KSQL -d thingsboard -v ON_ERROR_STOP=1 -f /tmp/addon.sql
+        echo ">> [Init-DB] 完成"
